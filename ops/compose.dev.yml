@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - dev-dbdata:/var/lib/postgresql/data
+    ports: ["5432:5432"]
+
+  cache:
+    image: redis:7
+    ports: ["6379:6379"]
+
+  api:
+    build:
+      context: ../
+      dockerfile: ./build/Dockerfile.api
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Default: Host=db;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      Redis__ConnectionString: ${REDIS_CONNECTION}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY}
+      Seed__AdminEmail: ${SEED_ADMIN_EMAIL}
+      Seed__AdminPassword: ${SEED_ADMIN_PASSWORD}
+      RunMigrations: "true"
+    depends_on: [db, cache]
+    ports: ["8080:8080"]
+
+  web:
+    build:
+      context: ../
+      dockerfile: ./build/Dockerfile.web
+    environment:
+      ASPNETCORE_URLS: http://+:8081
+      ApiBaseUrl: http://api:8080
+      PublicBaseUrl: http://localhost:8081
+    depends_on: [api]
+    ports: ["8081:8081"]
+
+volumes:
+  dev-dbdata:

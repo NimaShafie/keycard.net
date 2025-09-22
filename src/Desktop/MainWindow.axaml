@@ -1,0 +1,9 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="KeyCard.Desktop.MainWindow"
+        Width="800" Height="500" Title="KeyCard.NET — Staff">
+  <StackPanel Margin="16">
+    <TextBlock FontSize="24" Text="KeyCard.NET — Staff Desktop" />
+    <TextBlock Margin="0,8,0,0" Text="This is a placeholder UI. We'll add room grid & housekeeping Kanban."/>
+  </StackPanel>
+</Window>

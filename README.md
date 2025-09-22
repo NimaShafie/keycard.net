@@ -36,3 +36,18 @@ A C#/.NET 8–based hotel management platform that combines:
 ---
 
 ## Repository Layout
+TBD...
+
+## Quick Start
+#### 1) Clone & configure
+```git clone <your-repo-url> && cd hotel-suite```  
+```cp .env.example .env``` edit if needed
+
+#### 2) Bring up dev stack
+cd ops
+docker compose -f compose.dev.yml up -d --build
+
+#### 3) Open apps
+* API:   http://localhost:8080
+* Web:   http://localhost:8081
+* Login with seeded admin from .env
