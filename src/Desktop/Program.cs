@@ -1,26 +1,45 @@
 using Avalonia;
-using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Markup.Xaml;
+using Avalonia.ReactiveUI;
+using System;
+using System.IO;
+using Microsoft.Extensions.Hosting;
+using KeyCard.Desktop.Infrastructure;
 
 namespace KeyCard.Desktop;
 
-/// <summary>Staff desktop shell (Avalonia). Cross-platform Win/macOS/Linux.</summary>
-public sealed class App : Application
-{
-    public override void Initialize() => AvaloniaXamlLoader.Load(this);
-
-    public override void OnFrameworkInitializationCompleted()
-    {
-        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime d)
-            d.MainWindow = new MainWindow();
-        base.OnFrameworkInitializationCompleted();
-    }
-
-    public static AppBuilder BuildAvaloniaApp() =>
-        AppBuilder.Configure<App>().UsePlatformDetect().LogToTrace();
-}
-
 internal static class Program
 {
-    public static void Main(string[] args) => App.BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    public static IHost AppHost { get; private set; } = null!;
+
+    [STAThread]
+    public static void Main(string[] args)
+    {
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+            File.AppendAllText("startup.log", $"[Unhandled] {e.ExceptionObject}\n");
+
+        try
+        {
+            AppHost = Bootstrap.BuildHost(args);
+            AppHost.Start();
+            Console.WriteLine("[Program] Host started. Launching Avalonia…");
+            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+            Console.WriteLine("[Program] Avalonia lifetime ended. Disposing host…");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("[Program] Fatal: " + ex);
+            File.AppendAllText("startup.log", $"[Fatal] {ex}\n");
+            throw;
+        }
+        finally
+        {
+            AppHost.Dispose();
+        }
+    }
+
+    public static AppBuilder BuildAvaloniaApp()
+        => AppBuilder.Configure(() => new App(AppHost.Services))
+            .UsePlatformDetect()
+            .LogToTrace()
+            .UseReactiveUI();
 }

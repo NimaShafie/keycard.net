@@ -1,0 +1,42 @@
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vms="clr-namespace:KeyCard.Desktop.ViewModels"
+    xmlns:m="clr-namespace:KeyCard.Desktop.Models"
+    x:Class="KeyCard.Desktop.Views.FrontDeskView"
+    x:DataType="vms:FrontDeskViewModel">
+
+	<Grid Margin="20" RowDefinitions="Auto,*" ColumnDefinitions="2*,*">
+		<StackPanel Orientation="Horizontal" Spacing="8" Grid.Row="0" Grid.ColumnSpan="2">
+			<TextBox Width="260" Watermark="Booking ID or last name" Text="{Binding Query}"/>
+			<Button Content="Search" Command="{Binding SearchCommand}"/>
+		</StackPanel>
+
+		<Border Grid.Row="1" Grid.Column="0" Padding="8">
+			<ListBox ItemsSource="{Binding Results}" SelectedItem="{Binding Selected}">
+				<ListBox.ItemTemplate>
+					<DataTemplate x:DataType="m:Booking">
+						<StackPanel Orientation="Horizontal" Spacing="12">
+							<TextBlock Text="{Binding BookingId}" Width="120"/>
+							<TextBlock Text="{Binding GuestName}" Width="220"/>
+							<TextBlock Text="{Binding RoomNumber}" Width="80"/>
+							<TextBlock Text="{Binding CheckIn}" Width="140"/>
+							<TextBlock Text="{Binding CheckOut}" Width="140"/>
+						</StackPanel>
+					</DataTemplate>
+				</ListBox.ItemTemplate>
+			</ListBox>
+		</Border>
+
+		<Border Grid.Row="1" Grid.Column="1" Padding="8">
+			<StackPanel Spacing="8">
+				<StackPanel Orientation="Horizontal" Spacing="8">
+					<TextBlock Text="Assign Room:" VerticalAlignment="Center"/>
+					<TextBox Width="100" Text="{Binding AssignRoomNumber}"/>
+					<Button Content="Assign" Command="{Binding AssignRoomCommand}"/>
+				</StackPanel>
+				<Button Content="Check In" Command="{Binding CheckInCommand}"/>
+			</StackPanel>
+		</Border>
+	</Grid>
+</UserControl>

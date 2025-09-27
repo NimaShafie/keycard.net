@@ -1,0 +1,27 @@
+<Application
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:views="clr-namespace:KeyCard.Desktop.Views"
+  xmlns:vms="clr-namespace:KeyCard.Desktop.ViewModels"
+  x:Class="KeyCard.Desktop.App"
+  RequestedThemeVariant="Dark">
+
+	<Application.Styles>
+		<FluentTheme />
+	</Application.Styles>
+
+	<Application.DataTemplates>
+		<DataTemplate DataType="vms:LoginViewModel">
+			<views:LoginView/>
+		</DataTemplate>
+		<DataTemplate DataType="vms:DashboardViewModel">
+			<views:DashboardView/>
+		</DataTemplate>
+		<DataTemplate DataType="vms:FrontDeskViewModel">
+			<views:FrontDeskView/>
+		</DataTemplate>
+		<DataTemplate DataType="vms:HousekeepingViewModel">
+			<views:HousekeepingView/>
+		</DataTemplate>
+	</Application.DataTemplates>
+</Application>
