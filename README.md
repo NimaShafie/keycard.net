@@ -36,6 +36,7 @@ A C#/.NET 8–based hotel management platform that combines:
 ---
 
 ## Repository Layout
+```
 keycard.net/
 ├─ docs/
 │  └─ architecture.md
@@ -51,7 +52,7 @@ keycard.net/
 │  │  └─ KeyCard.Desktop/               # WPF/WinUI + MVVM + client SDK
 │  │
 │  └─ Web/                              ← Aastha (Web/Kiosk Lead)
-│     ├─ keycard-web/                   # Blazor (Server recommended)
+│     └─ keycard-web/                   # Blazor (Server recommended)
 │
 ├─ tests/
 │  ├─ Backend.UnitTests/
@@ -61,7 +62,7 @@ keycard.net/
 ├─ build/                               # Dockerfiles (api, web)
 ├─ ops/                                 # compose, nginx, scripts
 └─ keycard.net.sln
-
+```
 
 ## Quick Start
 #### 1) Clone & configure
