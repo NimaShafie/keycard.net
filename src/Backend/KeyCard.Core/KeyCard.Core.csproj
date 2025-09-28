@@ -6,8 +6,4 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\KeyCard.BusinessLogic\KeyCard.BusinessLogic.csproj" />
-  </ItemGroup>
-
 </Project>
