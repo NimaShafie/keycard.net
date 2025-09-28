@@ -1,0 +1,38 @@
+@page "/bookings"
+@inject KeyCard.Generated.KeyCardApiClient Api
+
+<h3>Bookings</h3>
+
+@if (bookings is null)
+{
+    <p>Loading…</p>
+}
+else if (bookings.Count == 0)
+{
+    <p>No bookings yet.</p>
+}
+else
+{
+    <table>
+        <thead><tr><th>Code</th><th>Guest</th><th>Room</th><th>Status</th></tr></thead>
+        <tbody>
+            @foreach (var b in bookings)
+            {
+                <tr>
+                    <td>@b.ConfirmationCode</td>
+                    <td>@b.GuestLastName</td>
+                    <td>@b.RoomNumber</td>
+                    <td>@b.Status</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    List<KeyCard.Generated.BookingDto>? bookings;
+    protected override async Task OnInitializedAsync()
+    {
+        bookings = (await Api.BookingsAllAsync()).ToList();
+    }
+}

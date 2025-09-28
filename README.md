@@ -36,7 +36,32 @@ A C#/.NET 8–based hotel management platform that combines:
 ---
 
 ## Repository Layout
-TBD...
+keycard.net/
+├─ docs/
+│  └─ architecture.md
+├─ src/
+│  ├─ Backend/                          ← Dhruv (Backend Lead)
+│  │  ├─ KeyCard.Api/                   # ASP.NET Core API + SignalR + Auth
+│  │  ├─ KeyCard.Application/           # CQRS/validators/domain services
+│  │  ├─ KeyCard.Domain/                # Entities, VOs, domain events
+│  │  ├─ KeyCard.Infrastructure/        # EF Core, providers, migrations
+│  │  └─ KeyCard.Contracts/             # DTOs + Swagger/OpenAPI config
+│  │
+│  ├─ Desktop/                          ← Nima (Desktop Lead)
+│  │  └─ KeyCard.Desktop/               # WPF/WinUI + MVVM + client SDK
+│  │
+│  └─ Web/                              ← Aastha (Web/Kiosk Lead)
+│     ├─ keycard-web/                   # Blazor (Server recommended)
+│
+├─ tests/
+│  ├─ Backend.UnitTests/
+│  ├─ Backend.IntegrationTests/
+│  ├─ Desktop.UITests/
+│  └─ Web.E2E/
+├─ build/                               # Dockerfiles (api, web)
+├─ ops/                                 # compose, nginx, scripts
+└─ keycard.net.sln
+
 
 ## Quick Start
 #### 1) Clone & configure

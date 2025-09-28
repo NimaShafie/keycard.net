@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+    <AssemblyName>KeyCard.Application</AssemblyName>
+    <RootNamespace>KeyCard.Application</RootNamespace>
+		<TargetFramework>net8.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
+	<ItemGroup>
+      <ProjectReference Include="..\KeyCard.Domain\KeyCard.Domain.csproj" />
+      <ProjectReference Include="..\KeyCard.Infrastructure\KeyCard.Infrastructure.csproj" />
+      <ProjectReference Include="..\KeyCard.Contracts\KeyCard.Contracts.csproj" />
+	</ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.18" />
+  </ItemGroup>
+</Project>
