@@ -2,6 +2,7 @@
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Windows.Input;
+
 using KeyCard.Desktop.Infrastructure;
 using KeyCard.Desktop.Models;
 using KeyCard.Desktop.Services;
@@ -41,13 +42,13 @@ public sealed class FrontDeskViewModel : ViewModelBase
     private async Task AssignAsync()
     {
         if (Selected is null) return;
-        if (await _svc.AssignRoomAsync(Selected.BookingId, AssignRoomNumber))
+        if (await _svc.AssignRoomAsync(Selected.ConfirmationCode, AssignRoomNumber))
             Selected = Selected with { RoomNumber = AssignRoomNumber };
     }
 
     private async Task CheckInAsync()
     {
         if (Selected is null) return;
-        await _svc.CheckInAsync(Selected.BookingId);
+        await _svc.CheckInAsync(Selected.ConfirmationCode);
     }
 }

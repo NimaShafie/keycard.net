@@ -32,7 +32,7 @@ public static class Bootstrap
             c.BaseAddress = new Uri(apiBase);
             c.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         })
-        .AddPolicyHandler(RetryPolicy());
+        .AddHttpMessageHandler(() => new RetryDelegatingHandler(RetryPolicy()));
 
         services.AddSingleton(sp =>
         {
