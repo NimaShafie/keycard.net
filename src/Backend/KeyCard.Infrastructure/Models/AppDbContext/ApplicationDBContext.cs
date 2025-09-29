@@ -1,12 +1,15 @@
+using KeyCard.Infrastructure.Identity;
 using KeyCard.Infrastructure.Models.Bookings;
 using KeyCard.Infrastructure.Models.Entities;
 using KeyCard.Infrastructure.Models.HouseKeeping;
 using KeyCard.Infrastructure.Models.Users;
+
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace KeyCard.Infrastructure.Models.AppDbContext
 {
-    public class ApplicationDBContext : DbContext
+    public class ApplicationDBContext : IdentityDbContext<ApplicationUser, ApplicationRole, string>
     {
         public ApplicationDBContext(DbContextOptions<ApplicationDBContext> options)
             : base(options) { }
