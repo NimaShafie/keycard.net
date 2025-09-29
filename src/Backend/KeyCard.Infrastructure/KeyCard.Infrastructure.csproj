@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\KeyCard.BusinessLogic\KeyCard.BusinessLogic.csproj" />
+    <ProjectReference Include="..\KeyCard.Core\KeyCard.Core.csproj" />
   </ItemGroup>
 
 </Project>

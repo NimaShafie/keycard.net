@@ -4,9 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KeyCard.Core.Middlewares
+namespace KeyCard.BusinessLogic
 {
-    internal class Sample
-    {
-    }
+    // Marker class – no logic inside
+    public class AssemblyMarker { }
 }
