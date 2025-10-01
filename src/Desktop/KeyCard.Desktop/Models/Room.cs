@@ -1,5 +1,8 @@
 // Models/Room.cs
 namespace KeyCard.Desktop.Models;
 
-public enum RoomStatus { Available, Occupied, Dirty, OutOfService }
-public record Room(int Number, string Type, RoomStatus Status);
+public sealed record Room
+{
+    public int Number { get; init; }
+    public string Status { get; init; } = "Dirty";
+}

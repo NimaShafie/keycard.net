@@ -1,11 +1,13 @@
 // Services/MockAuthService.cs
+using System.Threading;
 using System.Threading.Tasks;
-using KeyCard.Desktop.Models;
+
 namespace KeyCard.Desktop.Services;
 
 public sealed class MockAuthService : IAuthService
 {
-    public Task<UserSession?> LoginAsync(string u, string p)
-        => Task.FromResult<UserSession?>(u == "admin" && p == "admin" ? new("1", "Front Desk Admin", "jwt-mock") : null);
-    public Task LogoutAsync() => Task.CompletedTask;
+    public Task<bool> LoginAsync(string username, string password, CancellationToken ct = default)
+        => Task.FromResult(username == "admin" && password == "password");
+
+    public Task LogoutAsync(CancellationToken ct = default) => Task.CompletedTask;
 }

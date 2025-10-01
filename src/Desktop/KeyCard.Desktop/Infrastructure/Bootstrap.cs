@@ -46,8 +46,15 @@ public static class Bootstrap
         services.AddSingleton<IBookingService, ApiBookingService>();
         // services.AddSingleton<IBookingService, MockBookingService>();
 
+        services.AddSingleton<INavigationService, NavigationService>();
+        services.AddSingleton<IAuthService, ApiAuthService>();
+
         // ViewModels (add yours as needed)
         services.AddSingleton<ViewModels.MainViewModel>();
+        services.AddSingleton<ViewModels.LoginViewModel>();
+        services.AddSingleton<ViewModels.DashboardViewModel>();
+        services.AddSingleton<ViewModels.FrontDeskViewModel>();
+        services.AddSingleton<ViewModels.HousekeepingViewModel>();
 
         return services;
     }

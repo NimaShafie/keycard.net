@@ -1,16 +1,23 @@
+// ViewModels/ViewModelBase.cs
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace KeyCard.Desktop.ViewModels;
-
-public abstract class ViewModelBase : INotifyPropertyChanged
+namespace KeyCard.Desktop.ViewModels
 {
-    public event PropertyChangedEventHandler? PropertyChanged;
-    protected void Set<T>(ref T field, T value, [CallerMemberName] string? name = null)
+    public abstract class ViewModelBase : INotifyPropertyChanged
     {
-        if (!Equals(field, value)) { field = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected void OnPropertyChanged([CallerMemberName] string? name = null)
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+        protected bool SetProperty<T>(ref T storage, T value, [CallerMemberName] string? name = null)
+        {
+            if (EqualityComparer<T>.Default.Equals(storage, value)) return false;
+            storage = value;
+            OnPropertyChanged(name);
+            return true;
+        }
     }
-    protected void Notify([CallerMemberName] string? name = null)
-        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }

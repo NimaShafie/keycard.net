@@ -1,43 +1,116 @@
 // ViewModels/LoginViewModel.cs
+using System;
 using System.Threading.Tasks;
 using System.Windows.Input;
+
 using KeyCard.Desktop.Infrastructure;
-using KeyCard.Desktop.Services;
 
-namespace KeyCard.Desktop.ViewModels;
-
-public sealed class LoginViewModel : ViewModelBase
+namespace KeyCard.Desktop.ViewModels
 {
-    private readonly IAuthService _auth;
-    private readonly INavigationService _nav;
-
-    public LoginViewModel(IAuthService auth, INavigationService nav)
+    public sealed class LoginViewModel : ViewModelBase
     {
-        _auth = auth; _nav = nav;
-        LoginCommand = new RelayCommand(async _ => await LoginAsync(), _ => CanLogin);
-    }
-
-    private string _username = "";
-    public string Username { get => _username; set { Set(ref _username, value); Update(); } }
-    private string _password = "";
-    public string Password { get => _password; set { Set(ref _password, value); Update(); } }
-    private bool _busy;
-    public bool IsBusy { get => _busy; set { Set(ref _busy, value); Update(); } }
-    public string? Error { get; set; }
-    public ICommand LoginCommand { get; }
-    public bool CanLogin => !IsBusy && !string.IsNullOrWhiteSpace(Username) && !string.IsNullOrWhiteSpace(Password);
-    private void Update() => (LoginCommand as RelayCommand)!.RaiseCanExecuteChanged();
-
-    private async Task LoginAsync()
-    {
-        Error = null; Notify(nameof(Error));
-        IsBusy = true;
-        try
+        private string _username = string.Empty;
+        public string Username
         {
-            var session = await _auth.LoginAsync(Username, Password);
-            if (session is null) { Error = "Invalid credentials."; Notify(nameof(Error)); return; }
-            _nav.NavigateTo<DashboardViewModel>();
+            get => _username;
+            set
+            {
+                if (SetProperty(ref _username, value))
+                {
+                    OnPropertyChanged(nameof(CanLogin));
+                    (LoginCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                }
+            }
         }
-        finally { IsBusy = false; }
+
+        private string _password = string.Empty;
+        public string Password
+        {
+            get => _password;
+            set
+            {
+                if (SetProperty(ref _password, value))
+                {
+                    OnPropertyChanged(nameof(CanLogin));
+                    (LoginCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        private bool _isBusy;
+        public bool IsBusy
+        {
+            get => _isBusy;
+            set
+            {
+                if (SetProperty(ref _isBusy, value))
+                {
+                    OnPropertyChanged(nameof(CanLogin));
+                    (LoginCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        // Exposed for XAML: IsEnabled="{Binding CanLogin}"
+        public bool CanLogin =>
+            !IsBusy &&
+            !string.IsNullOrWhiteSpace(Username) &&
+            !string.IsNullOrWhiteSpace(Password);
+
+        private string _errorMessage = string.Empty;
+        public string ErrorMessage
+        {
+            get => _errorMessage;
+            set
+            {
+                if (SetProperty(ref _errorMessage, value))
+                    OnPropertyChanged(nameof(Error)); // keep alias in sync
+            }
+        }
+
+        // Alias to match XAML binding {Binding Error}
+        public string Error
+        {
+            get => ErrorMessage;
+            set => ErrorMessage = value;
+        }
+
+        public ICommand LoginCommand { get; }
+
+        public LoginViewModel()
+        {
+            LoginCommand = new RelayCommand(
+                execute: () => _ = LoginAsync(),
+                canExecute: () => CanLogin
+            );
+        }
+
+        private async Task LoginAsync()
+        {
+            try
+            {
+                IsBusy = true;
+                ErrorMessage = string.Empty;
+
+                // TODO: replace with real auth call
+                await Task.Delay(300);
+
+                if (!Username.Equals("admin", StringComparison.OrdinalIgnoreCase) || Password != "password")
+                {
+                    ErrorMessage = "Invalid username or password.";
+                    return;
+                }
+
+                // Success: navigate or update app state here
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = $"Login failed: {ex.Message}";
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
     }
 }
