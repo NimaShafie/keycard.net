@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
+using KeyCard.Core.Common;
 using KeyCard.Infrastructure.Models.Entities;
 using KeyCard.Infrastructure.Models.Users;
-using KeyCard.Core.Common;
 
 
 namespace KeyCard.Infrastructure.Models.HouseKeeping

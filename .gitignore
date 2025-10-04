@@ -101,3 +101,6 @@ ops/scripts/*.secret.*
 
 # macOS codesign leftovers
 *.dSYM/
+
+# per project local settings ignores
+src/Desktop/KeyCard.Desktop/appsettings.Local.json

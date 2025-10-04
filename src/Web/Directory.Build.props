@@ -1,0 +1,5 @@
+<Project>
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);WEB</DefineConstants>
+  </PropertyGroup>
+</Project>

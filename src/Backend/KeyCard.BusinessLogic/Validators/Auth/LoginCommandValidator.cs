@@ -5,13 +5,15 @@ using System.Text;
 using System.Threading.Tasks;
 
 using FluentValidation;
+
 using KeyCard.BusinessLogic.Commands.Auth;
 
 namespace KeyCard.BusinessLogic.Validators.Auth
 {
     public class LoginCommandValidator : AbstractValidator<LoginCommand>
     {
-        public LoginCommandValidator() {
+        public LoginCommandValidator()
+        {
             RuleFor(x => x.Username)
                 .NotEmpty().WithMessage("Username cannot be empty")
                 .MinimumLength(3).WithMessage("Username must be at least 3 characters long");

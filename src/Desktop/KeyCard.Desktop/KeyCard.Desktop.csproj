@@ -25,8 +25,13 @@
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 
-	<!-- Now include them ONCE, explicitly -->
+  <!-- Now include them ONCE, explicitly -->
 	<ItemGroup>
 		<AvaloniaXaml Include="App.axaml" />
 		<AvaloniaXaml Include="Views\*.axaml" />
@@ -44,21 +49,26 @@
 
 	<ItemGroup>
 		<!-- Avalonia -->
-		<PackageReference Include="Avalonia" Version="11.0.6" />
-		<PackageReference Include="Avalonia.Desktop" Version="11.0.6" />
-		<PackageReference Include="Avalonia.ReactiveUI" Version="11.0.6" />
-		<PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.6" />
-		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
-		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.18" />
+		<PackageReference Include="Avalonia">
+		  
+		</PackageReference>
+		<PackageReference Include="Avalonia.Desktop">
+		  
+		</PackageReference>
+		<PackageReference Include="Avalonia.ReactiveUI" />
+		<PackageReference Include="Avalonia.Themes.Fluent" />
+		<PackageReference Include="CommunityToolkit.Mvvm" />
+		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" />
 
 		<!-- DI / Hosting / Http / Config -->
-		<PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.2" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
-		<PackageReference Include="Polly" Version="8.6.4" />
-		<PackageReference Include="Polly.Extensions.Http" Version="3.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Hosting" />
+		<PackageReference Include="Microsoft.Extensions.Http" />
+		<PackageReference Include="Microsoft.Extensions.Configuration" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" />
+		<PackageReference Include="Polly" />
+		<PackageReference Include="Polly.Extensions.Http" />
 	</ItemGroup>
 
 	<!-- Uncomment later if you wire shared projects
@@ -68,3 +78,8 @@
   </ItemGroup>
   -->
 </Project>
+
+
+
+
+

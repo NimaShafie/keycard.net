@@ -1,6 +1,7 @@
+using KeyCard.Web.Data;
+
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
-using KeyCard.Web.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 

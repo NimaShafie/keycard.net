@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- Applies to all projects under src/Web -->
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Add Blazor/ASP.NET packages when you want them centralized -->
+  </ItemGroup>
+</Project>

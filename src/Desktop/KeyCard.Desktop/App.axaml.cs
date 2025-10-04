@@ -1,13 +1,16 @@
 using System;
+
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls.Templates;
 using Avalonia.Markup.Xaml;
-using Microsoft.Extensions.DependencyInjection;
+
 using KeyCard.Desktop.Services;
 using KeyCard.Desktop.ViewModels;
 using KeyCard.Desktop.Views;
+
+using Microsoft.Extensions.DependencyInjection;
 
 namespace KeyCard.Desktop;
 
@@ -37,7 +40,7 @@ public partial class App : Application
                 //_ = _services.GetRequiredService<INavigationService>();
 
                 // Create the window yourself and bind the shell VM
-                Console.WriteLine("[App] Creating MainWindow(shell) …");
+                Console.WriteLine("[App] Creating MainWindow(shell) â€¦");
                 var main = new MainWindow(shell)
                 {
                     WindowStartupLocation = WindowStartupLocation.CenterScreen
@@ -47,7 +50,7 @@ public partial class App : Application
                 // main.DataTemplates.Add(new FuncDataTemplate<LoginViewModel>((_,__) => new LoginView(), true));
 
                 desktop.MainWindow = main;
-                Console.WriteLine("[App] Showing MainWindow …");
+                Console.WriteLine("[App] Showing MainWindow â€¦");
                 main.Show();
                 Console.WriteLine("[App] MainWindow.Show() done");
             }

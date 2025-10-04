@@ -1,4 +1,5 @@
 using KeyCard.Core.Middleware;
+
 using Microsoft.AspNetCore.Builder;
 
 namespace KeyCard.Core.Extensions

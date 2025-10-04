@@ -1,11 +1,15 @@
 using System;
 using System.IO;
+
 using Avalonia;
 using Avalonia.ReactiveUI;
+
+using KeyCard.Desktop.Infrastructure;
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using KeyCard.Desktop.Infrastructure;
+using Microsoft.Extensions.Options;
 
 namespace KeyCard.Desktop;
 
@@ -25,8 +29,20 @@ internal static class Program
             AppHost.Start();
 
             var cfg = AppHost.Services.GetRequiredService<IConfiguration>();
-            var apiBase = cfg["ApiBaseUrl"] ?? Environment.GetEnvironmentVariable("API_BASE_URL") ?? "(not set)";
-            Console.WriteLine($"[Program] Host started. ApiBaseUrl = {apiBase}. Launching Avalonia…");
+            var opts = AppHost.Services.GetRequiredService<IOptions<KeyCardOptions>>().Value;
+
+            // Back-compat: allow legacy single value (ApiBaseUrl / API_BASE_URL) to win if supplied
+            var legacyApiBase =
+                cfg["ApiBaseUrl"] ?? Environment.GetEnvironmentVariable("API_BASE_URL");
+
+            var effectiveApiBase =
+                string.Equals(opts.Mode, "Live", StringComparison.OrdinalIgnoreCase)
+                    ? (legacyApiBase ?? opts.Api.HttpsBaseUrl)
+                    : "(mock)";
+
+            Console.WriteLine(
+                $"[Program] Host started. Mode={opts.Mode}; EffectiveApiBase={effectiveApiBase}; " +
+                $"HttpsBase={opts.Api.HttpsBaseUrl}; HttpBase={opts.Api.HttpBaseUrl}. Launching Avalonia…");
 
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
 
@@ -50,16 +66,21 @@ internal static class Program
             {
                 var env = context.HostingEnvironment;
 
-                cfg.Sources.Clear(); // start clean, then add what we want
+                // Start clean, then add only what we want (keeps your original behavior)
+                cfg.Sources.Clear();
                 cfg.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                    .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: true)
-                   // extra override when running against docker-compose
+                   // Extra override when running against docker-compose (kept from your code)
                    .AddJsonFile($"appsettings.{env.EnvironmentName}.Container.json", optional: true, reloadOnChange: true)
-                   .AddEnvironmentVariables(); // allows API_BASE_URL, etc.
+                   .AddEnvironmentVariables() // allows API_BASE_URL and KeyCard__Mode, etc.
+                   .AddCommandLine(args);     // allow: KeyCard:Mode=Live (new, for easy switching)
             })
             .ConfigureServices((context, services) =>
             {
-                // Registers HttpClient + NSwag API client, SignalR service, your Services/* and ViewModels/*
+                // Bind options once so everyone (including AddDesktopServices) can consume them
+                services.Configure<KeyCardOptions>(context.Configuration.GetSection("KeyCard"));
+
+                // Registers HttpClient + NSwag API client (live or mock), SignalR, your Services/* and ViewModels/*
                 services.AddDesktopServices(context.Configuration);
             })
             .Build();

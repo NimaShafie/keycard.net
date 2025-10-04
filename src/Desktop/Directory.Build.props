@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);DESKTOP</DefineConstants>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+</Project>

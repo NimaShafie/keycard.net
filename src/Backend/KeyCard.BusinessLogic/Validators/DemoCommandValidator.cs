@@ -1,4 +1,5 @@
 using FluentValidation;
+
 using KeyCard.BusinessLogic.Commands;
 
 namespace KeyCard.BusinessLogic.Validators

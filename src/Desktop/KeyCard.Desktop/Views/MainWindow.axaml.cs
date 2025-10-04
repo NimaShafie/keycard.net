@@ -1,7 +1,9 @@
 // Views/MainWindow.axaml.cs
 using System;
+
 using Avalonia;
 using Avalonia.Controls;
+
 using KeyCard.Desktop.ViewModels;
 
 namespace KeyCard.Desktop.Views;

@@ -1,8 +1,11 @@
 // Services/NavigationService.cs
 using System;
+
 using Avalonia.Threading;
-using Microsoft.Extensions.DependencyInjection;
+
 using KeyCard.Desktop.ViewModels;
+
+using Microsoft.Extensions.DependencyInjection;
 
 namespace KeyCard.Desktop.Services
 {

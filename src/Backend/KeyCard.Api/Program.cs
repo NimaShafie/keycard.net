@@ -3,10 +3,12 @@ using FluentValidation;
 using KeyCard.BusinessLogic;
 using KeyCard.Core.Extensions;
 using KeyCard.Core.Middlewares;
-using Microsoft.AspNetCore.Identity;
 using KeyCard.Infrastructure.Identity;
 using KeyCard.Infrastructure.Models.AppDbContext;
+
 using MediatR;
+
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
