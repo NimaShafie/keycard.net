@@ -6,15 +6,22 @@ namespace KeyCard.Infrastructure.Models.Bookings
 {
     public class Booking : IDeletable
     {
-        public int Id { get; set; }
-        public DateTime CheckIn { get; set; }
-        public DateTime CheckOut { get; set; }
+        public Guid Id { get; set; }
+        public string ConfirmationCode { get; set; } = default!;
+
+        public DateTime CheckInDate { get; set; }
+        public DateTime CheckOutDate { get; set; }
         public BookingStatus Status { get; set; } = BookingStatus.Reserved;
 
-        public int GuestProfileId { get; set; }
+        public int Adults { get; set; }
+        public int Children { get; set; }
+        public decimal TotalAmount { get; set; }
+        public bool IsPrepaid { get; set; }
+
+        public Guid GuestProfileId { get; set; }
         public GuestProfile GuestProfile { get; set; } = default!;
 
-        public int RoomId { get; set; }
+        public Guid RoomId { get; set; }
         public Room Room { get; set; } = default!;
 
         public ICollection<Payment> Payments { get; set; } = new List<Payment>();
