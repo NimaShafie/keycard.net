@@ -1,85 +1,81 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
-		<OutputType>WinExe</OutputType>
-		<Nullable>enable</Nullable>
-		<ImplicitUsings>enable</ImplicitUsings>
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
-		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-	</PropertyGroup>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
 
-	<!-- Strip ANY accidental inclusions of .axaml as Page/None/AvaloniaXaml first -->
-	<ItemGroup>
-		<Page Remove="**\*.axaml" />
-		<None Remove="**\*.axaml" />
-		<AvaloniaXaml Remove="**\*.axaml" />
-	</ItemGroup>
+  <!-- Strip ANY accidental inclusions of .axaml as Page/None/AvaloniaXaml first -->
+  <ItemGroup>
+    <Page Remove="**\*.axaml" />
+    <None Remove="**\*.axaml" />
+    <AvaloniaXaml Remove="**\*.axaml" />
+  </ItemGroup>
 
-	<!-- settings -->
-	<ItemGroup>
-		<None Update="appsettings.json">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="appsettings.Development.json">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-	</ItemGroup>
+  <!-- settings -->
   <ItemGroup>
     <None Update="appsettings.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="appsettings.Development.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 
   <!-- Now include them ONCE, explicitly -->
-	<ItemGroup>
-		<AvaloniaXaml Include="App.axaml" />
-		<AvaloniaXaml Include="Views\*.axaml" />
-	</ItemGroup>
+  <ItemGroup>
+    <AvaloniaXaml Include="App.axaml" />
+    <AvaloniaXaml Include="Views\*.axaml" />
+  </ItemGroup>
 
-	<!-- Pair code-behind to XAML (nice in Solution Explorer) -->
-	<ItemGroup>
-		<Compile Update="App.axaml.cs">
-			<DependentUpon>App.axaml</DependentUpon>
-		</Compile>
-		<Compile Update="Views\*.axaml.cs">
-			<DependentUpon>%(Filename).axaml</DependentUpon>
-		</Compile>
-	</ItemGroup>
+  <!-- Pair code-behind to XAML (nice in Solution Explorer) -->
+  <ItemGroup>
+    <Compile Update="App.axaml.cs">
+      <DependentUpon>App.axaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\*.axaml.cs">
+      <DependentUpon>%(Filename).axaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
 
-	<ItemGroup>
-		<!-- Avalonia -->
-		<PackageReference Include="Avalonia">
-		  
-		</PackageReference>
-		<PackageReference Include="Avalonia.Desktop">
-		  
-		</PackageReference>
-		<PackageReference Include="Avalonia.ReactiveUI" />
-		<PackageReference Include="Avalonia.Themes.Fluent" />
-		<PackageReference Include="CommunityToolkit.Mvvm" />
-		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+  <!-- Packages (preserved as-is) -->
+  <ItemGroup>
+    <!-- Avalonia -->
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.ReactiveUI" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
 
-		<!-- DI / Hosting / Http / Config -->
-		<PackageReference Include="Microsoft.Extensions.Hosting" />
-		<PackageReference Include="Microsoft.Extensions.Http" />
-		<PackageReference Include="Microsoft.Extensions.Configuration" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.Json" />
-		<PackageReference Include="Polly" />
-		<PackageReference Include="Polly.Extensions.Http" />
-	</ItemGroup>
+    <!-- MVVM / Toolkit -->
+    <PackageReference Include="CommunityToolkit.Mvvm" />
 
-	<!-- Uncomment later if you wire shared projects
+    <!-- Realtime / DI / Hosting / Http / Config -->
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
+
+    <!-- Resilience -->
+    <PackageReference Include="Polly" />
+    <PackageReference Include="Polly.Extensions.Http" />
+  </ItemGroup>
+
+  <!-- Brand logo resource (now OPTIONAL; build won’t fail if the file is missing) -->
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\logo.png" Condition="Exists('Assets\logo.png')" />
+  </ItemGroup>
+
+  <!-- Uncomment later if you wire shared projects
   <ItemGroup>
     <ProjectReference Include="..\..\Domain\KeyCard.Domain.csproj" />
     <ProjectReference Include="..\..\Contracts\KeyCard.Contracts.csproj" />
   </ItemGroup>
   -->
 </Project>
-
-
-
-
-

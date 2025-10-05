@@ -1,93 +1,163 @@
 using System;
-using System.IO;
+using System.Threading.Tasks;
 
 using Avalonia;
 using Avalonia.ReactiveUI;
 
-using KeyCard.Desktop.Infrastructure;
-
+using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 
-namespace KeyCard.Desktop;
-
-internal static class Program
+namespace KeyCard.Desktop
 {
-    public static IHost AppHost { get; private set; } = null!;
-
-    [STAThread]
-    public static void Main(string[] args)
+    public static class Program
     {
-        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
-            File.AppendAllText("startup.log", $"[Unhandled] {e.ExceptionObject}\n");
-
-        try
+        public static async Task Main(string[] args)
         {
-            AppHost = BuildHost(args);
-            AppHost.Start();
+            var host = Host.CreateDefaultBuilder(args)
+                .ConfigureAppConfiguration((ctx, cfg) =>
+                {
+                    var env = ctx.HostingEnvironment;
 
-            var cfg = AppHost.Services.GetRequiredService<IConfiguration>();
-            var opts = AppHost.Services.GetRequiredService<IOptions<KeyCardOptions>>().Value;
+                    // Keep your environment-specific config loading behavior
+                    cfg.Sources.Clear();
+                    cfg.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                       .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: true)
+                       .AddEnvironmentVariables();
+                })
+                .ConfigureServices((ctx, services) =>
+                {
+                    // Logging (console)
+                    services.AddLogging(b => b.AddConsole());
 
-            // Back-compat: allow legacy single value (ApiBaseUrl / API_BASE_URL) to win if supplied
-            var legacyApiBase =
-                cfg["ApiBaseUrl"] ?? Environment.GetEnvironmentVariable("API_BASE_URL");
+                    // Strongly-typed app config (kept)
+                    services.AddSingleton<IAppConfig>(sp =>
+                    {
+                        var cfg = sp.GetRequiredService<IConfiguration>();
+                        return new AppConfig(cfg);
+                    });
 
-            var effectiveApiBase =
-                string.Equals(opts.Mode, "Live", StringComparison.OrdinalIgnoreCase)
-                    ? (legacyApiBase ?? opts.Api.HttpsBaseUrl)
-                    : "(mock)";
+                    // Core services (kept)
+                    services.AddSingleton<Services.INavigationService, Services.NavigationService>();
+                    services.AddSingleton<Services.IAuthService, Services.MockAuthService>(); // swap later when wiring real auth
 
-            Console.WriteLine(
-                $"[Program] Host started. Mode={opts.Mode}; EffectiveApiBase={effectiveApiBase}; " +
-                $"HttpsBase={opts.Api.HttpsBaseUrl}; HttpBase={opts.Api.HttpBaseUrl}. Launching Avalonia…");
+                    // App services used by VMs (kept/added earlier)
+                    services.AddSingleton<Services.IBookingService, Services.MockBookingService>();
+                    services.AddSingleton<Services.IHousekeepingService, Services.MockHousekeepingService>();
 
-            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+                    // ---- SignalR service registration (FIX) ----
+                    var isMock =
+                        string.Equals(ctx.Configuration["KeyCard:Mode"], "Mock", StringComparison.OrdinalIgnoreCase) ||
+                        (bool.TryParse(ctx.Configuration["UseMocks"], out var useMocks) && useMocks);
 
-            Console.WriteLine("[Program] Avalonia lifetime ended. Disposing host…");
+                    if (isMock)
+                    {
+                        // No-op in Mock mode
+                        services.AddSingleton<Services.ISignalRService, NoOpSignalRService>();
+                    }
+                    else
+                    {
+                        // Provide the required string ctor arg (hub URL) from configuration.
+                        services.AddSingleton<Services.ISignalRService>(sp =>
+                        {
+                            var url = ResolveBookingsHubUrl(sp);
+                            // ActivatorUtilities will satisfy other ctor deps automatically and pass our string.
+                            return ActivatorUtilities.CreateInstance<Services.SignalRService>(sp, url);
+                        });
+                    }
+
+                    // ViewModels (kept + ensure all navigated VMs are registered)
+                    services.AddSingleton<ViewModels.LoginViewModel>();
+                    services.AddSingleton<ViewModels.DashboardViewModel>();
+                    services.AddSingleton<ViewModels.FrontDeskViewModel>();
+                    services.AddSingleton<ViewModels.HousekeepingViewModel>();
+                    services.AddSingleton<ViewModels.MainViewModel>(); // required by App startup
+
+                    // App from DI (kept)
+                    services.AddSingleton<App>();
+                })
+                .Build();
+
+            // Start Avalonia using the App instance from DI (kept)
+            BuildAvaloniaApp(host).StartWithClassicDesktopLifetime(args);
+
+            await Task.CompletedTask;
         }
-        catch (Exception ex)
+
+        public static AppBuilder BuildAvaloniaApp(IHost host)
+            => AppBuilder.Configure(() => host.Services.GetRequiredService<App>())
+                         .UsePlatformDetect()
+                         .LogToTrace()
+                         .UseReactiveUI();
+
+        /// <summary>
+        /// Picks the bookings hub URL from config. You can override with:
+        /// "SignalR:BookingsHubUrl": "https://your-api/hubs/bookings"
+        /// Otherwise it falls back to Api:BaseUrl + "/hubs/bookings".
+        /// </summary>
+        private static string ResolveBookingsHubUrl(IServiceProvider sp)
         {
-            Console.WriteLine("[Program] Fatal: " + ex);
-            File.AppendAllText("startup.log", $"[Fatal] {ex}\n");
-            throw;
+            var cfg = sp.GetRequiredService<IConfiguration>();
+
+            var explicitUrl = cfg["SignalR:BookingsHubUrl"];
+            if (!string.IsNullOrWhiteSpace(explicitUrl))
+                return explicitUrl;
+
+            var baseUrl = cfg["Api:BaseUrl"];
+            if (string.IsNullOrWhiteSpace(baseUrl))
+                baseUrl = "http://localhost:5001";
+
+            return CombineUri(baseUrl, "hubs/bookings");
         }
-        finally
+
+        private static string CombineUri(string baseUrl, string path)
         {
-            try { AppHost?.Dispose(); } catch { /* ignore */ }
+            if (string.IsNullOrWhiteSpace(path)) return baseUrl;
+            if (!baseUrl.EndsWith("/")) baseUrl += "/";
+            return baseUrl + path.TrimStart('/');
         }
     }
 
-    private static IHost BuildHost(string[] args) =>
-        Host.CreateDefaultBuilder(args)
-            .ConfigureAppConfiguration((context, cfg) =>
-            {
-                var env = context.HostingEnvironment;
+    public interface IAppConfig
+    {
+        string Mode { get; }
+        bool UseMocks { get; }
+        string ApiBaseUrl { get; }
+    }
 
-                // Start clean, then add only what we want (keeps your original behavior)
-                cfg.Sources.Clear();
-                cfg.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                   .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: true)
-                   // Extra override when running against docker-compose (kept from your code)
-                   .AddJsonFile($"appsettings.{env.EnvironmentName}.Container.json", optional: true, reloadOnChange: true)
-                   .AddEnvironmentVariables() // allows API_BASE_URL and KeyCard__Mode, etc.
-                   .AddCommandLine(args);     // allow: KeyCard:Mode=Live (new, for easy switching)
-            })
-            .ConfigureServices((context, services) =>
-            {
-                // Bind options once so everyone (including AddDesktopServices) can consume them
-                services.Configure<KeyCardOptions>(context.Configuration.GetSection("KeyCard"));
+    public class AppConfig : IAppConfig
+    {
+        public string Mode { get; }
+        public bool UseMocks { get; }
+        public string ApiBaseUrl { get; }
 
-                // Registers HttpClient + NSwag API client (live or mock), SignalR, your Services/* and ViewModels/*
-                services.AddDesktopServices(context.Configuration);
-            })
-            .Build();
+        public AppConfig(IConfiguration cfg)
+        {
+            Mode = cfg["KeyCard:Mode"] ?? "Live";
+            UseMocks = bool.TryParse(cfg["UseMocks"], out var b) && b;
+            ApiBaseUrl = cfg["Api:BaseUrl"] ?? "";
+        }
+    }
 
-    public static AppBuilder BuildAvaloniaApp() =>
-        AppBuilder.Configure(() => new App(AppHost.Services))
-                  .UsePlatformDetect()
-                  .LogToTrace()
-                  .UseReactiveUI();
+    /// <summary>
+    /// No-op SignalR for Mock/dev mode: satisfies ISignalRService so MainViewModel can start,
+    /// but avoids making any real network calls.
+    /// </summary>
+    internal sealed class NoOpSignalRService : Services.ISignalRService
+    {
+        public HubConnection BookingsHub { get; }
+
+        public NoOpSignalRService()
+        {
+            // Harmless placeholder connection; we never StartAsync on it.
+            BookingsHub = new HubConnectionBuilder()
+                .WithUrl("http://localhost/dev-null")
+                .Build();
+        }
+
+        public Task StartAsync(System.Threading.CancellationToken ct = default) => Task.CompletedTask;
+        public Task StopAsync(System.Threading.CancellationToken ct = default) => Task.CompletedTask;
+    }
 }

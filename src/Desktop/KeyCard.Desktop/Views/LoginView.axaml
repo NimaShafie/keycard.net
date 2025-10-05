@@ -5,11 +5,65 @@
     x:Class="KeyCard.Desktop.Views.LoginView"
     x:DataType="vms:LoginViewModel">
 
-	<StackPanel Margin="24" Spacing="8">
-		<TextBlock Text="Staff Login" FontSize="20" FontWeight="SemiBold"/>
-		<TextBox Watermark="Username" Text="{Binding Username}"/>
-		<TextBox Watermark="Password" PasswordChar="•" Text="{Binding Password}"/>
-		<TextBlock Foreground="Red" Text="{Binding Error}"/>
-		<Button Content="Sign in" Command="{Binding LoginCommand}" IsEnabled="{Binding CanLogin}"/>
-	</StackPanel>
+  <!-- ENTER submits (Avalonia 11) -->
+  <InputElement.KeyBindings>
+    <KeyBinding Gesture="Enter" Command="{Binding LoginCommand}" />
+  </InputElement.KeyBindings>
+
+  <Grid>
+    <!-- Animated gradient background; animated in code-behind -->
+    <Border x:Name="AnimatedBackground">
+      <Border.Background>
+        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+          <GradientStop Color="#651FFF" Offset="0"/>
+          <GradientStop Color="#7B1FA2" Offset="0.5"/>
+          <GradientStop Color="#00BCD4" Offset="1"/>
+        </LinearGradientBrush>
+      </Border.Background>
+    </Border>
+
+    <!-- Centered login card -->
+    <Grid>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="*" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="*" />
+      </Grid.RowDefinitions>
+
+      <Border Grid.Row="1"
+              x:Name="LoginCard"
+              CornerRadius="14"
+              Padding="28"
+              Background="#1E1E1E"
+              BorderBrush="#7B1FA2"
+              BorderThickness="2"
+              Opacity="0"
+              RenderTransformOrigin="0.5,0.5">
+        <Border.RenderTransform>
+          <ScaleTransform ScaleX="0.98" ScaleY="0.98"/>
+        </Border.RenderTransform>
+
+        <StackPanel Spacing="10" Width="360">
+          <!-- Brand -->
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
+            <!-- No Source here; set it conditionally in code-behind -->
+            <Image x:Name="BrandLogo" Width="28" Height="28"/>
+            <TextBlock Text="KeyCard.NET" FontSize="22" FontWeight="Bold"/>
+          </StackPanel>
+
+          <TextBlock Text="Staff Login" FontSize="18" FontWeight="SemiBold" Margin="0,4,0,8"/>
+
+          <TextBox Watermark="Username" Text="{Binding Username}" />
+          <TextBox Watermark="Password" PasswordChar="•" Text="{Binding Password}" />
+
+          <TextBlock Foreground="Red" Text="{Binding Error}" />
+
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
+            <Button Content="Sign in" Command="{Binding LoginCommand}" IsEnabled="{Binding CanLogin}" />
+            <Button Content="Mock Mode" IsVisible="{Binding IsMockMode}" Command="{Binding ContinueMockCommand}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Grid>
+  </Grid>
 </UserControl>
