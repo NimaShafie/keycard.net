@@ -21,7 +21,7 @@ namespace KeyCard.Desktop.Services
             return Task.FromResult((IReadOnlyList<HousekeepingTask>)_tasks);
         }
 
-        public Task<bool> UpdateRoomStatusAsync(int roomId, RoomStatus status)
+        public Task<bool> UpdateRoomStatusAsync(int roomNumber, RoomStatus status)
         {
             // No-op mock
             return Task.FromResult(true);

@@ -4,11 +4,15 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.ReactiveUI;
 
+using KeyCard.Desktop.Configuration;
+using KeyCard.Desktop.Services;
+
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace KeyCard.Desktop
 {
@@ -16,12 +20,18 @@ namespace KeyCard.Desktop
     {
         public static async Task Main(string[] args)
         {
-            var host = Host.CreateDefaultBuilder(args)
+            var builder = Host.CreateDefaultBuilder(args);
+
+#if DEBUG
+            // Load appsettings.Development.json automatically during Debug runs
+            builder = builder.UseEnvironment(Environments.Development);
+#endif
+
+            var host = builder
                 .ConfigureAppConfiguration((ctx, cfg) =>
                 {
                     var env = ctx.HostingEnvironment;
 
-                    // Keep your environment-specific config loading behavior
                     cfg.Sources.Clear();
                     cfg.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                        .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: true)
@@ -29,60 +39,55 @@ namespace KeyCard.Desktop
                 })
                 .ConfigureServices((ctx, services) =>
                 {
-                    // Logging (console)
+                    // Logging
                     services.AddLogging(b => b.AddConsole());
 
-                    // Strongly-typed app config (kept)
+                    // Bind options (single source of truth for settings)
+                    services.Configure<KeyCardOptions>(ctx.Configuration.GetSection("KeyCard"));
+                    services.Configure<ApiOptions>(ctx.Configuration.GetSection("Api"));
+                    services.Configure<SignalROptions>(ctx.Configuration.GetSection("SignalR"));
+
+                    // Central environment/config service
+                    services.AddSingleton<IAppEnvironment, AppEnvironment>();
+
+                    // Back-compat shim for any code still using IAppConfig
                     services.AddSingleton<IAppConfig>(sp =>
                     {
-                        var cfg = sp.GetRequiredService<IConfiguration>();
-                        return new AppConfig(cfg);
+                        var env = sp.GetRequiredService<IAppEnvironment>();
+                        return new AppConfig(env);
                     });
 
-                    // Core services (kept)
-                    services.AddSingleton<Services.INavigationService, Services.NavigationService>();
-                    services.AddSingleton<Services.IAuthService, Services.MockAuthService>(); // swap later when wiring real auth
+                    // Core services
+                    services.AddSingleton<INavigationService, NavigationService>();
+                    services.AddSingleton<IAuthService, MockAuthService>(); // swap later for real auth
 
-                    // App services used by VMs (kept/added earlier)
-                    services.AddSingleton<Services.IBookingService, Services.MockBookingService>();
-                    services.AddSingleton<Services.IHousekeepingService, Services.MockHousekeepingService>();
+                    // App services used by VMs
+                    services.AddSingleton<IBookingService, MockBookingService>();
+                    services.AddSingleton<IHousekeepingService, MockHousekeepingService>();
 
-                    // ---- SignalR service registration (FIX) ----
-                    var isMock =
-                        string.Equals(ctx.Configuration["KeyCard:Mode"], "Mock", StringComparison.OrdinalIgnoreCase) ||
-                        (bool.TryParse(ctx.Configuration["UseMocks"], out var useMocks) && useMocks);
-
-                    if (isMock)
+                    // SignalR service: choose No-Op in Mock, real in Live — using the centralized env
+                    services.AddSingleton<ISignalRService>(sp =>
                     {
-                        // No-op in Mock mode
-                        services.AddSingleton<Services.ISignalRService, NoOpSignalRService>();
-                    }
-                    else
-                    {
-                        // Provide the required string ctor arg (hub URL) from configuration.
-                        services.AddSingleton<Services.ISignalRService>(sp =>
-                        {
-                            var url = ResolveBookingsHubUrl(sp);
-                            // ActivatorUtilities will satisfy other ctor deps automatically and pass our string.
-                            return ActivatorUtilities.CreateInstance<Services.SignalRService>(sp, url);
-                        });
-                    }
+                        var env = sp.GetRequiredService<IAppEnvironment>();
+                        if (env.IsMock) return new NoOpSignalRService();
 
-                    // ViewModels (kept + ensure all navigated VMs are registered)
+                        var url = env.BookingsHubUrl;
+                        return ActivatorUtilities.CreateInstance<SignalRService>(sp, url);
+                    });
+
+                    // ViewModels
                     services.AddSingleton<ViewModels.LoginViewModel>();
                     services.AddSingleton<ViewModels.DashboardViewModel>();
                     services.AddSingleton<ViewModels.FrontDeskViewModel>();
                     services.AddSingleton<ViewModels.HousekeepingViewModel>();
-                    services.AddSingleton<ViewModels.MainViewModel>(); // required by App startup
+                    services.AddSingleton<ViewModels.MainViewModel>();
 
-                    // App from DI (kept)
+                    // App
                     services.AddSingleton<App>();
                 })
                 .Build();
 
-            // Start Avalonia using the App instance from DI (kept)
             BuildAvaloniaApp(host).StartWithClassicDesktopLifetime(args);
-
             await Task.CompletedTask;
         }
 
@@ -91,35 +96,9 @@ namespace KeyCard.Desktop
                          .UsePlatformDetect()
                          .LogToTrace()
                          .UseReactiveUI();
-
-        /// <summary>
-        /// Picks the bookings hub URL from config. You can override with:
-        /// "SignalR:BookingsHubUrl": "https://your-api/hubs/bookings"
-        /// Otherwise it falls back to Api:BaseUrl + "/hubs/bookings".
-        /// </summary>
-        private static string ResolveBookingsHubUrl(IServiceProvider sp)
-        {
-            var cfg = sp.GetRequiredService<IConfiguration>();
-
-            var explicitUrl = cfg["SignalR:BookingsHubUrl"];
-            if (!string.IsNullOrWhiteSpace(explicitUrl))
-                return explicitUrl;
-
-            var baseUrl = cfg["Api:BaseUrl"];
-            if (string.IsNullOrWhiteSpace(baseUrl))
-                baseUrl = "http://localhost:5001";
-
-            return CombineUri(baseUrl, "hubs/bookings");
-        }
-
-        private static string CombineUri(string baseUrl, string path)
-        {
-            if (string.IsNullOrWhiteSpace(path)) return baseUrl;
-            if (!baseUrl.EndsWith("/")) baseUrl += "/";
-            return baseUrl + path.TrimStart('/');
-        }
     }
 
+    // ---- Back-compat shim so old code can still inject IAppConfig if needed ----
     public interface IAppConfig
     {
         string Mode { get; }
@@ -127,31 +106,27 @@ namespace KeyCard.Desktop
         string ApiBaseUrl { get; }
     }
 
-    public class AppConfig : IAppConfig
+    public sealed class AppConfig : IAppConfig
     {
         public string Mode { get; }
         public bool UseMocks { get; }
         public string ApiBaseUrl { get; }
 
-        public AppConfig(IConfiguration cfg)
+        public AppConfig(IAppEnvironment env)
         {
-            Mode = cfg["KeyCard:Mode"] ?? "Live";
-            UseMocks = bool.TryParse(cfg["UseMocks"], out var b) && b;
-            ApiBaseUrl = cfg["Api:BaseUrl"] ?? "";
+            Mode = env.IsMock ? "Mock" : "Live";
+            UseMocks = env.IsMock;
+            ApiBaseUrl = env.ApiBaseUrl;
         }
     }
 
-    /// <summary>
-    /// No-op SignalR for Mock/dev mode: satisfies ISignalRService so MainViewModel can start,
-    /// but avoids making any real network calls.
-    /// </summary>
-    internal sealed class NoOpSignalRService : Services.ISignalRService
+    /// <summary>No-op SignalR for Mock/dev mode.</summary>
+    internal sealed class NoOpSignalRService : ISignalRService
     {
         public HubConnection BookingsHub { get; }
 
         public NoOpSignalRService()
         {
-            // Harmless placeholder connection; we never StartAsync on it.
             BookingsHub = new HubConnectionBuilder()
                 .WithUrl("http://localhost/dev-null")
                 .Build();

@@ -1,13 +1,21 @@
-namespace KeyCard.Desktop;
-
-public sealed class KeyCardOptions
+// Configuration/KeyCardOptions.cs
+namespace KeyCard.Desktop.Configuration
 {
-    public string Mode { get; set; } = "Mock"; // "Mock" or "Live"
-    public ApiOptions Api { get; set; } = new();
-}
+    public sealed class KeyCardOptions
+    {
+        public string Mode { get; set; } = "Live";
+        public bool UseMocks { get; set; } // default(false) – no explicit initializer to satisfy CA1805
+    }
 
-public sealed class ApiOptions
-{
-    public string HttpsBaseUrl { get; set; } = "https://localhost:7224";
-    public string HttpBaseUrl { get; set; } = "http://localhost:5149";
+    public sealed class ApiOptions
+    {
+        public string? BaseUrl { get; set; }
+        public string? HttpsBaseUrl { get; set; }
+        public string? HttpBaseUrl { get; set; }
+    }
+
+    public sealed class SignalROptions
+    {
+        public string? BookingsHubUrl { get; set; }
+    }
 }
