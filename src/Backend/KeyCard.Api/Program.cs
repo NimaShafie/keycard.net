@@ -1,13 +1,12 @@
 using FluentValidation;
-
 using KeyCard.BusinessLogic;
+using KeyCard.BusinessLogic.ServiceInterfaces;
 using KeyCard.Core.Extensions;
 using KeyCard.Core.Middlewares;
 using KeyCard.Infrastructure.Identity;
 using KeyCard.Infrastructure.Models.AppDbContext;
-
+using KeyCard.Infrastructure.ServiceImplementation;
 using MediatR;
-
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -40,6 +39,8 @@ builder.Services.AddIdentity<ApplicationUser, ApplicationRole>()
 builder.Services.AddDbContext<ApplicationDBContext>(opts =>
     opts.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddTransient<IBookingService, BookingService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -67,9 +68,7 @@ using (var scope = app.Services.CreateScope())
 
     // Apply pending migrations
     await dbContext.Database.MigrateAsync();
-
-    // Seed roles and admin user
-    await IdentitySeeder.SeedRolesAndAdminAsync(services);
+    await DbSeeder.SeedAsync(services);
 }
 
 app.Run();

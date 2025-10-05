@@ -11,13 +11,13 @@ namespace KeyCard.Infrastructure.Models
 {
     public class DigitalKey : IDeletable, IAuditable
     {
-        public Guid Id { get; set; }
+        public int Id { get; set; }
         public string Token { get; set; } = default!;
         public DateTime IssuedAt { get; set; }
         public DateTime ExpiresAt { get; set; }
         public bool IsRevoked { get; set; }
 
-        public Guid BookingId { get; set; }
+        public int BookingId { get; set; }
         public Booking Booking { get; set; } = default!;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

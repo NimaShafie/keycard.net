@@ -12,7 +12,7 @@ namespace KeyCard.Infrastructure.Models.Users
 {
     public class GuestProfile : IDeletable, IAuditable
     {
-        public Guid Id { get; set; }
+        public int Id { get; set; }
         public string? Address { get; set; }
         public string? Country { get; set; }
 

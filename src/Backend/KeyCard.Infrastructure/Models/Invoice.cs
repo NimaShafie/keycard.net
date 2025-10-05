@@ -5,13 +5,13 @@ namespace KeyCard.Infrastructure.Models
 {
     public class Invoice : IDeletable, IAuditable
     {
-        public Guid Id { get; set; }
+        public int Id { get; set; }
         public string InvoiceNumber { get; set; } = default!;
         public DateTime IssuedAt { get; set; }
         public string PdfPath { get; set; } = default!;
         public decimal TotalAmount { get; set; }
 
-        public Guid BookingId { get; set; }
+        public int BookingId { get; set; }
         public Booking Booking { get; set; } = default!;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

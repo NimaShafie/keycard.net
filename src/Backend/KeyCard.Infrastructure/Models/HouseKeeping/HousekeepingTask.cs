@@ -7,13 +7,13 @@ namespace KeyCard.Infrastructure.Models.HouseKeeping
 {
     public class HousekeepingTask : IDeletable, IAuditable
     {
-        public Guid Id { get; set; }
+        public int Id { get; set; }
         public string TaskName { get; set; } = default!;
         public string? Notes { get; set; }
         public TaskStatusEnum Status { get; set; } = TaskStatusEnum.Pending;
         public DateTime? CompletedAt { get; set; }
 
-        public Guid RoomId { get; set; }
+        public int RoomId { get; set; }
         public Room Room { get; set; } = default!;
 
         public Guid? AssignedToId { get; set; }

@@ -11,7 +11,7 @@ namespace KeyCard.Infrastructure.Models.Users
 {
     public class StaffProfile : IDeletable, IAuditable
     {
-        public Guid Id { get; set; }
+        public int Id { get; set; }
         public string Department { get; set; } = default!;  // e.g. FrontDesk, Housekeeping
 
         public Guid UserId { get; set; }

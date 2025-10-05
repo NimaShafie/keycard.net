@@ -12,4 +12,8 @@
     <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="11.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\KeyCard.Core\KeyCard.Core.csproj" />
+  </ItemGroup>
+
 </Project>

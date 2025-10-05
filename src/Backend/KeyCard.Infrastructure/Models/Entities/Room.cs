@@ -11,15 +11,15 @@ namespace KeyCard.Infrastructure.Models.Entities
 {
     public class Room : IDeletable, IAuditable
     {
-        public Guid Id { get; set; }
+        public int Id { get; set; }
         public string RoomNumber { get; set; } = default!;
         public string Floor { get; set; } = default!;
         public RoomStatus Status { get; set; } = RoomStatus.Vacant;
 
-        public Guid RoomTypeId { get; set; }
+        public int RoomTypeId { get; set; }
         public RoomType RoomType { get; set; } = default!;
 
-        public Guid HotelId { get; set; }
+        public int HotelId { get; set; }
         public Hotel Hotel { get; set; } = default!;
 
         public ICollection<Booking> Bookings { get; set; } = new List<Booking>();

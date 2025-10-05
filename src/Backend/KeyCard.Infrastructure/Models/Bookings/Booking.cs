@@ -4,9 +4,9 @@ using KeyCard.Infrastructure.Models.Users;
 
 namespace KeyCard.Infrastructure.Models.Bookings
 {
-    public class Booking : IDeletable
+    public class Booking : IDeletable, IAuditable
     {
-        public Guid Id { get; set; }
+        public int Id { get; set; }
         public string ConfirmationCode { get; set; } = default!;
 
         public DateTime CheckInDate { get; set; }
@@ -18,15 +18,20 @@ namespace KeyCard.Infrastructure.Models.Bookings
         public decimal TotalAmount { get; set; }
         public bool IsPrepaid { get; set; }
 
-        public Guid GuestProfileId { get; set; }
+        public int GuestProfileId { get; set; }
         public GuestProfile GuestProfile { get; set; } = default!;
 
-        public Guid RoomId { get; set; }
+        public int RoomId { get; set; }
         public Room Room { get; set; } = default!;
 
         public ICollection<Payment> Payments { get; set; } = new List<Payment>();
         public Invoice? Invoice { get; set; }
         public DigitalKey? DigitalKey { get; set; }
+
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public string? CreatedBy { get; set; }
+        public DateTime? LastUpdatedAt { get; set; }
+        public string? LastUpdatedBy { get; set; }
         public bool IsDeleted { get; set; }
 
     }

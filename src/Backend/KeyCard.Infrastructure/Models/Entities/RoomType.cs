@@ -10,14 +10,14 @@ namespace KeyCard.Infrastructure.Models.Entities
 {
     public class RoomType : IDeletable, IAuditable
     {
-        public Guid Id { get; set; }
+        public int Id { get; set; }
         public string Name { get; set; } = default!;
         public string Description { get; set; } = default!;
         public int Capacity { get; set; }
         public decimal BaseRate { get; set; }
         public decimal? SeasonalRate { get; set; }
 
-        public Guid HotelId { get; set; }
+        public int HotelId { get; set; }
         public Hotel Hotel { get; set; } = default!;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public string? CreatedBy { get; set; }
