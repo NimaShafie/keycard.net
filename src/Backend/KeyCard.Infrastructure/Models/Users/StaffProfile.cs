@@ -5,26 +5,23 @@ using System.Text;
 using System.Threading.Tasks;
 
 using KeyCard.Core.Common;
+using KeyCard.Infrastructure.Identity;
 
-namespace KeyCard.Infrastructure.Models.Entities
+namespace KeyCard.Infrastructure.Models.Users
 {
-    public class RoomType : IDeletable, IAuditable
+    public class StaffProfile : IDeletable, IAuditable
     {
         public Guid Id { get; set; }
-        public string Name { get; set; } = default!;
-        public string Description { get; set; } = default!;
-        public int Capacity { get; set; }
-        public decimal BaseRate { get; set; }
-        public decimal? SeasonalRate { get; set; }
+        public string Department { get; set; } = default!;  // e.g. FrontDesk, Housekeeping
 
-        public Guid HotelId { get; set; }
-        public Hotel Hotel { get; set; } = default!;
+        public Guid UserId { get; set; }
+        public ApplicationUser User { get; set; } = default!;
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public string? CreatedBy { get; set; }
         public DateTime? LastUpdatedAt { get; set; }
         public string? LastUpdatedBy { get; set; }
         public bool IsDeleted { get; set; }
-
     }
 
 }
