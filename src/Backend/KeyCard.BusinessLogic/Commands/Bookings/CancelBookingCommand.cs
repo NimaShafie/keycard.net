@@ -1,10 +1,11 @@
 using KeyCard.BusinessLogic.ServiceInterfaces;
+using KeyCard.BusinessLogic.ViewModels.RequestClaims;
 
 using MediatR;
 
 namespace KeyCard.BusinessLogic.Commands.Bookings
 {
-    public record CancelBookingCommand(int BookingId) : IRequest<bool>;
+    public record CancelBookingCommand(int BookingId) : Request, IRequest<bool>;
 
     public class CancelBookingCommandHandler : IRequestHandler<CancelBookingCommand, bool>
     {

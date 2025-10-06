@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KeyCard.BusinessLogic.ViewModels
+namespace KeyCard.BusinessLogic.ViewModels.Task
 {
-    public record TaskDto(
+    public record TaskViewModel(
         int Id,
         string TaskName,
         string? Notes,

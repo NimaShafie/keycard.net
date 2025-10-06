@@ -1,9 +1,10 @@
 using KeyCard.BusinessLogic.ServiceInterfaces;
+using KeyCard.BusinessLogic.ViewModels.RequestClaims;
 using MediatR;
 
 namespace KeyCard.BusinessLogic.Commands.Tasks
 {
-    public record CompleteTaskCommand(int Id) : IRequest<bool>;
+    public record CompleteTaskCommand(int Id) : Request, IRequest<bool>;
 
     public class CompleteTaskCommandHandler : IRequestHandler<CompleteTaskCommand, bool>
     {

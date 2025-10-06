@@ -1,5 +1,7 @@
+using KeyCard.Api.Helper;
 using KeyCard.BusinessLogic.Commands.Tasks;
-using KeyCard.BusinessLogic.ViewModels;
+using KeyCard.BusinessLogic.ViewModels.Task;
+using KeyCard.BusinessLogic.ViewModels.UserClaims;
 
 using MediatR;
 
@@ -14,22 +16,30 @@ namespace KeyCard.Api.Controllers
     public class HousekeepingController : ControllerBase
     {
         private readonly IMediator _mediator;
+        private readonly IHttpContextAccessor _contextAccessor;
+        private readonly UserClaimsViewModel _user;
 
-        public HousekeepingController(IMediator mediator)
+        public HousekeepingController(IMediator mediator, IHttpContextAccessor contextAccessor)
         {
             _mediator = mediator;
+            _contextAccessor = contextAccessor;
+            _user = _contextAccessor.HttpContext!.User.GetUser();
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<TaskDto>>> GetAll()
+        public async Task<ActionResult<List<TaskViewModel>>> GetAll()
         {
-            var result = await _mediator.Send(new GetAllTasksCommand());
+            GetAllTasksCommand command = new GetAllTasksCommand();
+            command.User = this._user;
+
+            var result = await _mediator.Send(command);
             return Ok(result);
         }
 
         [HttpPost]
-        public async Task<ActionResult<TaskDto>> Create([FromBody] CreateTaskCommand command)
+        public async Task<ActionResult<TaskViewModel>> Create([FromBody] CreateTaskCommand command)
         {
+            command.User = this._user;
             var result = await _mediator.Send(command);
             return CreatedAtAction(nameof(GetAll), new { id = result.Id }, result);
         }
@@ -37,6 +47,8 @@ namespace KeyCard.Api.Controllers
         [HttpPut("{id:int}")]
         public async Task<ActionResult> Update(int id, [FromBody] UpdateTaskCommand command)
         {
+            command.User = this._user;
+
             if (id != command.Id) return BadRequest("Task ID mismatch.");
             var success = await _mediator.Send(command);
             return success ? Ok("Task updated successfully.") : NotFound("Task not found.");
@@ -45,14 +57,16 @@ namespace KeyCard.Api.Controllers
         [HttpPost("{id:int}/complete")]
         public async Task<ActionResult> Complete(int id)
         {
-            var success = await _mediator.Send(new CompleteTaskCommand(id));
+            var command = new CompleteTaskCommand(id) { User = this._user };
+            var success = await _mediator.Send(command);
             return success ? Ok("Task completed.") : NotFound("Task not found.");
         }
 
         [HttpDelete("{id:int}")]
         public async Task<ActionResult> Delete(int id)
         {
-            var success = await _mediator.Send(new DeleteTaskCommand(id));
+            var command = new DeleteTaskCommand(id) { User = this._user };
+            var success = await _mediator.Send(command);
             return success ? Ok("Task deleted.") : NotFound("Task not found.");
         }
     }

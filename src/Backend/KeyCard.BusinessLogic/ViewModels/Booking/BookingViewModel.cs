@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 using KeyCard.Core.Common;
 
-namespace KeyCard.BusinessLogic.ViewModels
+namespace KeyCard.BusinessLogic.ViewModels.Booking
 {
-    public record BookingDto(
+    public record BookingViewModel(
         int Id,
         string ConfirmationCode,
         DateTime CheckInDate,

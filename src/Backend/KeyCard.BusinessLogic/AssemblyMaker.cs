@@ -6,6 +6,6 @@ using System.Threading.Tasks;
 
 namespace KeyCard.BusinessLogic
 {
-    // Marker class – no logic inside
+    // Marker class – no logic inside (just to mark the assembly)
     public class AssemblyMarker { }
 }

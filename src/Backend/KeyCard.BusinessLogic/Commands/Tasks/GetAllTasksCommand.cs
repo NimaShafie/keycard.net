@@ -1,12 +1,13 @@
 using KeyCard.BusinessLogic.ServiceInterfaces;
-using KeyCard.BusinessLogic.ViewModels;
+using KeyCard.BusinessLogic.ViewModels.RequestClaims;
+using KeyCard.BusinessLogic.ViewModels.Task;
 using MediatR;
 
 namespace KeyCard.BusinessLogic.Commands.Tasks
 {
-    public record GetAllTasksCommand() : IRequest<List<TaskDto>>;
+    public record GetAllTasksCommand() : Request, IRequest<List<TaskViewModel>>;
 
-    public class GetAllTasksCommandHandler : IRequestHandler<GetAllTasksCommand, List<TaskDto>>
+    public class GetAllTasksCommandHandler : IRequestHandler<GetAllTasksCommand, List<TaskViewModel>>
     {
         private readonly ITaskService _taskService;
 
@@ -15,7 +16,7 @@ namespace KeyCard.BusinessLogic.Commands.Tasks
             _taskService = taskService;
         }
 
-        public async Task<List<TaskDto>> Handle(GetAllTasksCommand command, CancellationToken cancellationToken)
+        public async Task<List<TaskViewModel>> Handle(GetAllTasksCommand command, CancellationToken cancellationToken)
         {
             return await _taskService.GetAllTasksAsync(command, cancellationToken);
         }

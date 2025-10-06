@@ -1,10 +1,11 @@
 using KeyCard.BusinessLogic.ServiceInterfaces;
+using KeyCard.BusinessLogic.ViewModels.RequestClaims;
 using MediatR;
 
 namespace KeyCard.BusinessLogic.Commands.Tasks
 {
     public record UpdateTaskCommand(int Id, string TaskName, string? Notes, Guid? AssignedToId, string Status)
-        : IRequest<bool>;
+        : Request, IRequest<bool>;
 
     public class UpdateTaskCommandHandler : IRequestHandler<UpdateTaskCommand, bool>
     {

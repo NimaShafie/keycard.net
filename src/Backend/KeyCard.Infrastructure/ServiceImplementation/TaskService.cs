@@ -1,6 +1,6 @@
 using KeyCard.BusinessLogic.Commands.Tasks;
 using KeyCard.BusinessLogic.ServiceInterfaces;
-using KeyCard.BusinessLogic.ViewModels;
+using KeyCard.BusinessLogic.ViewModels.Task;
 using KeyCard.Core.Common;
 using KeyCard.Infrastructure.Models.AppDbContext;
 using KeyCard.Infrastructure.Models.HouseKeeping;
@@ -18,13 +18,13 @@ namespace KeyCard.Infrastructure.ServiceImplementation
             _context = context;
         }
 
-        public async Task<List<TaskDto>> GetAllTasksAsync(GetAllTasksCommand command, CancellationToken cancellationToken)
+        public async Task<List<TaskViewModel>> GetAllTasksAsync(GetAllTasksCommand command, CancellationToken cancellationToken)
         {
             return await _context.HousekeepingTasks
                 .Where(t => !t.IsDeleted)
                 .Include(t => t.Room)
                 .Include(t => t.AssignedTo)
-                .Select(t => new TaskDto(
+                .Select(t => new TaskViewModel(
                     t.Id,
                     t.TaskName,
                     t.Notes,
@@ -34,7 +34,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<TaskDto?> GetTaskByIdAsync(GetTaskByIdCommand command, CancellationToken cancellationToken)
+        public async Task<TaskViewModel?> GetTaskByIdAsync(GetTaskByIdCommand command, CancellationToken cancellationToken)
         {
             var task = await _context.HousekeepingTasks
                 .Include(t => t.Room)
@@ -43,11 +43,11 @@ namespace KeyCard.Infrastructure.ServiceImplementation
 
             if (task == null) return null;
 
-            return new TaskDto(task.Id, task.TaskName, task.Notes, task.Status.ToString(),
+            return new TaskViewModel(task.Id, task.TaskName, task.Notes, task.Status.ToString(),
                 task.Room.RoomNumber, task.AssignedTo?.FullName);
         }
 
-        public async Task<TaskDto> CreateTaskAsync(CreateTaskCommand command, CancellationToken cancellationToken)
+        public async Task<TaskViewModel> CreateTaskAsync(CreateTaskCommand command, CancellationToken cancellationToken)
         {
             var task = new HousekeepingTask
             {
@@ -57,14 +57,14 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                 AssignedToId = command.AssignedToId,
                 Status = TaskStatusEnum.Pending,
                 CreatedAt = DateTime.UtcNow,
-                CreatedBy = "system"
-            };
+                CreatedBy = new Guid("system")
+            };  
 
             _context.HousekeepingTasks.Add(task);
             await _context.SaveChangesAsync(cancellationToken);
 
             var room = await _context.Rooms.FindAsync(task.RoomId);
-            return new TaskDto(task.Id, task.TaskName, task.Notes, task.Status.ToString(),
+            return new TaskViewModel(task.Id, task.TaskName, task.Notes, task.Status.ToString(),
                 room?.RoomNumber ?? "N/A", null);
         }
 
@@ -84,7 +84,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                 task.Status = status;
 
             task.LastUpdatedAt = DateTime.UtcNow;
-            task.LastUpdatedBy = "system"; // Replace with current user if available
+            task.LastUpdatedBy = new Guid("system"); // Replace with current user if available
 
             _context.HousekeepingTasks.Update(task);
             await _context.SaveChangesAsync(cancellationToken);
@@ -107,7 +107,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
             task.Status = TaskStatusEnum.Completed;
             task.CompletedAt = DateTime.UtcNow;
             task.LastUpdatedAt = DateTime.UtcNow;
-            task.LastUpdatedBy = "system";
+            task.LastUpdatedBy = new Guid("system");
 
             _context.HousekeepingTasks.Update(task);
             await _context.SaveChangesAsync(cancellationToken);
@@ -123,7 +123,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
 
             task.IsDeleted = true;
             task.LastUpdatedAt = DateTime.UtcNow;
-            task.LastUpdatedBy = "system"; // or current user
+            task.LastUpdatedBy = new Guid("system"); // or current user
             _context.HousekeepingTasks.Update(task);
             await _context.SaveChangesAsync(cancellationToken);
 

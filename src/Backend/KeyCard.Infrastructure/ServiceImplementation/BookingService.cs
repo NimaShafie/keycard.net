@@ -1,6 +1,6 @@
 using KeyCard.BusinessLogic.Commands.Bookings;
 using KeyCard.BusinessLogic.ServiceInterfaces;
-using KeyCard.BusinessLogic.ViewModels;
+using KeyCard.BusinessLogic.ViewModels.Booking;
 using KeyCard.Core.Common;
 using KeyCard.Infrastructure.Models.AppDbContext;
 using KeyCard.Infrastructure.Models.Bookings;
@@ -19,7 +19,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
             _context = context;
         }
 
-        public async Task<BookingDto> CreateBookingAsync(CreateBookingCommand command, CancellationToken cancellationToken)
+        public async Task<BookingViewModel> CreateBookingAsync(CreateBookingCommand command, CancellationToken cancellationToken)
         {
             // Validate Room availability
             bool isAvailable = !await _context.Bookings.AnyAsync(
@@ -46,7 +46,11 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                 TotalAmount = await _context.Rooms
                     .Where(r => r.Id == command.RoomId)
                     .Select(r => r.RoomType.BaseRate)
-                    .FirstAsync(cancellationToken)
+                    .FirstAsync(cancellationToken),
+                CreatedBy = command.User!.UserId,
+                CreatedAt = DateTime.UtcNow,
+                LastUpdatedAt = DateTime.UtcNow,
+                LastUpdatedBy = command.User!.UserId
             };
 
             _context.Bookings.Add(booking);
@@ -59,7 +63,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                 .Include(g => g.User)
                 .FirstAsync(g => g.Id == command.GuestProfileId, cancellationToken);
 
-            return new BookingDto(
+            return new BookingViewModel(
                 booking.Id,
                 booking.ConfirmationCode,
                 booking.CheckInDate,
@@ -71,7 +75,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
             );
         }
 
-        public async Task<BookingDto> GetBookingByIdAsync(GetBookingByIdCommand command, CancellationToken cancellationToken)
+        public async Task<BookingViewModel> GetBookingByIdAsync(GetBookingByIdCommand command, CancellationToken cancellationToken)
         {
             var booking = await _context.Bookings
                 .Include(b => b.GuestProfile)
@@ -79,7 +83,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                 .Include(b => b.Room)
                     .ThenInclude(r => r.RoomType)
                 .Where(b => b.Id == command.BookingId)
-                .Select(b => new BookingDto(
+                .Select(b => new BookingViewModel(
                     b.Id,
                     b.ConfirmationCode,
                     b.CheckInDate,
@@ -94,7 +98,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
             return booking;
         }
 
-        public async Task<List<BookingDto>> GetAllBookingsAsync(GetAllBookingsCommand command, CancellationToken cancellationToken)
+        public async Task<List<BookingViewModel>> GetAllBookingsAsync(GetAllBookingsCommand command, CancellationToken cancellationToken)
         {
             var bookingsQuery = _context.Bookings
                 .Include(b => b.Room)
@@ -123,7 +127,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
 
             var list = await bookingsQuery
                 .OrderByDescending(b => b.CreatedAt)
-                .Select(b => new BookingDto(
+                .Select(b => new BookingViewModel(
                     b.Id,
                     b.ConfirmationCode,
                     b.CheckInDate,
@@ -151,8 +155,9 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                 throw new InvalidOperationException("Cannot cancel a booking that has already been checked in or checked out.");
 
             // Cancel booking
-            booking.Status = BookingStatus.Cancelled;
+            booking.ChangeStatus(BookingStatus.Cancelled);
             booking.LastUpdatedAt = DateTime.UtcNow;
+            booking.LastUpdatedBy = command.User!.UserId;
             _context.Bookings.Update(booking);
 
             // Free the room if no other active booking overlaps
@@ -164,7 +169,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
 
             if (!hasOtherActive)
             {
-                booking.Room.Status = RoomStatus.Vacant;
+                booking.Room.ChangeStatus(RoomStatus.Vacant);
                 _context.Rooms.Update(booking.Room);
             }
 

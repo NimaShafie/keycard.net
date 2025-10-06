@@ -18,9 +18,9 @@ namespace KeyCard.Infrastructure.Models.Entities
         public string ContactEmail { get; set; } = default!;
         public string ContactPhone { get; set; } = default!;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public string? CreatedBy { get; set; }
+        public Guid? CreatedBy { get; set; }
         public DateTime? LastUpdatedAt { get; set; }
-        public string? LastUpdatedBy { get; set; }
+        public Guid? LastUpdatedBy { get; set; }
 
         public ICollection<RoomType> RoomTypes { get; set; } = new List<RoomType>();
         public ICollection<Room> Rooms { get; set; } = new List<Room>();

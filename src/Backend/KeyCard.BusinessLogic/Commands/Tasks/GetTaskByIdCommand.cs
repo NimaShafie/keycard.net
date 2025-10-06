@@ -1,19 +1,13 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 using KeyCard.BusinessLogic.ServiceInterfaces;
-using KeyCard.BusinessLogic.ViewModels;
-
+using KeyCard.BusinessLogic.ViewModels.RequestClaims;
+using KeyCard.BusinessLogic.ViewModels.Task;
 using MediatR;
 
 namespace KeyCard.BusinessLogic.Commands.Tasks
 {
-    public record GetTaskByIdCommand (int Id) : IRequest<TaskDto>;
+    public record GetTaskByIdCommand (int Id) : Request, IRequest<TaskViewModel>;
 
-    public class GetTaskByIdCommandHandler : IRequestHandler<GetTaskByIdCommand, TaskDto>
+    public class GetTaskByIdCommandHandler : IRequestHandler<GetTaskByIdCommand, TaskViewModel>
     {
         private readonly ITaskService _taskService;
 
@@ -22,7 +16,7 @@ namespace KeyCard.BusinessLogic.Commands.Tasks
             _taskService = taskService;
         }
 
-        public async Task<TaskDto> Handle(GetTaskByIdCommand command, CancellationToken cancellationToken)
+        public async Task<TaskViewModel> Handle(GetTaskByIdCommand command, CancellationToken cancellationToken)
         {
             return await _taskService.GetTaskByIdAsync(command, cancellationToken);
         }

@@ -1,17 +1,10 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 using KeyCard.BusinessLogic.ServiceInterfaces;
-using KeyCard.BusinessLogic.ViewModels;
-
+using KeyCard.BusinessLogic.ViewModels.RequestClaims;
 using MediatR;
 
 namespace KeyCard.BusinessLogic.Commands.Tasks
 {
-    public record DeleteTaskCommand(int Id) : IRequest<bool>;
+    public record DeleteTaskCommand(int Id) : Request, IRequest<bool>;
 
     public class DeleteTaskCommandHandler : IRequestHandler<DeleteTaskCommand, bool>
     {

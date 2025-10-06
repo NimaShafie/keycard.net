@@ -1,10 +1,12 @@
 using KeyCard.BusinessLogic.ServiceInterfaces;
-using KeyCard.BusinessLogic.ViewModels;
+using KeyCard.BusinessLogic.ViewModels.Booking;
+using KeyCard.BusinessLogic.ViewModels.RequestClaims;
+
 using MediatR;
 
 namespace KeyCard.BusinessLogic.Commands.Bookings
 {
-    public record CreateBookingCommand
+    public record CreateBookingCommand 
     (
         int GuestProfileId,
         int RoomId,
@@ -13,9 +15,9 @@ namespace KeyCard.BusinessLogic.Commands.Bookings
         int Adults,
         int Children,
         bool IsPrepaid
-    ) : IRequest<BookingDto>;
+    ) : Request, IRequest<BookingViewModel>;
 
-    public class CreateBookingCommandHandler : IRequestHandler<CreateBookingCommand, BookingDto>
+    public class CreateBookingCommandHandler : IRequestHandler<CreateBookingCommand, BookingViewModel>
     {
         private readonly IBookingService _bookingService;
         public CreateBookingCommandHandler(IBookingService bookingService)
@@ -23,7 +25,7 @@ namespace KeyCard.BusinessLogic.Commands.Bookings
             _bookingService = bookingService;
         }
 
-        public async Task<BookingDto> Handle(CreateBookingCommand command, CancellationToken cancellationToken)
+        public async Task<BookingViewModel> Handle(CreateBookingCommand command, CancellationToken cancellationToken)
         {
             return await _bookingService.CreateBookingAsync(command, cancellationToken);
         }

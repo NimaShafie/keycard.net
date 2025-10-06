@@ -1,3 +1,4 @@
+using KeyCard.BusinessLogic.Commands.Bookings;
 using KeyCard.Core.Common;
 using KeyCard.Infrastructure.Models.Entities;
 using KeyCard.Infrastructure.Models.Users;
@@ -29,10 +30,15 @@ namespace KeyCard.Infrastructure.Models.Bookings
         public DigitalKey? DigitalKey { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public string? CreatedBy { get; set; }
+        public Guid? CreatedBy { get; set; }
         public DateTime? LastUpdatedAt { get; set; }
-        public string? LastUpdatedBy { get; set; }
+        public Guid? LastUpdatedBy { get; set; }
         public bool IsDeleted { get; set; }
+
+        public void ChangeStatus(BookingStatus status)
+        {
+            this.Status = status;
+        }
 
     }
 

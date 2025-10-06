@@ -85,7 +85,7 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                 ContactEmail = "info@keycardhotel.com",
                 ContactPhone = "+1 (555) 555-5555",
                 CreatedAt = DateTime.UtcNow,
-                CreatedBy = "system"
+                CreatedBy = new Guid()
             };
 
             context.Hotels.Add(hotel);
@@ -110,7 +110,7 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                     Capacity = 1,
                     BaseRate = 80,
                     HotelId = hotel.Id,
-                    CreatedBy = "system",
+                    CreatedBy = new Guid(),
                     CreatedAt = DateTime.UtcNow
                 },
                 new RoomType
@@ -120,7 +120,7 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                     Capacity = 2,
                     BaseRate = 120,
                     HotelId = hotel.Id,
-                    CreatedBy = "system",
+                    CreatedBy = new Guid(),
                     CreatedAt = DateTime.UtcNow
                 },
                 new RoomType
@@ -130,7 +130,7 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                     Capacity = 2,
                     BaseRate = 160,
                     HotelId = hotel.Id,
-                    CreatedBy = "system",
+                    CreatedBy = new Guid(),
                     CreatedAt = DateTime.UtcNow
                 },
                 new RoomType
@@ -140,7 +140,7 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                     Capacity = 3,
                     BaseRate = 220,
                     HotelId = hotel.Id,
-                    CreatedBy = "system",
+                    CreatedBy = new Guid(),
                     CreatedAt = DateTime.UtcNow
                 },
                 new RoomType
@@ -150,7 +150,7 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                     Capacity = 4,
                     BaseRate = 350,
                     HotelId = hotel.Id,
-                    CreatedBy = "system",
+                    CreatedBy = new Guid(),
                     CreatedAt = DateTime.UtcNow
                 }
             };
@@ -209,7 +209,7 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                         RoomTypeId = type.Id,
                         HotelId = hotel.Id,
                         CreatedAt = DateTime.UtcNow,
-                        CreatedBy = "system"
+                        CreatedBy = new Guid()
                     });
                 }
             }
@@ -261,7 +261,7 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                         UserId = user.Id,
                         Address = "123 Demo Street",
                         Country = "USA",
-                        CreatedBy = "system",
+                        CreatedBy = new Guid(),
                         CreatedAt = DateTime.UtcNow
                     };
 
@@ -311,7 +311,7 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                         UserId = user.Id,
                         Department = department,
                         IsDeleted = false,
-                        CreatedBy = "system",
+                        CreatedBy = new Guid(),
                         CreatedAt = DateTime.UtcNow
                     };
 
