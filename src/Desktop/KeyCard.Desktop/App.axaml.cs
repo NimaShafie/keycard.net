@@ -1,12 +1,12 @@
+// src/Desktop/KeyCard.Desktop/App.axaml.cs
 using System;
 
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Controls.Templates;
 using Avalonia.Markup.Xaml;
+using Avalonia.Media;
 
-using KeyCard.Desktop.Services;
 using KeyCard.Desktop.ViewModels;
 using KeyCard.Desktop.Views;
 
@@ -17,64 +17,70 @@ namespace KeyCard.Desktop;
 public partial class App : Application
 {
     private readonly IServiceProvider _services;
-    public App(IServiceProvider services) => _services = services;
+    private Exception? _xamlLoadError;
 
-    public override void Initialize() => AvaloniaXamlLoader.Load(this);
+    public App(IServiceProvider services)
+        => _services = services ?? throw new ArgumentNullException(nameof(services));
+
+    public override void Initialize()
+    {
+        try
+        {
+            AvaloniaXamlLoader.Load(this);
+        }
+        catch (Exception ex)
+        {
+            _xamlLoadError = ex;
+        }
+    }
 
     public override void OnFrameworkInitializationCompleted()
     {
-        Console.WriteLine("[App] OnFrameworkInitializationCompleted()");
-        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
+            return;
+
+        // 1) Always create + show a window *first*, so the lifetime stays alive.
+        var main = new MainWindow
         {
-            try
+            WindowStartupLocation = WindowStartupLocation.CenterScreen,
+            Title = "KeyCard.NET — Staff Console"
+        };
+        desktop.MainWindow = main;
+        main.Show();
+
+        // 2) Now try to wire DI + VM. If anything fails, keep the window and display the error.
+        try
+        {
+            if (_xamlLoadError is not null)
+                throw new InvalidOperationException("App XAML failed to load.", _xamlLoadError);
+
+            // Resolve the shell (MainViewModel) from DI
+            var shell = _services.GetRequiredService<MainViewModel>();
+
+            // Ensure we start at Login if nothing has set a page yet
+            if (shell.Current is null)
             {
-                // Shell + starting page
-                var shell = _services.GetRequiredService<MainViewModel>();
-                if (shell.Current is null)
-                {
-                    Console.WriteLine("[App] Setting initial VM -> LoginViewModel");
-                    shell.Current = _services.GetRequiredService<LoginViewModel>();
-                }
-
-                // Ensure nav service is constructed (no-op but helps later navigation)
-                //_ = _services.GetRequiredService<INavigationService>();
-
-                // Create the window yourself and bind the shell VM
-                Console.WriteLine("[App] Creating MainWindow(shell) …");
-                var main = new MainWindow(shell)
-                {
-                    WindowStartupLocation = WindowStartupLocation.CenterScreen
-                };
-
-                // Optional belt-and-suspenders: VM->View mapping in code
-                // main.DataTemplates.Add(new FuncDataTemplate<LoginViewModel>((_,__) => new LoginView(), true));
-
-                desktop.MainWindow = main;
-                Console.WriteLine("[App] Showing MainWindow …");
-                main.Show();
-                Console.WriteLine("[App] MainWindow.Show() done");
+                var login = _services.GetRequiredService<LoginViewModel>();
+                shell.Current = login;
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine("[App] ERROR while creating window: " + ex);
-                // Force at least *some* window so the loop doesn't exit silently
-                var fallback = new Window
-                {
-                    Content = new TextBlock { Text = "Startup error: " + ex.Message, Margin = new Avalonia.Thickness(20) },
-                    Width = 800,
-                    Height = 500,
-                    WindowStartupLocation = WindowStartupLocation.CenterScreen
-                };
-                desktop.MainWindow = fallback;
-                fallback.Show();
-            }
+
+            // Bind the shell VM to the already-shown window
+            main.DataContext = shell;
         }
-        else
+        catch (Exception ex)
         {
-            Console.WriteLine("[App] Non-desktop lifetime (unexpected on Windows).");
+            // Replace window content with a readable error instead of exiting silently
+            main.Content = new ScrollViewer
+            {
+                Content = new TextBlock
+                {
+                    Text = "Startup error:\n\n" + ex,
+                    TextWrapping = TextWrapping.Wrap
+                },
+                Margin = new Thickness(20)
+            };
         }
 
         base.OnFrameworkInitializationCompleted();
     }
-
 }

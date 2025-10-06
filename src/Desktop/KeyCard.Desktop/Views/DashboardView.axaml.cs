@@ -1,3 +1,4 @@
+// Views/DashboardView.axaml.cs
 using Avalonia.Controls;
 
 namespace KeyCard.Desktop.Views;

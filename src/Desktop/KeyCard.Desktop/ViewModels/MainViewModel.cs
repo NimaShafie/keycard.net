@@ -1,4 +1,5 @@
 // ViewModels/MainViewModel.cs
+using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
@@ -10,23 +11,59 @@ using CommunityToolkit.Mvvm.Input;
 using KeyCard.Desktop.Models;
 using KeyCard.Desktop.Services;
 
+using Avalonia.Threading;
+
 namespace KeyCard.Desktop.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {
     private readonly IBookingService _bookings;
     private readonly ISignalRService _signalR;
+    private readonly IAuthService _auth;
+    private readonly INavigationService _nav;
 
     public ObservableCollection<Booking> BookingItems { get; } = new();
 
     [ObservableProperty] private ViewModelBase? current;
-
     [ObservableProperty] private bool isBusy;
 
-    public MainViewModel(IBookingService bookings, ISignalRService signalR)
+    [ObservableProperty] private bool isAuthenticated;
+    [ObservableProperty] private string displayName = string.Empty;
+
+    public string AvatarInitials => string.Join("",
+        (DisplayName ?? string.Empty)
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Take(2)
+            .Select(s => char.ToUpperInvariant(s[0])));
+
+    public MainViewModel(IBookingService bookings, ISignalRService signalR, IAuthService auth, INavigationService nav)
     {
         _bookings = bookings;
         _signalR = signalR;
+        _auth = auth;
+        _nav = nav;
+
+        // reflect initial state & subscribe to changes
+        ApplyAuth();
+        _auth.StateChanged += (_, __) => ApplyAuth();
+
+        // Schedule initial navigation so we don't block the UI thread
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (!_auth.IsAuthenticated)
+                _nav.NavigateTo<LoginViewModel>();
+            else
+                _nav.NavigateTo<DashboardViewModel>();
+        }, DispatcherPriority.Background);
+    }
+
+    private void ApplyAuth()
+    {
+        IsAuthenticated = _auth.IsAuthenticated;
+        DisplayName = _auth.DisplayName ?? string.Empty;
+
+        // refresh computed initials
+        OnPropertyChanged(nameof(AvatarInitials));
     }
 
     [RelayCommand]
@@ -40,8 +77,29 @@ public partial class MainViewModel : ObservableObject
             foreach (var b in items) BookingItems.Add(b);
 
             await _signalR.StartAsync(ct);
-            // Wire hub messages later
         }
         finally { IsBusy = false; }
+    }
+
+    // Profile menu
+    [RelayCommand]
+    private void OpenProfileMenu()
+    {
+        // Touch instance state so CA1822 doesn't suggest 'static'
+        _ = IsAuthenticated;
+        // Flyout opening is handled by XAML; no further action needed here.
+    }
+
+    [RelayCommand]
+    private void OpenProfile() => _nav.NavigateTo<ProfileViewModel>();
+
+    [RelayCommand]
+    private void OpenSettings() => _nav.NavigateTo<SettingsViewModel>();
+
+    [RelayCommand]
+    private void Logout()
+    {
+        _auth.Logout();
+        _nav.NavigateTo<LoginViewModel>();
     }
 }

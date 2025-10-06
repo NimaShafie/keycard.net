@@ -1,0 +1,10 @@
+<!-- src/Desktop/KeyCard.Desktop/Views/SettingsView.axaml -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vms="clr-namespace:KeyCard.Desktop.ViewModels"
+             x:Class="KeyCard.Desktop.Views.SettingsView"
+             x:DataType="vms:SettingsViewModel">
+  <Grid Margin="20">
+    <TextBlock Text="Settings (coming soon)" FontSize="18" />
+  </Grid>
+</UserControl>

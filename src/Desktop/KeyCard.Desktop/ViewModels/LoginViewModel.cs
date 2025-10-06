@@ -1,4 +1,4 @@
-// ViewModels/LoginViewModel.cs
+// ViewModels/LoginViewModel.cs  (drop-in replacement keeping your structure)
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -81,6 +81,8 @@ namespace KeyCard.Desktop.ViewModels
             {
                 if (IsMockMode)
                 {
+                    // ✅ Set authenticated state in the auth service before navigating
+                    await _auth.LoginMockAsync(ct);
                     _nav.NavigateTo<DashboardViewModel>();
                     return;
                 }
@@ -102,6 +104,8 @@ namespace KeyCard.Desktop.ViewModels
         private void ContinueMock()
         {
             if (!IsMockMode) return;
+            // ✅ Mark as authenticated for mock users
+            _ = _auth.LoginMockAsync(CancellationToken.None);
             _nav.NavigateTo<DashboardViewModel>();
         }
     }

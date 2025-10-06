@@ -19,7 +19,6 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             Console.WriteLine("[MainWindow] InitializeComponent failed: " + ex);
-            // Fallback so you still see a window:
             Content = new TextBlock { Text = "Failed to load MainWindow.axaml", Margin = new Thickness(20) };
         }
     }
