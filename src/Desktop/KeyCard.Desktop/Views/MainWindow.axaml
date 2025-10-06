@@ -1,3 +1,4 @@
+<!-- src/Desktop/KeyCard.Desktop/Views/MainWindow.axaml -->
 <Window
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -6,7 +7,88 @@
     x:DataType="vms:MainViewModel"
     Width="1100" Height="700"
     WindowStartupLocation="CenterScreen"
-    Title="KeyCard.NET — Staff Console">
+    Title="KeyCard.NET — Staff Console"
+    Background="#0F0F12">
 
-	<ContentControl Content="{Binding Current}" />
+  <Grid RowDefinitions="Auto,*">
+    <!-- Top Bar -->
+    <Border Height="64" Padding="16,0">
+      <Border.Background>
+        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+          <GradientStop Color="#6F3BF5" Offset="0"/>
+          <GradientStop Color="#3A2E5E" Offset="0.55"/>
+          <GradientStop Color="#1B1B22" Offset="1"/>
+        </LinearGradientBrush>
+      </Border.Background>
+
+      <Grid ColumnDefinitions="*,Auto,*">
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" />
+
+        <TextBlock Grid.Column="1"
+                   Text="KeyCard.NET"
+                   FontSize="22"
+                   FontWeight="Bold"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   Foreground="White"/>
+
+        <!-- Profile (right) -->
+        <StackPanel Grid.Column="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
+                    Spacing="10"
+                    IsVisible="{Binding IsAuthenticated}">
+          <TextBlock Text="{Binding DisplayName}"
+                     Foreground="White"
+                     VerticalAlignment="Center"
+                     Opacity="0.92"/>
+
+          <Button Classes="profileButton"
+                  Command="{Binding OpenProfileMenuCommand}">
+            <Button.Content>
+              <Grid Width="36" Height="36">
+                <Ellipse Fill="#2C2C34" />
+                <TextBlock Text="{Binding AvatarInitials}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           FontWeight="SemiBold"
+                           Foreground="White"/>
+              </Grid>
+            </Button.Content>
+            <Button.Flyout>
+              <MenuFlyout>
+                <MenuItem Header="Profile"  Command="{Binding OpenProfileCommand}"/>
+                <MenuItem Header="Settings" Command="{Binding OpenSettingsCommand}"/>
+                <Separator/>
+                <MenuItem Header="Logout"   Command="{Binding LogoutCommand}"/>
+              </MenuFlyout>
+            </Button.Flyout>
+          </Button>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- Page content -->
+    <Border Grid.Row="1" Margin="12">
+      <Border.Background>
+        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+          <GradientStop Color="#111117" Offset="0"/>
+          <GradientStop Color="#12131A" Offset="1"/>
+        </LinearGradientBrush>
+      </Border.Background>
+
+      <Border CornerRadius="12" BorderBrush="#5C46A3" BorderThickness="1" Padding="12">
+        <ContentControl Content="{Binding Current}"/>
+      </Border>
+    </Border>
+  </Grid>
+
+  <Window.Styles>
+    <Style Selector="Button.profileButton">
+      <Setter Property="Background" Value="#00000000"/>
+      <Setter Property="BorderBrush" Value="#00000000"/>
+      <Setter Property="Padding" Value="0"/>
+    </Style>
+  </Window.Styles>
 </Window>
