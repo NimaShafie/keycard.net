@@ -1,9 +1,11 @@
 using KeyCard.BusinessLogic.Commands.Bookings;
+using KeyCard.BusinessLogic.Commands.DigitalKey;
 using KeyCard.BusinessLogic.ServiceInterfaces;
 using KeyCard.BusinessLogic.ViewModels.Booking;
 using KeyCard.Core.Common;
 using KeyCard.Infrastructure.Models.AppDbContext;
 using KeyCard.Infrastructure.Models.Bookings;
+using KeyCard.Infrastructure.Models.HouseKeeping;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -13,10 +15,12 @@ namespace KeyCard.Infrastructure.ServiceImplementation
     {
 
         private readonly ApplicationDBContext _context;
+        private readonly IDigitalKeyService _digitalKeyService;
 
-        public BookingService(ApplicationDBContext context)
+        public BookingService(ApplicationDBContext context, IDigitalKeyService digitalKeyService)
         {
             _context = context;
+            _digitalKeyService = digitalKeyService;
         }
 
         public async Task<BookingViewModel> CreateBookingAsync(CreateBookingCommand command, CancellationToken cancellationToken)
@@ -94,6 +98,9 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                     b.TotalAmount
                 ))
                 .FirstOrDefaultAsync(cancellationToken);
+
+            if(booking == null)
+                throw new KeyNotFoundException("Booking not found.");
 
             return booking;
         }
@@ -176,6 +183,84 @@ namespace KeyCard.Infrastructure.ServiceImplementation
             await _context.SaveChangesAsync(cancellationToken);
             return true;
         }
+
+        public async Task<bool> CheckInBookingAsync(CheckInBookingCommand command, CancellationToken cancellationToken)
+        {
+            var booking = await _context.Bookings
+                .Include(b => b.Room)
+                .FirstOrDefaultAsync(b => b.Id == command.BookingId && !b.IsDeleted, cancellationToken);
+
+            if (booking == null)
+                throw new InvalidOperationException("Booking not found.");
+
+            if (booking.Status != BookingStatus.Reserved)
+                throw new InvalidOperationException("Only reserved bookings can be checked in.");
+
+            // Update booking status
+            booking.Status = BookingStatus.CheckedIn;
+            booking.LastUpdatedAt = DateTime.UtcNow;
+            booking.LastUpdatedBy = command.User!.UserId; // later replace with current user via IUserContext
+
+            // Update room status
+            booking.Room.Status = RoomStatus.Occupied;
+            booking.Room.LastUpdatedAt = DateTime.UtcNow;
+            booking.Room.LastUpdatedBy = command.User!.UserId;
+
+            _context.Bookings.Update(booking);
+            _context.Rooms.Update(booking.Room);
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            await _digitalKeyService.IssueKeyAsync(new IssueDigitalKeyCommand(BookingId: booking.Id) { User = command.User}, cancellationToken);
+
+            return true;
+        }
+
+        public async Task<bool> CheckOutBookingAsync(CheckOutBookingCommand command, CancellationToken cancellationToken)
+        {
+            var booking = await _context.Bookings
+                .Include(b => b.Room)
+                .FirstOrDefaultAsync(b => b.Id == command.BookingId && !b.IsDeleted, cancellationToken);
+
+            if (booking == null)
+                throw new InvalidOperationException("Booking not found.");
+
+            if (booking.Status != BookingStatus.CheckedIn)
+                throw new InvalidOperationException("Only checked-in bookings can be checked out.");
+
+            // Update booking status
+            booking.Status = BookingStatus.CheckedOut;
+            booking.LastUpdatedAt = DateTime.UtcNow;
+            booking.LastUpdatedBy = command.User!.UserId; // later: replace with IUserContext
+
+            // Update room status → Dirty
+            booking.Room.Status = RoomStatus.Dirty;
+            booking.Room.LastUpdatedAt = DateTime.UtcNow;
+            booking.Room.LastUpdatedBy = command.User!.UserId;
+
+            _context.Bookings.Update(booking);
+            _context.Rooms.Update(booking.Room);
+
+            //create housekeeping task for cleaning the room
+            var cleaningTask = new HousekeepingTask
+            {
+                TaskName = $"Clean Room {booking.Room.RoomNumber}",
+                Notes = $"Auto-generated after checkout of Booking #{booking.Id}",
+                RoomId = booking.Room.Id,
+                Status = TaskStatusEnum.Pending,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = command.User!.UserId
+            };
+
+            _context.HousekeepingTasks.Add(cleaningTask);
+
+            // (Future: Generate invoice or revoke digital key here)
+                
+            await _context.SaveChangesAsync(cancellationToken);
+
+            return true;
+        }
+
 
 
     }

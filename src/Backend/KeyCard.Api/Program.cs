@@ -46,6 +46,7 @@ builder.Services.AddDbContext<ApplicationDBContext>(opts =>
 
 builder.Services.AddTransient<IBookingService, BookingService>();
 builder.Services.AddTransient<ITaskService, TaskService>();
+builder.Services.AddTransient<IDigitalKeyService, DigitalKeyService>();
 
 builder.Services.AddSwaggerGen(c =>
 {

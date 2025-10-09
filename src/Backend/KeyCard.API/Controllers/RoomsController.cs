@@ -18,9 +18,5 @@ namespace KeyCard.Api.Controllers
             _contextAccessor = contextAccessor;
             //_user = _contextAccessor.HttpContext!.User.GetUser();
         }
-        public IActionResult Index()
-        {
-            return Ok();
-        }
     }
 }

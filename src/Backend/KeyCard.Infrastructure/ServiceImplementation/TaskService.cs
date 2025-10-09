@@ -34,14 +34,17 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<TaskViewModel?> GetTaskByIdAsync(GetTaskByIdCommand command, CancellationToken cancellationToken)
+        public async Task<TaskViewModel> GetTaskByIdAsync(GetTaskByIdCommand command, CancellationToken cancellationToken)
         {
             var task = await _context.HousekeepingTasks
                 .Include(t => t.Room)
                 .Include(t => t.AssignedTo)
                 .FirstOrDefaultAsync(t => t.Id == command.Id && !t.IsDeleted, cancellationToken);
 
-            if (task == null) return null;
+            if (task == null)
+            {
+                throw new KeyNotFoundException($"Task with ID {command.Id} not found.");
+            }
 
             return new TaskViewModel(task.Id, task.TaskName, task.Notes, task.Status.ToString(),
                 task.Room.RoomNumber, task.AssignedTo?.FullName);
@@ -57,7 +60,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                 AssignedToId = command.AssignedToId,
                 Status = TaskStatusEnum.Pending,
                 CreatedAt = DateTime.UtcNow,
-                CreatedBy = new Guid("system")
+                CreatedBy = command.User!.UserId
             };  
 
             _context.HousekeepingTasks.Add(task);
@@ -74,7 +77,9 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                 .FirstOrDefaultAsync(t => t.Id == command.Id && !t.IsDeleted, cancellationToken);
 
             if (task == null)
-                return false; // Not found or soft deleted
+            {
+                throw new KeyNotFoundException($"Task with ID {command.Id} not found.");
+            }
 
             task.TaskName = command.TaskName;
             task.Notes = command.Notes;
@@ -84,7 +89,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                 task.Status = status;
 
             task.LastUpdatedAt = DateTime.UtcNow;
-            task.LastUpdatedBy = new Guid("system"); // Replace with current user if available
+            task.LastUpdatedBy = command.User!.UserId;
 
             _context.HousekeepingTasks.Update(task);
             await _context.SaveChangesAsync(cancellationToken);
@@ -99,7 +104,9 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                 .FirstOrDefaultAsync(t => t.Id == command.Id && !t.IsDeleted, cancellationToken);
 
             if (task == null)
-                return false; // Task not found or deleted
+            {
+                throw new KeyNotFoundException($"Task with ID {command.Id} not found.");
+            }
 
             if (task.Status == TaskStatusEnum.Completed)
                 return true; // Already completed — safe no-op
@@ -107,7 +114,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
             task.Status = TaskStatusEnum.Completed;
             task.CompletedAt = DateTime.UtcNow;
             task.LastUpdatedAt = DateTime.UtcNow;
-            task.LastUpdatedBy = new Guid("system");
+            task.LastUpdatedBy = command.User!.UserId;
 
             _context.HousekeepingTasks.Update(task);
             await _context.SaveChangesAsync(cancellationToken);
@@ -118,12 +125,15 @@ namespace KeyCard.Infrastructure.ServiceImplementation
         public async Task<bool> DeleteTaskAsync(DeleteTaskCommand command, CancellationToken cancellationToken)
         {
             var task = await _context.HousekeepingTasks.FindAsync(command.Id);
+
             if (task == null || task.IsDeleted)
-                return false;
+            {
+                throw new KeyNotFoundException($"Task with ID {command.Id} not found.");
+            }
 
             task.IsDeleted = true;
             task.LastUpdatedAt = DateTime.UtcNow;
-            task.LastUpdatedBy = new Guid("system"); // or current user
+            task.LastUpdatedBy = command.User!.UserId; // or current user
             _context.HousekeepingTasks.Update(task);
             await _context.SaveChangesAsync(cancellationToken);
 

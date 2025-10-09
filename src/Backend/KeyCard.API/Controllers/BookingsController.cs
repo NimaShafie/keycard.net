@@ -74,5 +74,29 @@ public class BookingsController : ControllerBase
         return Ok(new { message = "Booking cancelled successfully." });
     }
 
+    [HttpPost("{id:int}/checkin")]
+    [Authorize(Roles = "FrontDesk,Admin")]
+    public async Task<ActionResult> CheckIn(int id)
+    {
+        var success = await _mediator.Send(new CheckInBookingCommand(id));
+
+        if (!success)
+            return BadRequest(new { message = "Check-in failed or booking not found." });
+
+        return Ok(new { message = "Guest checked in successfully." });
+    }
+
+    [HttpPost("{id:int}/checkout")]
+    [Authorize(Roles = "FrontDesk,Admin")]
+    public async Task<ActionResult> CheckOut(int id)
+    {
+        var success = await _mediator.Send(new CheckOutBookingCommand(id));
+
+        if (!success)
+            return BadRequest(new { message = "Check-out failed or booking not found." });
+
+        return Ok(new { message = "Guest checked out successfully. Room marked as Dirty." });
+    }
+
 
 }
