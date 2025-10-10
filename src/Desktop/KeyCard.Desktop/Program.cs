@@ -1,3 +1,4 @@
+// Program.cs
 using System;
 using System.Threading.Tasks;
 
@@ -6,6 +7,7 @@ using Avalonia.ReactiveUI;
 
 using KeyCard.Desktop.Configuration;
 using KeyCard.Desktop.Services;
+using KeyCard.Desktop.ViewModels; // <-- Added for VM registrations
 
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Configuration;
@@ -75,14 +77,22 @@ namespace KeyCard.Desktop
                         return ActivatorUtilities.CreateInstance<SignalRService>(sp, url);
                     });
 
-                    // ViewModels
-                    services.AddSingleton<ViewModels.LoginViewModel>();
-                    services.AddSingleton<ViewModels.DashboardViewModel>();
-                    services.AddSingleton<ViewModels.FrontDeskViewModel>();
-                    services.AddSingleton<ViewModels.HousekeepingViewModel>();
-                    services.AddSingleton<ViewModels.MainViewModel>();
+                    // =========================
+                    // ViewModels (DI registrations)
+                    // =========================
 
-                    // App
+                    // Shell
+                    services.AddSingleton<MainViewModel>();
+
+                    // Navigated pages: use Transient so each navigation can get a fresh instance if needed
+                    services.AddTransient<LoginViewModel>();
+                    services.AddTransient<DashboardViewModel>();
+                    services.AddTransient<FrontDeskViewModel>();
+                    services.AddTransient<HousekeepingViewModel>();
+                    services.AddTransient<ProfileViewModel>();
+                    services.AddTransient<SettingsViewModel>();
+
+                    // App instance
                     services.AddSingleton<App>();
                 })
                 .Build();

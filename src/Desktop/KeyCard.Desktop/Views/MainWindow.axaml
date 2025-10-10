@@ -22,8 +22,15 @@
       </Border.Background>
 
       <Grid ColumnDefinitions="*,Auto,*">
-        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" />
+        <!-- LEFT: Dashboard button (improved visuals + centered text) -->
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+          <Button Content="Dashboard"
+                  Classes="topbarBtn"
+                  Command="{Binding NavigateDashboardCommand}"
+                  IsVisible="{Binding IsAuthenticated}"/>
+        </StackPanel>
 
+        <!-- CENTER: app title -->
         <TextBlock Grid.Column="1"
                    Text="KeyCard.NET"
                    FontSize="22"
@@ -32,7 +39,7 @@
                    VerticalAlignment="Center"
                    Foreground="White"/>
 
-        <!-- Profile (right) -->
+        <!-- RIGHT: profile area -->
         <StackPanel Grid.Column="2"
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
@@ -89,6 +96,32 @@
       <Setter Property="Background" Value="#00000000"/>
       <Setter Property="BorderBrush" Value="#00000000"/>
       <Setter Property="Padding" Value="0"/>
+    </Style>
+
+    <!-- NEW: consistent, centered topbar button -->
+    <Style Selector="Button.topbarBtn">
+      <Setter Property="Height" Value="36"/>
+      <Setter Property="MinWidth" Value="110"/>
+      <Setter Property="Padding" Value="14,0"/>
+      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="Background" Value="#3B3B44"/>
+      <Setter Property="Foreground" Value="White"/>
+      <Setter Property="BorderBrush" Value="#5C46A3"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Opacity" Value="0.92"/>
+      <Setter Property="Transitions">
+        <Transitions>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.12"/>
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button.topbarBtn:pointerover">
+      <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="Button.topbarBtn:pressed">
+      <Setter Property="Opacity" Value="0.85"/>
     </Style>
   </Window.Styles>
 </Window>

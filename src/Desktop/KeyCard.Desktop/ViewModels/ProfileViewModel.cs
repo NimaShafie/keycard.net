@@ -1,5 +1,14 @@
-// src/Desktop/KeyCard.Desktop/ViewModels/ProfileViewModel.cs
+// ProfileViewModel.cs
+using System.Diagnostics.CodeAnalysis;
+
 namespace KeyCard.Desktop.ViewModels
 {
-    public sealed class ProfileViewModel : ViewModelBase { }
+    public class ProfileViewModel : ViewModelBase
+    {
+        [SuppressMessage("Performance", "CA1822")]
+        public string Name => "Mock Staff";
+
+        [SuppressMessage("Performance", "CA1822")]
+        public string Role => "Front Desk (Mock)";
+    }
 }

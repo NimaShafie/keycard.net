@@ -1,17 +1,25 @@
+<!-- src/Desktop/KeyCard.Desktop/App.axaml -->
 <Application
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:infra="clr-namespace:KeyCard.Desktop.Infrastructure"
     x:Class="KeyCard.Desktop.App"
     RequestedThemeVariant="Dark">
+
+  <!-- You are using a ViewLocator; kept as-is -->
   <Application.DataTemplates>
     <infra:ViewLocator/>
   </Application.DataTemplates>
+
   <Application.Styles>
     <FluentTheme/>
+
+    <!-- Your shared spacing -->
     <Style Selector="TextBox, Button">
       <Setter Property="Margin" Value="0,4,0,0"/>
     </Style>
+
+    <!-- Login card styling (unchanged) -->
     <Style Selector="Border.login-card">
       <Setter Property="CornerRadius" Value="14"/>
       <Setter Property="Padding" Value="28"/>
@@ -23,6 +31,13 @@
           <DropShadowEffect BlurRadius="24" Opacity="0.35"/>
         </Setter.Value>
       </Setter>
+    </Style>
+
+    <!-- Small helper so indeterminate ProgressBars look tidy in headers -->
+    <Style Selector="ProgressBar:indeterminate">
+      <Setter Property="MinWidth" Value="80"/>
+      <Setter Property="Height" Value="6"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
   </Application.Styles>
 </Application>

@@ -12,8 +12,8 @@ namespace KeyCard.Desktop.Services
     public sealed class AppEnvironment : IAppEnvironment
     {
         private readonly KeyCardOptions _keyCard;     // bound from "KeyCard"
-        private readonly ApiOptions _api;             // bound from "Api" (root)
-        private readonly SignalROptions _signalR;     // bound from "SignalR" (root)
+        private readonly ApiOptions _api;             // bound from "Api"
+        private readonly SignalROptions _signalR;     // bound from "SignalR"
         private readonly IHostEnvironment _hostEnv;
         private readonly IConfiguration _config;      // raw for fallbacks
 
@@ -47,45 +47,47 @@ namespace KeyCard.Desktop.Services
 
         private bool EvaluateIsMock()
         {
-            // 1) Preferred: typed "KeyCard" options
-            if (EqualsIgnoreCase(_keyCard.Mode, "Mock") || _keyCard.UseMocks)
-                return true;
-
-            // 2) Fallbacks: read raw config in BOTH shapes
-            //    - Nested under KeyCard
-            var modeNested = _config["KeyCard:Mode"];
-            var useNested = _config["KeyCard:UseMocks"];
-            if (EqualsIgnoreCase(modeNested, "Mock")) return true;
-            if (bool.TryParse(useNested, out var nestedFlag) && nestedFlag) return true;
-
-            //    - Root
-            var modeRoot = _config["Mode"];
-            var useRoot = _config["UseMocks"];
-            if (EqualsIgnoreCase(modeRoot, "Mock")) return true;
-            if (bool.TryParse(useRoot, out var rootFlag) && rootFlag) return true;
-
-            // 3) Environment: treat "Development" as mock-friendly unless explicitly disabled
-            var env = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
-                   ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-            if (EqualsIgnoreCase(env, "Development"))
+            // -------- 1) Explicit overrides (typed options) --------
+            // KeyCard:Mode = "Mock" | "Live" takes precedence over everything.
+            if (!string.IsNullOrWhiteSpace(_keyCard.Mode))
             {
-                // If someone explicitly set UseMocks=false anywhere, honor it.
-                if (bool.TryParse(useNested, out var nestedOff) && !nestedOff) return false;
-                if (bool.TryParse(useRoot, out var rootOff) && !rootOff) return false;
-                return true;
+                if (EqualsIgnoreCase(_keyCard.Mode, "Mock")) return true;
+                if (EqualsIgnoreCase(_keyCard.Mode, "Live")) return false;
             }
+            // KeyCard:UseMocks = true/false (typed)
+            if (_keyCard.UseMocks) return true;
 
+            // -------- 2) Fallbacks from raw config (covers env vars & unbound shapes) --------
+            // Nested: KeyCard:UseMocks / KeyCard:Mode
+            var useNested = _config["KeyCard:UseMocks"];
+            var modeNested = _config["KeyCard:Mode"];
+            if (bool.TryParse(useNested, out var nestedFlag)) return nestedFlag;
+            if (EqualsIgnoreCase(modeNested, "Mock")) return true;
+            if (EqualsIgnoreCase(modeNested, "Live")) return false;
+
+            // Root: UseMocks / Mode (if someone put them at the root)
+            var useRoot = _config["UseMocks"];
+            var modeRoot = _config["Mode"];
+            if (bool.TryParse(useRoot, out var rootFlag)) return rootFlag;
+            if (EqualsIgnoreCase(modeRoot, "Mock")) return true;
+            if (EqualsIgnoreCase(modeRoot, "Live")) return false;
+
+            // -------- 3) Sensible default: Development => Mock --------
+            // If nothing explicitly opted in or out, default to mocks in dev.
+            if (_hostEnv.IsDevelopment()) return true;
+
+            // -------- 4) Otherwise assume Live --------
             return false;
         }
 
         private string ResolveApiBaseUrl()
         {
-            // Preferred: typed options bound from ROOT "Api"
+            // Preferred: typed options bound from root "Api"
             if (!string.IsNullOrWhiteSpace(_api.BaseUrl)) return _api.BaseUrl!;
             if (!string.IsNullOrWhiteSpace(_api.HttpsBaseUrl)) return _api.HttpsBaseUrl!;
             if (!string.IsNullOrWhiteSpace(_api.HttpBaseUrl)) return _api.HttpBaseUrl!;
 
-            // Fallback: nested under KeyCard:Api
+            // Fallbacks: nested KeyCard:Api
             var baseUrlNested = _config["KeyCard:Api:BaseUrl"];
             var httpsNested = _config["KeyCard:Api:HttpsBaseUrl"];
             var httpNested = _config["KeyCard:Api:HttpBaseUrl"];
@@ -93,7 +95,7 @@ namespace KeyCard.Desktop.Services
             if (!string.IsNullOrWhiteSpace(httpsNested)) return httpsNested!;
             if (!string.IsNullOrWhiteSpace(httpNested)) return httpNested!;
 
-            // Fallback: root "Api" direct from raw config (covers cases where options weren't bound)
+            // Fallbacks: raw root "Api"
             var baseUrlRoot = _config["Api:BaseUrl"];
             var httpsRoot = _config["Api:HttpsBaseUrl"];
             var httpRoot = _config["Api:HttpBaseUrl"];
@@ -119,7 +121,7 @@ namespace KeyCard.Desktop.Services
             var root = _config["SignalR:BookingsHubUrl"];
             if (!string.IsNullOrWhiteSpace(root)) return root!;
 
-            // Build from API base
+            // Build from API base as a last resort
             return CombineUri(ApiBaseUrl, "hubs/bookings");
         }
 

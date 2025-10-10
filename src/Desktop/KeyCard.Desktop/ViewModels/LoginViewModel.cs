@@ -1,4 +1,4 @@
-// ViewModels/LoginViewModel.cs  (drop-in replacement keeping your structure)
+// ViewModels/LoginViewModel.cs
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -54,7 +54,7 @@ namespace KeyCard.Desktop.ViewModels
         }
 
         // Single source of truth for mock flag
-        public bool IsMockMode => _env.IsMock;
+        public bool IsMockMode => _env.IsMock || _auth is MockAuthService;
 
         // In Mock, allow Sign in / Enter with empty fields
         public bool CanLogin =>

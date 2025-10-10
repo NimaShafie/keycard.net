@@ -39,7 +39,7 @@ public partial class App : Application
         if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
             return;
 
-        // 1) Always create + show a window *first*, so the lifetime stays alive.
+        // 1) Always create + show a window first so the lifetime stays alive
         var main = new MainWindow
         {
             WindowStartupLocation = WindowStartupLocation.CenterScreen,
@@ -48,28 +48,35 @@ public partial class App : Application
         desktop.MainWindow = main;
         main.Show();
 
-        // 2) Now try to wire DI + VM. If anything fails, keep the window and display the error.
+        // 2) Now wire DI + VM. If anything fails, keep the window and display the error.
         try
         {
             if (_xamlLoadError is not null)
                 throw new InvalidOperationException("App XAML failed to load.", _xamlLoadError);
 
-            // Resolve the shell (MainViewModel) from DI
-            var shell = _services.GetRequiredService<MainViewModel>();
+            // Resolve the shell (MainViewModel) from DI; fall back to ActivatorUtilities if needed
+            var shell = SafeResolve<MainViewModel>();
 
             // Ensure we start at Login if nothing has set a page yet
             if (shell.Current is null)
             {
-                var login = _services.GetRequiredService<LoginViewModel>();
+                var login = SafeResolve<LoginViewModel>();
                 shell.Current = login;
             }
 
             // Bind the shell VM to the already-shown window
             main.DataContext = shell;
+
+            // Optional: warm up commonly navigated VMs so missing registrations show at startup
+            _ = TryResolve<DashboardViewModel>();
+            _ = TryResolve<FrontDeskViewModel>();
+            _ = TryResolve<HousekeepingViewModel>();
+            _ = TryResolve<ProfileViewModel>();
+            _ = TryResolve<SettingsViewModel>();
         }
         catch (Exception ex)
         {
-            // Replace window content with a readable error instead of exiting silently
+            // Replace window content with a readable error instead of exiting
             main.Content = new ScrollViewer
             {
                 Content = new TextBlock
@@ -82,5 +89,26 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    // --- Helpers -------------------------------------------------------------
+
+    private T SafeResolve<T>() where T : class
+        => TryResolve<T>() ?? throw new InvalidOperationException(
+            $"Unable to resolve {typeof(T).Name}. Make sure it is registered in DI.");
+
+    private T? TryResolve<T>() where T : class
+    {
+        // 1) DI
+        var svc = _services.GetService<T>();
+        if (svc is not null) return svc;
+
+        // 2) ActivatorUtilities (injects any known deps from the container)
+        try { return ActivatorUtilities.CreateInstance<T>(_services); }
+        catch { /* fall through */ }
+
+        // 3) public or non-public parameterless ctor
+        try { return (T?)Activator.CreateInstance(typeof(T), nonPublic: true); }
+        catch { return null; }
     }
 }

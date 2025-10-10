@@ -1,10 +1,10 @@
 <!-- src/Desktop/KeyCard.Desktop/Views/ProfileView.axaml -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vms="clr-namespace:KeyCard.Desktop.ViewModels"
-             x:Class="KeyCard.Desktop.Views.ProfileView"
-             x:DataType="vms:ProfileViewModel">
-  <Grid Margin="20">
-    <TextBlock Text="Profile (coming soon)" FontSize="18" />
-  </Grid>
+             x:Class="KeyCard.Desktop.Views.ProfileView">
+  <StackPanel Margin="16" Spacing="6">
+    <TextBlock Text="Profile" FontSize="18" FontWeight="Bold"/>
+    <TextBlock Text="Name: Mock Staff"/>
+    <TextBlock Text="Role: Front Desk (Mock)"/>
+  </StackPanel>
 </UserControl>

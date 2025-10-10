@@ -1,4 +1,4 @@
-// ViewModels/MainViewModel.cs
+// src/Desktop/KeyCard.Desktop/ViewModels/MainViewModel.cs
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -102,4 +102,8 @@ public partial class MainViewModel : ObservableObject
         _auth.Logout();
         _nav.NavigateTo<LoginViewModel>();
     }
+
+    // Top-left Dashboard button
+    [RelayCommand]
+    private void NavigateDashboard() => _nav.NavigateTo<DashboardViewModel>();
 }
