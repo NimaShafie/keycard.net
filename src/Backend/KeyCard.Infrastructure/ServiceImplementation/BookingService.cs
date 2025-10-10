@@ -3,6 +3,7 @@ using KeyCard.BusinessLogic.Commands.DigitalKey;
 using KeyCard.BusinessLogic.ServiceInterfaces;
 using KeyCard.BusinessLogic.ViewModels.Booking;
 using KeyCard.Core.Common;
+using KeyCard.Core.Wrappers;
 using KeyCard.Infrastructure.Models.AppDbContext;
 using KeyCard.Infrastructure.Models.Bookings;
 using KeyCard.Infrastructure.Models.HouseKeeping;
