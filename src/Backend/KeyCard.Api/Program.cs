@@ -1,15 +1,11 @@
 using FluentValidation;
-
 using KeyCard.BusinessLogic;
 using KeyCard.BusinessLogic.ServiceInterfaces;
-using KeyCard.Core.Extensions;
 using KeyCard.Core.Middlewares;
 using KeyCard.Infrastructure.Identity;
 using KeyCard.Infrastructure.Models.AppDbContext;
 using KeyCard.Infrastructure.ServiceImplementation;
-
 using MediatR;
-
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
@@ -102,7 +98,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.UseValidationExceptionHandler();
+app.UseApiResponseWrapperMiddleware();
 
 using (var scope = app.Services.CreateScope())
 {

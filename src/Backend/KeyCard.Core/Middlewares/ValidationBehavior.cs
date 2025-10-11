@@ -1,5 +1,7 @@
 using FluentValidation;
 
+using KeyCard.Core.Wrappers;
+
 using MediatR;
 
 namespace KeyCard.Core.Middlewares
@@ -28,47 +30,17 @@ namespace KeyCard.Core.Middlewares
                     ))
                     .SelectMany(r => r.Errors)
                     .Where(f => f != null)
+                    .Select(x => new ValidationError(x.PropertyName, x.ErrorMessage))
                     .ToList();
 
                 if (failures.Count != 0)
                 {
                     // throw a custom exception (not raw ValidationException)
-                    throw new ValidationSummaryException(failures);
+                    throw new CustomValidationException(failures);
                 }
             }
 
             return await next();
-        }
-    }
-
-    public class ValidationSummaryException : Exception
-    {
-        public List<string> Errors { get; }
-
-        public ValidationSummaryException(IEnumerable<FluentValidation.Results.ValidationFailure> failures)
-            : base("Validation failed")
-        {
-            Errors = failures.Select(f => f.ErrorMessage).ToList();
-        }
-
-        // Default constructor
-        public ValidationSummaryException()
-        {
-            Errors = new List<string>();
-        }
-
-        // Message-only constructor
-        public ValidationSummaryException(string message)
-            : base(message)
-        {
-            Errors = new List<string>();
-        }
-
-        // Message + inner exception constructor
-        public ValidationSummaryException(string message, Exception inner)
-            : base(message, inner)
-        {
-            Errors = new List<string>();
         }
     }
 }
