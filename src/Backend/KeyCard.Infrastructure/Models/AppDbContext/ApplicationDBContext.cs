@@ -1,10 +1,9 @@
 using System.Reflection.Emit;
 
-using KeyCard.Infrastructure.Identity;
 using KeyCard.Infrastructure.Models.Bookings;
 using KeyCard.Infrastructure.Models.Entities;
 using KeyCard.Infrastructure.Models.HouseKeeping;
-using KeyCard.Infrastructure.Models.Users;
+using KeyCard.Infrastructure.Models.User;
 
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -12,15 +11,13 @@ using Microsoft.EntityFrameworkCore;
 namespace KeyCard.Infrastructure.Models.AppDbContext
 {
     public class ApplicationDBContext
-    : IdentityDbContext<ApplicationUser, ApplicationRole, Guid>
+    : IdentityDbContext<ApplicationUser, ApplicationUserRole, int>
     {
         public ApplicationDBContext(DbContextOptions<ApplicationDBContext> options) : base(options) { }
 
         public DbSet<Hotel> Hotels => Set<Hotel>();
         public DbSet<RoomType> RoomTypes => Set<RoomType>();
         public DbSet<Room> Rooms => Set<Room>();
-        public DbSet<GuestProfile> GuestProfiles => Set<GuestProfile>();
-        public DbSet<StaffProfile> StaffProfiles => Set<StaffProfile>();
         public DbSet<Booking> Bookings => Set<Booking>();
         public DbSet<Payment> Payments => Set<Payment>();
         public DbSet<Invoice> Invoices => Set<Invoice>();

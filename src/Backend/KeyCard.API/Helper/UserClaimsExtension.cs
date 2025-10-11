@@ -6,13 +6,13 @@ namespace KeyCard.Api.Helper
 {
     public static class ClaimsPrincipalExtensions
         {
-            public static Guid GetUserId(this ClaimsPrincipal user)
+            public static int GetUserId(this ClaimsPrincipal user)
             {
                 var idClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (idClaim == null)
                     throw new UnauthorizedAccessException("User ID claim not found.");
 
-                return Guid.Parse(idClaim);
+                return int.Parse(idClaim);
             }
 
             public static string GetUserEmail(this ClaimsPrincipal user)

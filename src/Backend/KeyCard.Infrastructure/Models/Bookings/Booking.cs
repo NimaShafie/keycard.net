@@ -1,7 +1,6 @@
-using KeyCard.BusinessLogic.Commands.Bookings;
 using KeyCard.Core.Common;
 using KeyCard.Infrastructure.Models.Entities;
-using KeyCard.Infrastructure.Models.Users;
+using KeyCard.Infrastructure.Models.User;
 
 namespace KeyCard.Infrastructure.Models.Bookings
 {
@@ -20,7 +19,7 @@ namespace KeyCard.Infrastructure.Models.Bookings
         public bool IsPrepaid { get; set; }
 
         public int GuestProfileId { get; set; }
-        public GuestProfile GuestProfile { get; set; } = default!;
+        public ApplicationUser GuestProfile { get; set; } = default!;
 
         public int RoomId { get; set; }
         public Room Room { get; set; } = default!;
@@ -30,9 +29,9 @@ namespace KeyCard.Infrastructure.Models.Bookings
         public DigitalKey? DigitalKey { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public Guid? CreatedBy { get; set; }
+        public int? CreatedBy { get; set; }
         public DateTime? LastUpdatedAt { get; set; }
-        public Guid? LastUpdatedBy { get; set; }
+        public int? LastUpdatedBy { get; set; }
         public bool IsDeleted { get; set; }
 
         public void ChangeStatus(BookingStatus status)

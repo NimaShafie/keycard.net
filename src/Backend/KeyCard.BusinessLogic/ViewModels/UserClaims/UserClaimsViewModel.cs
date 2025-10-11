@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace KeyCard.BusinessLogic.ViewModels.UserClaims
 {
     public record UserClaimsViewModel (
-        Guid UserId,
+        int UserId,
         string Email,
         string Role);
 

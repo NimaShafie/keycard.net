@@ -1,3 +1,5 @@
 dotnet ef migrations add [migration name] --project KeyCard.Infrastructure --startup-project KeyCard.Api
 
 dotnet ef database update --project KeyCard.Infrastructure --startup-project KeyCard.Api
+
+dotnet ef migrations remove --project KeyCard.Infrastructure --startup-project KeyCard.Api

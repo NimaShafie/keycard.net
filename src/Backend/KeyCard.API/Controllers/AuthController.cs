@@ -3,8 +3,10 @@ using System.Security.Claims;
 using System.Text;
 
 using KeyCard.BusinessLogic.Commands.Auth;
-using KeyCard.Infrastructure.Identity;
+using KeyCard.BusinessLogic.ViewModels.Auth;
+using KeyCard.Infrastructure.Models.User;
 
+using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -14,12 +16,14 @@ using Microsoft.IdentityModel.Tokens;
 public class AuthController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IMediator _mediator;
     private readonly IConfiguration _config;
 
-    public AuthController(UserManager<ApplicationUser> userManager, IConfiguration config)
+    public AuthController(UserManager<ApplicationUser> userManager, IConfiguration config, IMediator mediator)
     {
         _userManager = userManager;
         _config = config;
+        _mediator = mediator;
     }
 
     [HttpPost("login")]
@@ -57,5 +61,16 @@ public class AuthController : ControllerBase
         }
 
         return Unauthorized();
+    }
+
+    /// <summary>
+    /// Guest signup (no admin privileges required)
+    /// </summary>
+    [HttpPost("signup/guest")]
+    [ProducesResponseType(typeof(AuthResultViewModel), 200)]
+    public async Task<IActionResult> GuestSignup([FromBody] GuestSignupCommand command, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(command, cancellationToken);
+        return Ok(result);
     }
 }

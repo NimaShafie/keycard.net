@@ -15,9 +15,9 @@ namespace KeyCard.Infrastructure.Models
         public Booking Booking { get; set; } = default!;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public Guid? CreatedBy { get; set; }
+        public int? CreatedBy { get; set; }
         public DateTime? LastUpdatedAt { get; set; }
-        public Guid? LastUpdatedBy { get; set; }
+        public int? LastUpdatedBy { get; set; }
         public bool IsDeleted { get; set; }
     }
 

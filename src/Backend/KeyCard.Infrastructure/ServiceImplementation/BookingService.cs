@@ -63,9 +63,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
             var room = await _context.Rooms.Include(r => r.RoomType)
                 .FirstAsync(r => r.Id == command.RoomId, cancellationToken);
 
-            var guest = await _context.GuestProfiles
-                .Include(g => g.User)
-                .FirstAsync(g => g.Id == command.GuestProfileId, cancellationToken);
+            var guest = await _context.Users.FirstAsync(g => g.Id == command.GuestProfileId, cancellationToken);
 
             return new BookingViewModel(
                 booking.Id,
@@ -73,7 +71,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                 booking.CheckInDate,
                 booking.CheckOutDate,
                 booking.Status,
-                guest.User.FullName,
+                guest.FullName,
                 room.RoomNumber,
                 booking.TotalAmount
             );
@@ -83,7 +81,6 @@ namespace KeyCard.Infrastructure.ServiceImplementation
         {
             var booking = await _context.Bookings
                 .Include(b => b.GuestProfile)
-                    .ThenInclude(g => g.User)
                 .Include(b => b.Room)
                     .ThenInclude(r => r.RoomType)
                 .Where(b => b.Id == command.BookingId)
@@ -93,7 +90,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                     b.CheckInDate,
                     b.CheckOutDate,
                     b.Status,
-                    b.GuestProfile.User.FullName,
+                    b.GuestProfile.FullName,
                     b.Room.RoomNumber,
                     b.TotalAmount
                 ))
@@ -111,7 +108,6 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                 .Include(b => b.Room)
                     .ThenInclude(r => r.RoomType)
                 .Include(b => b.GuestProfile)
-                    .ThenInclude(g => g.User)
                 .AsQueryable();
 
             if (command.FromDate.HasValue)
@@ -129,7 +125,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
             if (!string.IsNullOrWhiteSpace(command.GuestName))
             {
                 bookingsQuery = bookingsQuery.Where(b =>
-                    b.GuestProfile.User.FullName.ToLower().Contains(command.GuestName.ToLower()));
+                    b.GuestProfile.FullName.ToLower().Contains(command.GuestName.ToLower()));
             }
 
             var list = await bookingsQuery
@@ -140,7 +136,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                     b.CheckInDate,
                     b.CheckOutDate,
                     b.Status,
-                    b.GuestProfile.User.FullName,
+                    b.GuestProfile.FullName,
                     b.Room.RoomNumber,
                     b.TotalAmount
                 ))

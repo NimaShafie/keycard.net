@@ -4,7 +4,7 @@ using MediatR;
 
 namespace KeyCard.BusinessLogic.Commands.Tasks
 {
-    public record UpdateTaskCommand(int Id, string TaskName, string? Notes, Guid? AssignedToId, string Status)
+    public record UpdateTaskCommand(int Id, string TaskName, string? Notes, int? AssignedToId, string Status)
         : Request, IRequest<bool>;
 
     public class UpdateTaskCommandHandler : IRequestHandler<UpdateTaskCommand, bool>

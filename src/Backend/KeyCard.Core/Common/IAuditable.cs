@@ -9,8 +9,8 @@ namespace KeyCard.Core.Common
     public interface IAuditable
     {
         public DateTime CreatedAt { get; set; }
-        public Guid? CreatedBy { get; set; }
+        public int? CreatedBy { get; set; }
         public DateTime? LastUpdatedAt { get; set; }
-        public Guid? LastUpdatedBy { get; set; }
+        public int? LastUpdatedBy { get; set; }
     }
 }

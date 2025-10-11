@@ -6,7 +6,7 @@ using MediatR;
 
 namespace KeyCard.BusinessLogic.Commands.Tasks
 {
-    public record CreateTaskCommand(string TaskName, string? Notes, int? RoomId, Guid? AssignedToId)
+    public record CreateTaskCommand(string TaskName, string? Notes, int? RoomId, int? AssignedToId)
         : Request, IRequest<TaskViewModel>;
 
     public class CreateTaskCommandHandler : IRequestHandler<CreateTaskCommand, TaskViewModel>

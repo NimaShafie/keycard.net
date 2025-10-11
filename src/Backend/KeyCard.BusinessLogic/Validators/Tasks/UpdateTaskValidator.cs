@@ -28,9 +28,9 @@ namespace KeyCard.BusinessLogic.Validators.Tasks
 
             // AssignedToId is optional, but must be a valid GUID if provided
             RuleFor(x => x.AssignedToId)
-                .NotEqual(Guid.Empty)
+                .GreaterThan(0)
                 .When(x => x.AssignedToId.HasValue)
-                .WithMessage("AssignedToId cannot be an empty GUID.");
+                .WithMessage("AssignedToId must be greater than zero if provided.");
 
             // Status validation — must match one of the defined TaskStatusEnum values
             RuleFor(x => x.Status)

@@ -34,9 +34,8 @@ namespace KeyCard.BusinessLogic.Validators.Tasks
 
             // AssignedToId is optional, but must be a valid Guid if provided
             RuleFor(x => x.AssignedToId)
-                .NotEqual(Guid.Empty)
-                .When(x => x.AssignedToId.HasValue)
-                .WithMessage("AssignedToId cannot be an empty GUID.");
+                .GreaterThan(0)
+                .WithMessage("AssignedToId must be greater than zero.");
         }
     }
 }

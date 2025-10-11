@@ -1,11 +1,14 @@
 using FluentValidation;
+
 using KeyCard.BusinessLogic;
 using KeyCard.BusinessLogic.ServiceInterfaces;
 using KeyCard.Core.Middlewares;
-using KeyCard.Infrastructure.Identity;
 using KeyCard.Infrastructure.Models.AppDbContext;
+using KeyCard.Infrastructure.Models.User;
 using KeyCard.Infrastructure.ServiceImplementation;
+
 using MediatR;
+
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
@@ -33,7 +36,7 @@ builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddIdentity<ApplicationUser, ApplicationRole>()
+builder.Services.AddIdentity<ApplicationUser, ApplicationUserRole>()
     .AddEntityFrameworkStores<ApplicationDBContext>()
     .AddDefaultTokenProviders();
 

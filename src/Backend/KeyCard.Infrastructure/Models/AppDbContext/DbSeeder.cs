@@ -1,7 +1,6 @@
 using KeyCard.Core.Common;
-using KeyCard.Infrastructure.Identity;
 using KeyCard.Infrastructure.Models.Entities;
-using KeyCard.Infrastructure.Models.Users;
+using KeyCard.Infrastructure.Models.User;
 
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -25,10 +24,9 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
         /// <summary>
         /// Seed default roles and an admin user
         /// </summary>
-        public static async Task SeedRolesAndAdminAsync(
-            IServiceProvider serviceProvider)
+        public static async Task SeedRolesAndAdminAsync(IServiceProvider serviceProvider)
         {
-            var roleManager = serviceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
+            var roleManager = serviceProvider.GetRequiredService<RoleManager<ApplicationUserRole>>();
             var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
             string[] roles = { "Admin", "Employee", "HouseKeeping", "Guest" };
@@ -38,7 +36,7 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
             {
                 if (!await roleManager.RoleExistsAsync(role))
                 {
-                    await roleManager.CreateAsync(new ApplicationRole { Name = role });
+                    await roleManager.CreateAsync(new ApplicationUserRole { Name = role });
                 }
             }
 
@@ -51,19 +49,22 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                 adminUser = new ApplicationUser
                 {
                     UserName = "admin",
+                    FirstName = "System",
+                    LastName = "Administrator",
                     Email = adminEmail,
                     FullName = "System Administrator",
                     EmailConfirmed = true
                 };
 
-                var result = await userManager.CreateAsync(adminUser, "Admin@123"); // default password
+                var result = await userManager.CreateAsync(adminUser, "Admin@123");
 
                 if (result.Succeeded)
                 {
                     await userManager.AddToRoleAsync(adminUser, "Admin");
 
-                    // Add claims (optional)
-                    await userManager.AddClaimAsync(adminUser, new System.Security.Claims.Claim("Permission", "ManageSystem"));
+                    // Optional claim
+                    await userManager.AddClaimAsync(adminUser,
+                        new System.Security.Claims.Claim("Permission", "ManageSystem"));
                 }
             }
         }
@@ -85,7 +86,7 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                 ContactEmail = "info@keycardhotel.com",
                 ContactPhone = "+1 (555) 555-5555",
                 CreatedAt = DateTime.UtcNow,
-                CreatedBy = new Guid()
+                CreatedBy = 0 // System
             };
 
             context.Hotels.Add(hotel);
@@ -103,57 +104,18 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
 
             var roomTypes = new[]
             {
-                new RoomType
-                {
-                    Name = "Single Bed",
-                    Description = "Compact room with a single bed, ideal for solo travelers.",
-                    Capacity = 1,
-                    BaseRate = 80,
-                    HotelId = hotel.Id,
-                    CreatedBy = new Guid(),
-                    CreatedAt = DateTime.UtcNow
-                },
-                new RoomType
-                {
-                    Name = "Double Bed",
-                    Description = "Comfortable room with two single beds or one double bed.",
-                    Capacity = 2,
-                    BaseRate = 120,
-                    HotelId = hotel.Id,
-                    CreatedBy = new Guid(),
-                    CreatedAt = DateTime.UtcNow
-                },
-                new RoomType
-                {
-                    Name = "King Size",
-                    Description = "Spacious room with a king-size bed and modern amenities.",
-                    Capacity = 2,
-                    BaseRate = 160,
-                    HotelId = hotel.Id,
-                    CreatedBy = new Guid(),
-                    CreatedAt = DateTime.UtcNow
-                },
-                new RoomType
-                {
-                    Name = "Deluxe Suite",
-                    Description = "Luxurious suite with lounge area, work desk, and balcony.",
-                    Capacity = 3,
-                    BaseRate = 220,
-                    HotelId = hotel.Id,
-                    CreatedBy = new Guid(),
-                    CreatedAt = DateTime.UtcNow
-                },
-                new RoomType
-                {
-                    Name = "Penthouse Suite",
-                    Description = "Top-floor suite with panoramic views, jacuzzi, and VIP service.",
-                    Capacity = 4,
-                    BaseRate = 350,
-                    HotelId = hotel.Id,
-                    CreatedBy = new Guid(),
-                    CreatedAt = DateTime.UtcNow
-                }
+                new RoomType { Name = "Single Bed", Description = "Compact room with a single bed, ideal for solo travelers.", Capacity = 1, BaseRate = 80, HotelId = hotel.Id },
+                new RoomType { Name = "Double Bed", Description = "Comfortable room with two single beds or one double bed.", Capacity = 2, BaseRate = 120, HotelId = hotel.Id },
+                new RoomType { Name = "King Size", Description = "Spacious room with a king-size bed and modern amenities.", Capacity = 2, BaseRate = 160, HotelId = hotel.Id },
+                new RoomType { Name = "Deluxe Suite", Description = "Luxurious suite with lounge area, work desk, and balcony.", Capacity = 3, BaseRate = 220, HotelId = hotel.Id },
+                new RoomType { Name = "Penthouse Suite", Description = "Top-floor suite with panoramic views, jacuzzi, and VIP service.", Capacity = 4, BaseRate = 350, HotelId = hotel.Id }
             };
+
+            foreach (var type in roomTypes)
+            {
+                type.CreatedAt = DateTime.UtcNow;
+                type.CreatedBy = 0; // System
+            }
 
             context.RoomTypes.AddRange(roomTypes);
             await context.SaveChangesAsync();
@@ -174,7 +136,6 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
 
             foreach (var type in roomTypes)
             {
-                // Assign numbering ranges based on room type
                 int start = type.Name switch
                 {
                     "Single Bed" => 100,
@@ -185,14 +146,13 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                     _ => 600
                 };
 
-                // Decide how many rooms of each type you want
                 int count = type.Name switch
                 {
-                    "Single Bed" => 10,        // 10 single rooms (100–109)
-                    "Double Bed" => 12,        // 12 doubles (200–211)
-                    "King Size" => 8,          // 8 kings (300–307)
-                    "Deluxe Suite" => 5,       // 5 deluxe suites (400–404)
-                    "Penthouse Suite" => 2,    // 2 penthouses (500–501)
+                    "Single Bed" => 10,
+                    "Double Bed" => 12,
+                    "King Size" => 8,
+                    "Deluxe Suite" => 5,
+                    "Penthouse Suite" => 2,
                     _ => 0
                 };
 
@@ -209,7 +169,7 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                         RoomTypeId = type.Id,
                         HotelId = hotel.Id,
                         CreatedAt = DateTime.UtcNow,
-                        CreatedBy = new Guid()
+                        CreatedBy = 0 // System
                     });
                 }
             }
@@ -220,34 +180,44 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
         #endregion
 
         #region Guests
+        #region Guests
         private static async Task SeedGuestUsersAsync(IServiceProvider serviceProvider)
         {
             var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-            var context = serviceProvider.GetRequiredService<ApplicationDBContext>();
+            var roleManager = serviceProvider.GetRequiredService<RoleManager<ApplicationUserRole>>();
 
-            // Prevent duplication if already seeded
-            if (await context.GuestProfiles.AnyAsync())
-                return;
+            // Just check if any user is already in the Guest role
+            var guestRole = await roleManager.FindByNameAsync("Guest");
+            if (guestRole == null)
+                return; // Role not created yet (shouldn't happen)
 
-            var guests = new List<(string FullName, string Email)>
+            var anyGuest = (await userManager.GetUsersInRoleAsync("Guest")).Any();
+            if (anyGuest)
+                return; // Already seeded
+
+            var guests = new List<(string FirstName, string LastName, string Email, string Address, string Country)>
             {
-                ("John Doe", "john.doe@guest.com"),
-                ("Jane Smith", "jane.smith@guest.com"),
-                ("Robert Brown", "robert.brown@guest.com"),
-                ("Emily Davis", "emily.davis@guest.com"),
-                ("Michael Wilson", "michael.wilson@guest.com")
+                ("John", "Doe", "john.doe@guest.com", "123 Demo Street", "USA"),
+                ("Jane", "Smith", "jane.smith@guest.com", "456 Ocean Ave", "USA"),
+                ("John", "Brown", "robert.brown@guest.com", "789 Maple Road", "Canada"),
+                ("Emily", "Davis", "emily.davis@guest.com", "22 Lakeview Blvd", "UK"),
+                ("Michael", "Wilson", "michael.wilson@guest.com", "12 Greenway Crescent", "USA")
             };
 
-            foreach (var (fullName, email) in guests)
+            foreach (var (firstName, lastName, email, address, country) in guests)
             {
                 var existingUser = await userManager.FindByEmailAsync(email);
                 if (existingUser != null) continue;
 
                 var user = new ApplicationUser
                 {
-                    UserName = email,
+                    UserName = firstName + lastName,
                     Email = email,
-                    FullName = fullName,
+                    FirstName = firstName,
+                    LastName = firstName + " " + lastName,
+                    FullName = lastName + " " + firstName,
+                    Address = address,
+                    Country = country,
                     EmailConfirmed = true
                 };
 
@@ -255,40 +225,25 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                 if (result.Succeeded)
                 {
                     await userManager.AddToRoleAsync(user, "Guest");
-
-                    var profile = new GuestProfile
-                    {
-                        UserId = user.Id,
-                        Address = "123 Demo Street",
-                        Country = "USA",
-                        CreatedBy = new Guid(),
-                        CreatedAt = DateTime.UtcNow
-                    };
-
-                    context.GuestProfiles.Add(profile);
                 }
             }
-
-            await context.SaveChangesAsync();
         }
+        #endregion
+
         #endregion
 
         #region Staff
         private static async Task SeedStaffUsersAsync(IServiceProvider serviceProvider)
         {
             var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-            var context = serviceProvider.GetRequiredService<ApplicationDBContext>();
 
-            if (await context.StaffProfiles.AnyAsync())
-                return;
-
-            var staffList = new List<(string FullName, string Email, string Department, string Role)>
+            var staffList = new List<(string FirstName, string LastName, string Email, string Role)>
             {
-                ("Sarah Johnson", "sarah.johnson@hotel.com", "FrontDesk", "Employee"),
-                ("David Clark", "david.clark@hotel.com", "Housekeeping", "HouseKeeping")
+                ("Sarah", "Johnson" ,"sarah.johnson@hotel.com", "Employee"),
+                ("David" , "Clark", "david.clark@hotel.com", "HouseKeeping")
             };
 
-            foreach (var (fullName, email, department, role) in staffList)
+            foreach (var (firstName, lastName, email, role) in staffList)
             {
                 var existingUser = await userManager.FindByEmailAsync(email);
                 if (existingUser != null) continue;
@@ -297,32 +252,17 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                 {
                     UserName = email,
                     Email = email,
-                    FullName = fullName,
+                    FirstName = firstName,
+                    LastName = lastName,
+                    FullName = lastName + " " + firstName,
                     EmailConfirmed = true
                 };
 
                 var result = await userManager.CreateAsync(user, "Staff@123");
                 if (result.Succeeded)
-                {
                     await userManager.AddToRoleAsync(user, role);
-
-                    var profile = new StaffProfile
-                    {
-                        UserId = user.Id,
-                        Department = department,
-                        IsDeleted = false,
-                        CreatedBy = new Guid(),
-                        CreatedAt = DateTime.UtcNow
-                    };
-
-                    context.StaffProfiles.Add(profile);
-                }
             }
-
-            await context.SaveChangesAsync();
         }
         #endregion
-
-
     }
 }
