@@ -11,7 +11,7 @@ namespace KeyCard.BusinessLogic.ViewModels.Task
         string TaskName,
         string? Notes,
         string Status,
-        string RoomNumber,
+        string? RoomNumber,
         string? AssignedTo
     );
 }

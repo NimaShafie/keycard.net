@@ -29,7 +29,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                     t.TaskName,
                     t.Notes,
                     t.Status.ToString(),
-                    t.Room.RoomNumber,
+                    t.Room != null ? t.Room.RoomNumber : null,
                     t.AssignedTo != null ? t.AssignedTo.FullName : null))
                 .ToListAsync(cancellationToken);
         }
@@ -63,7 +63,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                 CreatedBy = command.User!.UserId
             };  
 
-            _context.HousekeepingTasks.Add(task);
+            await _context.HousekeepingTasks.AddAsync(task);
             await _context.SaveChangesAsync(cancellationToken);
 
             var room = await _context.Rooms.FindAsync(task.RoomId);
@@ -86,7 +86,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
             task.AssignedToId = command.AssignedToId;
 
             if (Enum.TryParse<TaskStatusEnum>(command.Status, true, out var status))
-                task.Status = status;
+                task.UpdateStatus(status);
 
             task.LastUpdatedAt = DateTime.UtcNow;
             task.LastUpdatedBy = command.User!.UserId;
@@ -111,7 +111,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
             if (task.Status == TaskStatusEnum.Completed)
                 return true; // Already completed — safe no-op
 
-            task.Status = TaskStatusEnum.Completed;
+            task.UpdateStatus(TaskStatusEnum.Completed);
             task.CompletedAt = DateTime.UtcNow;
             task.LastUpdatedAt = DateTime.UtcNow;
             task.LastUpdatedBy = command.User!.UserId;

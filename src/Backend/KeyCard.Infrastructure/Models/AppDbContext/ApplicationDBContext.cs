@@ -1,8 +1,11 @@
+using System.Reflection.Emit;
+
 using KeyCard.Infrastructure.Identity;
 using KeyCard.Infrastructure.Models.Bookings;
 using KeyCard.Infrastructure.Models.Entities;
 using KeyCard.Infrastructure.Models.HouseKeeping;
 using KeyCard.Infrastructure.Models.Users;
+
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -33,21 +36,21 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                 .HasOne(rt => rt.Hotel)
                 .WithMany(h => h.RoomTypes)
                 .HasForeignKey(rt => rt.HotelId)
-                .OnDelete(DeleteBehavior.NoAction);  // 👈 use NoAction (not Cascade)
+                .OnDelete(DeleteBehavior.NoAction);  // use NoAction (not Cascade)
 
             // Hotel → Room (no cascade)
             builder.Entity<Room>()
                 .HasOne(r => r.Hotel)
                 .WithMany(h => h.Rooms)
                 .HasForeignKey(r => r.HotelId)
-                .OnDelete(DeleteBehavior.NoAction);  // 👈 prevents multiple paths
+                .OnDelete(DeleteBehavior.NoAction);  // prevents multiple paths
 
             // RoomType → Room (no cascade)
             builder.Entity<Room>()
                 .HasOne(r => r.RoomType)
                 .WithMany()
                 .HasForeignKey(r => r.RoomTypeId)
-                .OnDelete(DeleteBehavior.NoAction);  // 👈 final link—no cascade
+                .OnDelete(DeleteBehavior.NoAction);  // final link—no cascade
 
             // Other relationships
             builder.Entity<Booking>()
@@ -79,6 +82,12 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                 .WithMany()
                 .HasForeignKey(ht => ht.AssignedToId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            builder.Entity<HousekeepingTask>()
+                .HasOne(t => t.Room)
+                .WithMany()
+                .HasForeignKey(t => t.RoomId)
+                .IsRequired(false);
         }
 
     }

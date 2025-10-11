@@ -3,7 +3,6 @@ using KeyCard.BusinessLogic.Commands.DigitalKey;
 using KeyCard.BusinessLogic.ServiceInterfaces;
 using KeyCard.BusinessLogic.ViewModels.Booking;
 using KeyCard.Core.Common;
-using KeyCard.Core.Wrappers;
 using KeyCard.Infrastructure.Models.AppDbContext;
 using KeyCard.Infrastructure.Models.Bookings;
 using KeyCard.Infrastructure.Models.HouseKeeping;
@@ -58,7 +57,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                 LastUpdatedBy = command.User!.UserId
             };
 
-            _context.Bookings.Add(booking);
+            await _context.Bookings.AddAsync(booking);
             await _context.SaveChangesAsync(cancellationToken);
 
             var room = await _context.Rooms.Include(r => r.RoomType)
@@ -198,12 +197,12 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                 throw new InvalidOperationException("Only reserved bookings can be checked in.");
 
             // Update booking status
-            booking.Status = BookingStatus.CheckedIn;
+            booking.ChangeStatus(BookingStatus.CheckedIn);
             booking.LastUpdatedAt = DateTime.UtcNow;
             booking.LastUpdatedBy = command.User!.UserId; // later replace with current user via IUserContext
 
             // Update room status
-            booking.Room.Status = RoomStatus.Occupied;
+            booking.Room.ChangeStatus(RoomStatus.Occupied);
             booking.Room.LastUpdatedAt = DateTime.UtcNow;
             booking.Room.LastUpdatedBy = command.User!.UserId;
 
@@ -230,12 +229,12 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                 throw new InvalidOperationException("Only checked-in bookings can be checked out.");
 
             // Update booking status
-            booking.Status = BookingStatus.CheckedOut;
+            booking.ChangeStatus(BookingStatus.CheckedOut);
             booking.LastUpdatedAt = DateTime.UtcNow;
             booking.LastUpdatedBy = command.User!.UserId; // later: replace with IUserContext
 
             // Update room status → Dirty
-            booking.Room.Status = RoomStatus.Dirty;
+            booking.Room.ChangeStatus(RoomStatus.Dirty);
             booking.Room.LastUpdatedAt = DateTime.UtcNow;
             booking.Room.LastUpdatedBy = command.User!.UserId;
 
@@ -253,9 +252,10 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                 CreatedBy = command.User!.UserId
             };
 
-            _context.HousekeepingTasks.Add(cleaningTask);
+            await _context.HousekeepingTasks.AddAsync(cleaningTask);
 
             // (Future: Generate invoice or revoke digital key here)
+            await _digitalKeyService.RevokeKeyAsync(new RevokeDigitalKeyCommand(booking.Id) { User = command.User }, cancellationToken);
                 
             await _context.SaveChangesAsync(cancellationToken);
 

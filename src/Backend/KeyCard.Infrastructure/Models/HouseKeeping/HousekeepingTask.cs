@@ -13,8 +13,8 @@ namespace KeyCard.Infrastructure.Models.HouseKeeping
         public TaskStatusEnum Status { get; set; } = TaskStatusEnum.Pending;
         public DateTime? CompletedAt { get; set; }
 
-        public int RoomId { get; set; }
-        public Room Room { get; set; } = default!;
+        public int? RoomId { get; set; }
+        public Room? Room { get; set; } = default!;
 
         public Guid? AssignedToId { get; set; }
         public ApplicationUser? AssignedTo { get; set; } // Link to staff identity
@@ -24,6 +24,11 @@ namespace KeyCard.Infrastructure.Models.HouseKeeping
         public DateTime? LastUpdatedAt { get; set; }
         public Guid? LastUpdatedBy { get; set; }
         public bool IsDeleted { get; set; }
+
+        public void UpdateStatus(TaskStatusEnum status)
+        {
+            this.Status = status;
+        }
 
     }
 
