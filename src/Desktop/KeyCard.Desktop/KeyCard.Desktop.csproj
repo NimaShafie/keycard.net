@@ -9,14 +9,14 @@
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
 
-  <!-- Strip ANY accidental inclusions of .axaml as Page/None/AvaloniaXaml first -->
+  <!-- Remove any accidental wrong build actions on .axaml -->
   <ItemGroup>
     <Page Remove="**\*.axaml" />
     <None Remove="**\*.axaml" />
     <AvaloniaXaml Remove="**\*.axaml" />
   </ItemGroup>
 
-  <!-- settings -->
+  <!-- App settings copy -->
   <ItemGroup>
     <None Update="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -26,35 +26,30 @@
     </None>
   </ItemGroup>
 
-  <!-- Now include them ONCE, explicitly -->
+  <!-- Compile ALL .axaml (recursively) -->
   <ItemGroup>
     <AvaloniaXaml Include="App.axaml" />
-    <AvaloniaXaml Include="Views\*.axaml" />
+    <AvaloniaXaml Include="Views\**\*.axaml" />
   </ItemGroup>
 
-  <!-- Pair code-behind to XAML (nice in Solution Explorer) -->
+  <!-- Pair code-behind to XAML (recursively) -->
   <ItemGroup>
     <Compile Update="App.axaml.cs">
       <DependentUpon>App.axaml</DependentUpon>
     </Compile>
-    <Compile Update="Views\*.axaml.cs">
+    <Compile Update="Views\**\*.axaml.cs">
       <DependentUpon>%(Filename).axaml</DependentUpon>
     </Compile>
   </ItemGroup>
 
-  <!-- Packages (preserved as-is) -->
+  <!-- Packages -->
   <ItemGroup>
-    <!-- Avalonia -->
     <PackageReference Include="Avalonia" />
     <PackageReference Include="Avalonia.Desktop" />
     <PackageReference Include="Avalonia.ReactiveUI" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
     <PackageReference Include="Avalonia.Controls.DataGrid" />
-
-    <!-- MVVM / Toolkit -->
     <PackageReference Include="CommunityToolkit.Mvvm" />
-
-    <!-- Realtime / DI / Hosting / Http / Config -->
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
@@ -62,21 +57,13 @@
     <PackageReference Include="Microsoft.Extensions.Configuration" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
-
-    <!-- Resilience -->
     <PackageReference Include="Polly" />
     <PackageReference Include="Polly.Extensions.Http" />
   </ItemGroup>
 
-  <!-- Brand logo resource (now OPTIONAL; build won’t fail if the file is missing) -->
+  <!-- Optional asset -->
   <ItemGroup>
     <AvaloniaResource Include="Assets\logo.png" Condition="Exists('Assets\logo.png')" />
   </ItemGroup>
 
-  <!-- Uncomment later if you wire shared projects
-  <ItemGroup>
-    <ProjectReference Include="..\..\Domain\KeyCard.Domain.csproj" />
-    <ProjectReference Include="..\..\Contracts\KeyCard.Contracts.csproj" />
-  </ItemGroup>
-  -->
 </Project>

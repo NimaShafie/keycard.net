@@ -1,45 +1,54 @@
+<!-- Views/FrontDeskView.axaml -->
 <UserControl
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vms="clr-namespace:KeyCard.Desktop.ViewModels"
-    xmlns:m="clr-namespace:KeyCard.Desktop.Models"
     xmlns:vctrl="clr-namespace:KeyCard.Desktop.Views.Controls"
     x:Class="KeyCard.Desktop.Views.FrontDeskView"
     x:DataType="vms:FrontDeskViewModel">
 
-  <!-- Single root -->
   <Grid RowDefinitions="Auto,*">
-    <!-- Breadcrumb/header -->
     <vctrl:ViewHeader Grid.Row="0" HeaderText="Dashboard / Front Desk"/>
 
-    <!-- Your original layout goes here unchanged -->
-    <Grid Grid.Row="1" Margin="20" RowDefinitions="Auto,*" ColumnDefinitions="2*,*">
-      <StackPanel Orientation="Horizontal" Spacing="8" Grid.Row="0" Grid.ColumnSpan="2">
+    <Grid Grid.Row="1" Margin="20" RowDefinitions="Auto,*" ColumnDefinitions="3*,2*">
+      <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="8">
         <TextBox Width="260" Watermark="Booking ID or last name" Text="{Binding Query}"/>
         <Button Content="Search" Command="{Binding SearchCommand}"/>
       </StackPanel>
 
-      <Border Grid.Row="1" Grid.Column="0" Padding="8">
-        <ListBox ItemsSource="{Binding Results}" SelectedItem="{Binding Selected}">
-          <ListBox.ItemTemplate>
-            <DataTemplate x:DataType="m:Booking">
-              <StackPanel Orientation="Horizontal" Spacing="12">
-                <TextBlock Text="{Binding BookingId}"  Width="120"/>
-                <TextBlock Text="{Binding GuestName}"  Width="220"/>
-                <TextBlock Text="{Binding RoomNumber}" Width="80"/>
-                <TextBlock Text="{Binding CheckIn}"    Width="140"/>
-                <TextBlock Text="{Binding CheckOut}"   Width="140"/>
-              </StackPanel>
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
+      <Border Grid.Row="1" Grid.Column="0" Padding="8"
+              Background="#141419" BorderBrush="#4B3A86" BorderThickness="1"
+              CornerRadius="8" MinHeight="320">
+        <!-- OPEN grid + columns INSIDE -->
+        <DataGrid
+            ItemsSource="{Binding Results}"
+            SelectedItem="{Binding Selected, Mode=TwoWay}"
+            AutoGenerateColumns="False"
+            HeadersVisibility="Column"
+            GridLinesVisibility="All"
+            CanUserSortColumns="True"
+            CanUserResizeColumns="True"
+            CanUserReorderColumns="True"
+            IsReadOnly="True"
+            RowHeight="36"
+            Background="#141419">
+
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Booking ID" Width="2*" Binding="{Binding BookingId}" SortMemberPath="BookingId"/>
+            <DataGridTextColumn Header="Guest"      Width="2*" Binding="{Binding GuestName}" SortMemberPath="GuestName"/>
+            <DataGridTextColumn Header="Room"       Width="*"  Binding="{Binding RoomNumber}" SortMemberPath="RoomNumber"/>
+            <DataGridTextColumn Header="Check-In"   Width="*"  Binding="{Binding CheckIn}"    SortMemberPath="CheckIn"/>
+            <DataGridTextColumn Header="Check-Out"  Width="*"  Binding="{Binding CheckOut}"   SortMemberPath="CheckOut"/>
+          </DataGrid.Columns>
+
+        </DataGrid>
       </Border>
 
       <Border Grid.Row="1" Grid.Column="1" Padding="8">
-        <StackPanel Spacing="8">
+        <StackPanel Spacing="12">
           <StackPanel Orientation="Horizontal" Spacing="8">
             <TextBlock Text="Assign Room:" VerticalAlignment="Center"/>
-            <TextBox Width="100" Text="{Binding AssignRoomNumber}"/>
+            <TextBox Width="120"/>
             <Button Content="Assign" Command="{Binding AssignRoomCommand}"/>
           </StackPanel>
           <Button Content="Check In" Command="{Binding CheckInCommand}"/>

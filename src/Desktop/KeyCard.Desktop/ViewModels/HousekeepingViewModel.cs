@@ -6,29 +6,59 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using System.Windows.Input;
 
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using KeyCard.Desktop.Services;
 
 namespace KeyCard.Desktop.ViewModels
 {
-    /// <summary>
-    /// Matches Views/HousekeepingView.axaml bindings:
-    /// - ObservableCollection<string> Rooms
-    /// - string? SelectedRoom
-    /// - ObservableCollection<string> Tasks
-    /// - string? SelectedTask
-    /// - Commands: MarkRoomCleanCommand, MarkTaskDoneCommand, RefreshCommand
-    /// No compile-time dependency on specific IHousekeepingService methods
-    /// (supports ListRoomsAsync, GetRoomsAsync, ListRooms, GetRooms, Rooms, etc.).
-    /// </summary>
     public partial class HousekeepingViewModel : ViewModelBase
     {
         private readonly IHousekeepingService _svc;
         private readonly IAppEnvironment _env;
 
-        // Preferred: static readonly arrays to avoid CA1861 (“constant array arguments”) warnings
+
+        public ObservableCollection<string> Rooms { get; }
+        public ObservableCollection<string> Tasks { get; }
+        public bool UseMockData { get; set; } = true;
+
+        // String-based selections (kept for back-compat with older views)
+        private string? _selectedRoom;
+        public string? SelectedRoom
+        {
+            get => _selectedRoom;
+            set
+            {
+                if (_selectedRoom == value) return;
+                _selectedRoom = value;
+                Raise(nameof(SelectedRoom));
+            }
+        }
+
+        private string? _selectedTask;
+        public string? SelectedTask
+        {
+            get => _selectedTask;
+            set
+            {
+                if (_selectedTask == value) return;
+                _selectedTask = value;
+                Raise(nameof(SelectedTask));
+            }
+        }
+
+        // NEW: tabular sources for DataGrids (with Status column)
+        public ObservableCollection<RoomRow> RoomsTable { get; }
+        public ObservableCollection<TaskRow> TasksTable { get; }
+
+        // NEW: row selections used by the DataGrids
+        public RoomRow? SelectedRoomRow { get; set; }
+        public TaskRow? SelectedTaskRow { get; set; }
+
+        // Reflection candidates (unchanged)
         private static readonly string[] AsyncRoomMethods = { "ListRoomsAsync", "GetRoomsAsync" };
         private static readonly string[] RoomMethods = { "ListRooms", "GetRooms" };
         private static readonly string[] RoomProps = { "Rooms" };
@@ -43,34 +73,10 @@ namespace KeyCard.Desktop.ViewModels
 
             Rooms = new ObservableCollection<string>();
             Tasks = new ObservableCollection<string>();
+            RoomsTable = new ObservableCollection<RoomRow>();
+            TasksTable = new ObservableCollection<TaskRow>();
 
             _ = RefreshAsync();
-        }
-
-        public ObservableCollection<string> Rooms { get; }
-        private string? _selectedRoom;
-        public string? SelectedRoom
-        {
-            get => _selectedRoom;
-            set
-            {
-                if (_selectedRoom == value) return;
-                _selectedRoom = value;
-                Raise(nameof(SelectedRoom));
-            }
-        }
-
-        public ObservableCollection<string> Tasks { get; }
-        private string? _selectedTask;
-        public string? SelectedTask
-        {
-            get => _selectedTask;
-            set
-            {
-                if (_selectedTask == value) return;
-                _selectedTask = value;
-                Raise(nameof(SelectedTask));
-            }
         }
 
         [RelayCommand]
@@ -80,6 +86,8 @@ namespace KeyCard.Desktop.ViewModels
             {
                 Rooms.Clear();
                 Tasks.Clear();
+                RoomsTable.Clear();
+                TasksTable.Clear();
 
                 var rooms = await TryGetListOfStringsAsync(_svc, AsyncRoomMethods)
                             ?? TryGetListOfStrings(_svc, RoomMethods)
@@ -90,47 +98,80 @@ namespace KeyCard.Desktop.ViewModels
                             ?? TryReadListProperty(_svc, TaskProps);
 
                 if (rooms is { Count: > 0 })
-                    foreach (var r in rooms) Rooms.Add(r);
+                {
+                    foreach (var r in rooms)
+                    {
+                        Rooms.Add(r);
+                        RoomsTable.Add(new RoomRow { Name = r, Status = null });
+                    }
+                }
                 else
+                {
                     AddMockRooms();
+                }
 
                 if (tasks is { Count: > 0 })
-                    foreach (var t in tasks) Tasks.Add(t);
+                {
+                    foreach (var t in tasks)
+                    {
+                        Tasks.Add(t);
+                        TasksTable.Add(new TaskRow { Description = t, Status = null });
+                    }
+                }
                 else
+                {
                     AddMockTasks();
+                }
             }
             catch
             {
-                // Safe fallback
                 Rooms.Clear();
                 Tasks.Clear();
+                RoomsTable.Clear();
+                TasksTable.Clear();
                 AddMockRooms();
                 AddMockTasks();
             }
         }
 
+        // SINGLE command that handles both the DataGrid row selection and the legacy string selection
         [RelayCommand]
         private void MarkRoomClean()
         {
+            if (SelectedRoomRow is not null) { SelectedRoomRow.Status = true; return; }
+
             if (SelectedRoom is null) return;
-            var label = SelectedRoom;
-            if (!label.Contains("(Clean)", StringComparison.OrdinalIgnoreCase))
-            {
-                var idx = Rooms.IndexOf(label);
-                if (idx >= 0) Rooms[idx] = $"{label} (Clean)";
-            }
+            var row = RoomsTable.FirstOrDefault(r =>
+                string.Equals(r.Name, SelectedRoom, StringComparison.OrdinalIgnoreCase));
+            if (row is not null) row.Status = true;
         }
 
+        // SINGLE command that handles both selection modes
         [RelayCommand]
         private void MarkTaskDone()
         {
+            if (SelectedTaskRow is not null) { SelectedTaskRow.Status = true; return; }
+
             if (SelectedTask is null) return;
-            var idx = Tasks.IndexOf(SelectedTask);
-            if (idx >= 0) Tasks[idx] = $"{SelectedTask} (Done)";
+            var row = TasksTable.FirstOrDefault(t =>
+                string.Equals(t.Description, SelectedTask, StringComparison.OrdinalIgnoreCase));
+            if (row is not null) row.Status = true;
         }
 
-        // --- Reflection helpers to tolerate multiple service shapes ---
+        // --- Table row view models (Status is tri-state: null/unchecked/checked) ---
+        public partial class RoomRow : ObservableObject
+        {
+            [ObservableProperty] private string name = "";
+            [ObservableProperty] private bool? status;
+        }
 
+        public partial class TaskRow : ObservableObject
+        {
+            [ObservableProperty] private string description = "";
+            [ObservableProperty] private bool? status;
+        }
+
+        // --- Reflection helpers (unchanged) ---
         private static async Task<List<string>?> TryGetListOfStringsAsync(object svc, string[] methodNames)
         {
             foreach (var name in methodNames)
@@ -151,10 +192,7 @@ namespace KeyCard.Desktop.ViewModels
 
                     return ToStringList(result);
                 }
-                catch
-                {
-                    // try next
-                }
+                catch { /* try next */ }
             }
             return null;
         }
@@ -171,10 +209,7 @@ namespace KeyCard.Desktop.ViewModels
                     var result = mi.Invoke(svc, null);
                     return ToStringList(result);
                 }
-                catch
-                {
-                    // try next
-                }
+                catch { /* try next */ }
             }
             return null;
         }
@@ -191,10 +226,7 @@ namespace KeyCard.Desktop.ViewModels
                     var val = pi.GetValue(svc);
                     return ToStringList(val);
                 }
-                catch
-                {
-                    // try next
-                }
+                catch { /* try next */ }
             }
             return null;
         }
@@ -220,21 +252,30 @@ namespace KeyCard.Desktop.ViewModels
             return null;
         }
 
-        // --- Mock helpers ---
-
+        // --- Mock helpers (populate both string and table forms) ---
         private void AddMockRooms()
         {
-            Rooms.Add("1204");
-            Rooms.Add("0711");
-            Rooms.Add("1502");
-            Rooms.Add("0808");
+            var rooms = new[] { "1204", "0711", "1502", "0808" };
+            foreach (var r in rooms)
+            {
+                Rooms.Add(r);
+                RoomsTable.Add(new RoomRow { Name = r, Status = null });
+            }
         }
 
         private void AddMockTasks()
         {
-            Tasks.Add("Deliver extra towels to 0711");
-            Tasks.Add("Deep clean 1502");
-            Tasks.Add("Replace linens in 1204");
+            var tasks = new[]
+            {
+                "Deliver extra towels to 0711",
+                "Deep clean 1502",
+                "Replace linens in 1204"
+            };
+            foreach (var t in tasks)
+            {
+                Tasks.Add(t);
+                TasksTable.Add(new TaskRow { Description = t, Status = null });
+            }
         }
 
         private void Raise(string propertyName)

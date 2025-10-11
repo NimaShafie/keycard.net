@@ -3,58 +3,19 @@ using System;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
-using System.Reflection;
-using System.Threading;
 using System.Threading.Tasks;
-
-using Avalonia.Threading; // UI thread marshaling
-
-using CommunityToolkit.Mvvm.Input;
-
+using System.Windows.Input;
 using KeyCard.Desktop.Models;
+using KeyCard.Desktop.Mocks;
 using KeyCard.Desktop.Services;
 
 namespace KeyCard.Desktop.ViewModels
 {
-    /// <summary>
-    /// Matches Views/FrontDeskView.axaml bindings:
-    /// - string Query
-    /// - ObservableCollection<Booking> Results
-    /// - Booking? Selected
-    /// - string AssignRoomNumber
-    /// - Commands: SearchCommand, AssignRoomCommand, CheckInCommand
-    /// </summary>
-    public partial class FrontDeskViewModel : ViewModelBase
+    public class FrontDeskViewModel : ViewModelBase
     {
-        private readonly IBookingService _bookings;
-        private readonly IAppEnvironment _env;
+        private readonly INavigationService? _nav;
 
-        public FrontDeskViewModel(IBookingService bookings, IAppEnvironment env)
-        {
-            _bookings = bookings;
-            _env = env;
-
-            Results = new ObservableCollection<Booking>();
-
-            // Async, non-blocking initial data load
-            _ = LoadInitialAsync();
-        }
-
-        // --- Properties ---
-
-        private string? _query;
-        public string? Query
-        {
-            get => _query;
-            set
-            {
-                if (_query == value) return;
-                _query = value;
-                Raise(nameof(Query));
-            }
-        }
-
-        public ObservableCollection<Booking> Results { get; }
+        // ---- Bindable properties ----
 
         private Booking? _selected;
         public Booking? Selected
@@ -62,222 +23,228 @@ namespace KeyCard.Desktop.ViewModels
             get => _selected;
             set
             {
-                if (_selected == value) return;
-                _selected = value;
-                Raise(nameof(Selected));
+                if (!Equals(_selected, value))
+                {
+                    _selected = value;
+                    OnPropertyChanged();
+                    (CheckInCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                    (CheckOutCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                    (_assignRoomCore as RelayCommand)?.RaiseCanExecuteChanged();
+                }
             }
         }
 
-        private string? _assignRoomNumber;
-        public string? AssignRoomNumber
+        private string? _searchText;
+        public string? SearchText
         {
-            get => _assignRoomNumber;
+            get => _searchText;
             set
             {
-                if (_assignRoomNumber == value) return;
-                _assignRoomNumber = value;
-                Raise(nameof(AssignRoomNumber));
-            }
-        }
-
-        // --- Commands ---
-
-        [RelayCommand]
-        private async Task SearchAsync()
-        {
-            try
-            {
-                var list = await _bookings.ListAsync(CancellationToken.None);
-                var q = (Query ?? string.Empty).Trim();
-
-                if (string.IsNullOrWhiteSpace(q))
+                if (_searchText != value)
                 {
-                    await Dispatcher.UIThread.InvokeAsync(() =>
-                    {
-                        Results.Clear();
-                        foreach (var b in list) Results.Add(b);
-                    });
-                    return;
-                }
-
-                var filtered = list.Where(b =>
-                {
-                    var id = GetString(b, "BookingId") ?? GetString(b, "Id");
-                    var guest = GetString(b, "GuestName") ?? GetString(b, "Guest");
-                    var room = GetString(b, "RoomNumber") ?? GetString(b, "Room");
-                    return Contains(id, q) || Contains(guest, q) || Contains(room, q);
-                }).ToList();
-
-                await Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    Results.Clear();
-                    foreach (var b in filtered) Results.Add(b);
-                });
-            }
-            catch
-            {
-                // Swallow transient errors to avoid UI crash
-            }
-        }
-
-        [RelayCommand]
-        private void AssignRoom()
-        {
-            if (Selected is null) return;
-
-            var room = (AssignRoomNumber ?? string.Empty).Trim();
-            if (string.IsNullOrWhiteSpace(room)) return;
-
-            // Try int first; fall back to string if RoomNumber is not an int
-            if (int.TryParse(room, NumberStyles.Integer, CultureInfo.InvariantCulture, out var rn))
-                TrySet(Selected, "RoomNumber", rn);
-            else
-                TrySet(Selected, "RoomNumber", room);
-        }
-
-        [RelayCommand]
-        private void CheckIn()
-        {
-            if (Selected is null) return;
-
-            var today = DateTime.Today;
-            TrySetDate(Selected, "CheckIn", today);
-        }
-
-        // --- Async initial load (UI-thread safe) ---
-
-        private async Task LoadInitialAsync()
-        {
-            try
-            {
-                var list = await _bookings.ListAsync(CancellationToken.None);
-                if (list?.Any() == true)
-                {
-                    await Dispatcher.UIThread.InvokeAsync(() =>
-                    {
-                        Results.Clear();
-                        foreach (var b in list) Results.Add(b);
-                    });
-                    return;
+                    _searchText = value;
+                    OnPropertyChanged();
+                    ApplyFilter();
+                    OnPropertyChanged(nameof(Query)); // keep alias in sync
                 }
             }
-            catch
-            {
-                // fall through to local mock
-            }
-
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                Results.Clear();
-                Results.Add(Mock("BK-100241", "Alex Chen", "1204", DateTime.Today, DateTime.Today.AddDays(3)));
-                Results.Add(Mock("BK-100242", "Priya N.", "0711", DateTime.Today, DateTime.Today.AddDays(2)));
-                Results.Add(Mock("BK-100243", "J. Morales", "1502", DateTime.Today, DateTime.Today.AddDays(5)));
-            });
         }
 
-        // --- Helpers ---
-
-        private static bool Contains(string? haystack, string needle)
-            => haystack?.IndexOf(needle, StringComparison.OrdinalIgnoreCase) >= 0;
-
-        private static string? GetString(object obj, string prop)
+        /// <summary>Alias some XAML uses.</summary>
+        public string? Query
         {
-            var pi = obj.GetType().GetProperty(prop, BindingFlags.Public | BindingFlags.Instance);
-            if (pi is null) return null;
-            var val = pi.GetValue(obj);
-            return val switch
+            get => SearchText;
+            set
             {
-                null => null,
-                IFormattable f => f.ToString(null, CultureInfo.InvariantCulture),
-                _ => val.ToString()
-            };
-        }
-
-        private static void TrySet(object target, string prop, object? value)
-        {
-            var pi = target.GetType().GetProperty(prop, BindingFlags.Public | BindingFlags.Instance);
-            if (pi is null || !pi.CanWrite) return;
-
-            try
-            {
-                var destType = pi.PropertyType;
-                object? converted = value;
-
-                if (value != null && !destType.IsAssignableFrom(value.GetType()))
+                if (!string.Equals(_searchText, value, StringComparison.Ordinal))
                 {
-                    if (destType == typeof(Guid) && value is string s)
-                        converted = Guid.TryParse(s, out var g) ? g : Guid.NewGuid();
-                    else if (destType == typeof(int) && value is string ss && int.TryParse(ss, NumberStyles.Integer, CultureInfo.InvariantCulture, out var iv))
-                        converted = iv;
-                    else
-                        converted = Convert.ChangeType(value, destType, CultureInfo.InvariantCulture);
+                    SearchText = value;               // triggers ApplyFilter
+                    OnPropertyChanged(nameof(Query)); // explicit notify for alias
                 }
-
-                pi.SetValue(target, converted);
-            }
-            catch
-            {
-                // ignored by design
             }
         }
 
-        private static void TrySetDate(object target, string prop, DateTime dt)
+        private bool _isBusy;
+        public bool IsBusy
         {
-            var pi = target.GetType().GetProperty(prop, BindingFlags.Public | BindingFlags.Instance);
-            if (pi is null || !pi.CanWrite) return;
+            get => _isBusy;
+            set
+            {
+                if (_isBusy != value)
+                {
+                    _isBusy = value;
+                    OnPropertyChanged();
+                    (RefreshCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                    (SearchCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                    (_assignRoomCore as RelayCommand)?.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        public ObservableCollection<Booking> Arrivals { get; } = new();
+        public ObservableCollection<Booking> Departures { get; } = new();
+        public ObservableCollection<Booking> Results { get; } = new();
+
+        // Backing stores for filtering (not bound)
+        private readonly ObservableCollection<Booking> _allArrivals = new();
+        private readonly ObservableCollection<Booking> _allDepartures = new();
+
+        // ---- Commands ----
+        public ICommand BackToDashboardCommand { get; }
+        public ICommand RefreshCommand { get; }
+        public ICommand SearchCommand { get; }
+        public ICommand CheckInCommand { get; }
+        public ICommand CheckOutCommand { get; }
+
+        // Keep a single core command instance and expose both names for XAML compatibility.
+        private readonly ICommand _assignRoomCore;
+        /// <summary>Some XAML uses this name.</summary>
+        public ICommand AssignRoomNumber => _assignRoomCore;
+        /// <summary>Other XAML uses this name.</summary>
+        public ICommand AssignRoomCommand => _assignRoomCore;
+
+        // ---- Ctors ----
+        public FrontDeskViewModel() : this(null) { }
+
+        public FrontDeskViewModel(INavigationService? nav)
+        {
+            _nav = nav;
+
+            BackToDashboardCommand = new RelayCommand(_ => _nav?.NavigateTo<DashboardViewModel>());
+            RefreshCommand = new RelayCommand(async _ => await RefreshAsync(), _ => !IsBusy);
+
+            // Search: optional CommandParameter (string). If present, uses it; otherwise re-applies filter.
+            SearchCommand = new RelayCommand(param =>
+            {
+                if (param is string s)
+                    Query = s;   // sets SearchText and applies filter
+                else
+                    ApplyFilter();
+            }, _ => !IsBusy);
+
+            CheckInCommand = new RelayCommand(b =>
+            {
+                var booking = b as Booking ?? Selected;
+                if (booking is null) return;
+                // TODO: integrate with backend to mark check-in
+            },
+            _ => Selected is not null && !IsBusy);
+
+            CheckOutCommand = new RelayCommand(b =>
+            {
+                var booking = b as Booking ?? Selected;
+                if (booking is null) return;
+                // TODO: integrate with backend to mark check-out
+            },
+            _ => Selected is not null && !IsBusy);
+
+            // Core assign-room command used by both AssignRoomNumber and AssignRoomCommand properties.
+            _assignRoomCore = new RelayCommand(b =>
+            {
+                var booking = b as Booking ?? Selected;
+                if (booking is null) return;
+
+                // TODO: choose/find room, call service, then update list item (immutable model considerations)
+                // Example placeholder:
+                // var newRoom = 500; // demo
+                // var updated = booking with { RoomNumber = newRoom }; // if Booking is a record
+                // ReplaceInCollections(updated);
+            },
+            _ => Selected is not null && !IsBusy);
+
+            // ensure lists aren’t blank when the view opens
+            _ = RefreshAsync();
+        }
+
+        // ---- Behaviors ----
+
+        private async Task RefreshAsync()
+        {
+            if (IsBusy) return;
 
             try
             {
-                if (pi.PropertyType.Name == "DateOnly")
-                {
-                    var t = Type.GetType("System.DateOnly");
-                    if (t != null)
-                    {
-                        var ctor = t.GetConstructor(new[] { typeof(int), typeof(int), typeof(int) });
-                        var dateOnly = ctor?.Invoke(new object[] { dt.Year, dt.Month, dt.Day });
-                        if (dateOnly != null) pi.SetValue(target, dateOnly);
-                    }
-                }
-                else if (pi.PropertyType == typeof(DateTime))
-                {
-                    pi.SetValue(target, dt);
-                }
+                IsBusy = true;
+
+                await Task.Delay(200); // simulate fetch
+
+                var arrivals = KeyCard.Desktop.Mocks.BookingMocks.GetArrivalsToday(10);
+                var departures = KeyCard.Desktop.Mocks.BookingMocks.GetDeparturesToday(5);
+
+                // If you have backing stores (e.g., _allArrivals/_allDepartures), keep them in sync
+                _allArrivals?.Clear();
+                if (_allArrivals is not null) foreach (var a in arrivals) _allArrivals.Add(a);
+
+                _allDepartures?.Clear();
+                if (_allDepartures is not null) foreach (var d in departures) _allDepartures.Add(d);
+
+                // Always update the bound collections the view uses
+                Arrivals.Clear(); foreach (var a in arrivals) Arrivals.Add(a);
+                Departures.Clear(); foreach (var d in departures) Departures.Add(d);
+
+                ApplyFilter();
+                Selected = null;
             }
-            catch
+            finally
             {
-                // ignored
+                IsBusy = false;
             }
         }
 
-        private static Booking Mock(string id, string guest, string room, DateTime ci, DateTime co)
+        private void ApplyFilter()
         {
-            var b = Activator.CreateInstance<Booking>()
-#pragma warning disable SYSLIB0050
-                    ?? (Booking)System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(Booking));
-#pragma warning restore SYSLIB0050
+            var term = (SearchText ?? string.Empty).Trim();
+            bool hasTerm = term.Length > 0;
 
-            TrySet(b, "BookingId", id);
-            TrySet(b, "GuestName", guest);
+            static bool Match(Booking b, string t) =>
+                b.BookingId.ToString("D", CultureInfo.InvariantCulture).Contains(t, StringComparison.OrdinalIgnoreCase) ||
+                (b.GuestName?.Contains(t, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                b.RoomNumber.ToString(CultureInfo.InvariantCulture).Contains(t, StringComparison.OrdinalIgnoreCase);
 
-            if (int.TryParse(room, NumberStyles.Integer, CultureInfo.InvariantCulture, out var rn))
-                TrySet(b, "RoomNumber", rn);
-            else
-                TrySet(b, "RoomNumber", room);
+            var filteredArrivals = hasTerm ? _allArrivals.Where(b => Match(b, term)) : _allArrivals;
+            var filteredDepartures = hasTerm ? _allDepartures.Where(b => Match(b, term)) : _allDepartures;
 
-            TrySetDate(b, "CheckIn", ci);
-            TrySetDate(b, "CheckOut", co);
-            return b;
+            Arrivals.ReplaceWith(filteredArrivals);
+            Departures.ReplaceWith(filteredDepartures);
+            Results.ReplaceWith(filteredArrivals.Concat(filteredDepartures));
+
+            if (Selected is not null && !Results.Contains(Selected))
+                Selected = null;
         }
 
-        private void Raise(string propertyName)
+        // ---- Minimal ICommand impl ----
+        internal sealed class RelayCommand : ICommand
         {
-            try
+            private readonly Func<object?, bool>? _canExecute;
+            private readonly Action<object?>? _execSync;
+            private readonly Func<object?, Task>? _execAsync;
+
+            public RelayCommand(Action<object?> execute, Func<object?, bool>? canExecute = null)
+            { _execSync = execute ?? throw new ArgumentNullException(nameof(execute)); _canExecute = canExecute; }
+
+            public RelayCommand(Func<object?, Task> executeAsync, Func<object?, bool>? canExecute = null)
+            { _execAsync = executeAsync ?? throw new ArgumentNullException(nameof(executeAsync)); _canExecute = canExecute; }
+
+            public bool CanExecute(object? parameter) => _canExecute?.Invoke(parameter) ?? true;
+
+            public async void Execute(object? parameter)
             {
-                var mi = GetType().GetMethod("OnPropertyChanged", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
-                         ?? typeof(ViewModelBase).GetMethod("OnPropertyChanged", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-                mi?.Invoke(this, new object?[] { propertyName });
+                if (_execSync is not null) { _execSync(parameter); return; }
+                if (_execAsync is not null) { await _execAsync(parameter); }
             }
-            catch { /* ignored */ }
+
+            public event EventHandler? CanExecuteChanged;
+            public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    // Public helper
+    public static class ObservableCollectionSyncExtensions
+    {
+        public static void ReplaceWith<T>(this ObservableCollection<T> target, System.Collections.Generic.IEnumerable<T> source)
+        {
+            target.Clear();
+            foreach (var item in source) target.Add(item);
         }
     }
 }

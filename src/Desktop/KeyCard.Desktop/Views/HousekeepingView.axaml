@@ -1,3 +1,4 @@
+<!-- Views/HousekeepingView.axaml -->
 <UserControl
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -6,37 +7,136 @@
     x:Class="KeyCard.Desktop.Views.HousekeepingView"
     x:DataType="vms:HousekeepingViewModel">
 
-  <!-- Single root -->
+  <!-- Load the DataGrid control template/theme -->
+  <UserControl.Styles>
+    <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+
+    <!-- Dark theme DataGrid styles (scoped to this view) -->
+    <Style Selector="DataGridColumnHeader">
+      <Setter Property="Background" Value="#1E1F29"/>
+      <Setter Property="Foreground" Value="#EDEDF1"/>
+      <Setter Property="BorderBrush" Value="#2E2750"/>
+    </Style>
+
+    <Style Selector="DataGridRow">
+      <Setter Property="Background" Value="#171822"/>
+      <Setter Property="Foreground" Value="#EDEDF1"/>
+      <Setter Property="BorderBrush" Value="#2E2750"/>
+    </Style>
+
+    <Style Selector="DataGridRow:odd">
+      <Setter Property="Background" Value="#131521"/>
+    </Style>
+
+    <Style Selector="DataGridCell">
+      <Setter Property="Foreground" Value="#EDEDF1"/>
+    </Style>
+  </UserControl.Styles>
+
   <Grid RowDefinitions="Auto,*">
-    <!-- Breadcrumb/header -->
+    <!-- Header -->
     <vctrl:ViewHeader Grid.Row="0" HeaderText="Dashboard / Housekeeping"/>
 
-    <!-- Your original layout goes here unchanged -->
-    <Grid Grid.Row="1" Margin="20" ColumnDefinitions="*,*" RowDefinitions="Auto,*">
-      <!-- You had a local title; keeping it -->
-      <TextBlock Grid.ColumnSpan="2"
-                 Text="Housekeeping"
-                 FontSize="20"
-                 FontWeight="SemiBold"
-                 Margin="0,0,0,10"/>
+    <!-- Body -->
+    <Grid Grid.Row="1" Margin="20" RowDefinitions="Auto,*,Auto" ColumnDefinitions="*,*">
 
-      <StackPanel Grid.Row="1" Grid.Column="0" Spacing="6">
-        <TextBlock Text="Rooms" FontWeight="SemiBold"/>
-        <ListBox ItemsSource="{Binding Rooms}" SelectedItem="{Binding SelectedRoom}"/>
-        <StackPanel Orientation="Horizontal" Spacing="8">
-          <Button Content="Mark Clean" Command="{Binding MarkRoomCleanCommand}"/>
-          <Button Content="Refresh"    Command="{Binding RefreshCommand}"/>
-        </StackPanel>
+      <!-- Section headings -->
+      <TextBlock Grid.Row="0" Grid.Column="0" Text="Rooms" FontWeight="SemiBold" Margin="0,0,8,8"/>
+      <TextBlock Grid.Row="0" Grid.Column="1" Text="Tasks"  FontWeight="SemiBold" Margin="8,0,0,8"/>
+
+      <!-- Counts -->
+      <TextBlock Grid.Row="0" Grid.Column="0"
+                 Text="{Binding RoomsTable.Count, StringFormat='({0})'}"
+                 Margin="56,0,0,8" Opacity="0.7"/>
+      <TextBlock Grid.Row="0" Grid.Column="1"
+                 Text="{Binding TasksTable.Count, StringFormat='({0})'}"
+                 Margin="48,0,0,8" Opacity="0.7"/>
+
+      <!-- Rooms table -->
+      <Border Grid.Row="1" Grid.Column="0"
+              Background="#141419" BorderBrush="#4B3A86" BorderThickness="1"
+              CornerRadius="8" MinHeight="300" Padding="6" Margin="0,0,8,0">
+        <DataGrid ItemsSource="{Binding RoomsTable}"
+                  SelectedItem="{Binding SelectedRoomRow, Mode=TwoWay}"
+                  HeadersVisibility="Column"
+                  GridLinesVisibility="All"
+                  AutoGenerateColumns="False"
+                  CanUserSortColumns="True"
+                  CanUserResizeColumns="True"
+                  CanUserReorderColumns="True"
+                  IsReadOnly="False"
+                  RowHeight="36"
+                  Background="#141419"
+                  Foreground="#EDEDF1"
+                  HorizontalGridLinesBrush="#2E2750"
+                  VerticalGridLinesBrush="#2E2750">
+
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Room" Width="2*"
+                                Binding="{Binding Name}"
+                                SortMemberPath="Name"/>
+            <DataGridTemplateColumn Header="Status" Width="*"
+                                    SortMemberPath="Status">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <CheckBox IsThreeState="True"
+                            IsChecked="{Binding Status, Mode=TwoWay}"
+                            HorizontalAlignment="Center"/>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+          </DataGrid.Columns>
+        </DataGrid>
+      </Border>
+
+      <!-- Tasks table -->
+      <Border Grid.Row="1" Grid.Column="1"
+              Background="#141419" BorderBrush="#4B3A86" BorderThickness="1"
+              CornerRadius="8" MinHeight="300" Padding="6" Margin="8,0,0,0">
+        <DataGrid ItemsSource="{Binding TasksTable}"
+                  SelectedItem="{Binding SelectedTaskRow, Mode=TwoWay}"
+                  HeadersVisibility="Column"
+                  GridLinesVisibility="All"
+                  AutoGenerateColumns="False"
+                  CanUserSortColumns="True"
+                  CanUserResizeColumns="True"
+                  CanUserReorderColumns="True"
+                  IsReadOnly="False"
+                  RowHeight="36"
+                  Background="#141419"
+                  Foreground="#EDEDF1"
+                  HorizontalGridLinesBrush="#2E2750"
+                  VerticalGridLinesBrush="#2E2750">
+
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Task" Width="3*"
+                                Binding="{Binding Description}"
+                                SortMemberPath="Description"/>
+            <DataGridTemplateColumn Header="Status" Width="*"
+                                    SortMemberPath="Status">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <CheckBox IsThreeState="True"
+                            IsChecked="{Binding Status, Mode=TwoWay}"
+                            HorizontalAlignment="Center"/>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+          </DataGrid.Columns>
+        </DataGrid>
+      </Border>
+
+      <!-- Buttons -->
+      <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" Spacing="8" Margin="0,10,8,0">
+        <Button Content="Mark Clean" Command="{Binding MarkRoomCleanCommand}"/>
+        <Button Content="Refresh"    Command="{Binding RefreshCommand}"/>
       </StackPanel>
 
-      <StackPanel Grid.Row="1" Grid.Column="1" Spacing="6">
-        <TextBlock Text="Tasks" FontWeight="SemiBold"/>
-        <ListBox ItemsSource="{Binding Tasks}" SelectedItem="{Binding SelectedTask}"/>
-        <StackPanel Orientation="Horizontal" Spacing="8">
-          <Button Content="Mark Done" Command="{Binding MarkTaskDoneCommand}"/>
-          <Button Content="Refresh"   Command="{Binding RefreshCommand}"/>
-        </StackPanel>
+      <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="8,10,0,0">
+        <Button Content="Mark Done" Command="{Binding MarkTaskDoneCommand}"/>
+        <Button Content="Refresh"   Command="{Binding RefreshCommand}"/>
       </StackPanel>
+
     </Grid>
   </Grid>
 </UserControl>

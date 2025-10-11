@@ -1,0 +1,16 @@
+<!-- Views/Controls/ViewHeader.axaml -->
+<UserControl
+    x:Class="KeyCard.Desktop.Views.Controls.ViewHeader"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    x:Name="root">
+
+  <Grid RowDefinitions="Auto,Auto" Margin="8,4">
+    <TextBlock
+        Text="{Binding HeaderText, ElementName=root}"
+        FontSize="22" FontWeight="SemiBold"/>
+    <TextBlock Grid.Row="1"
+        Text="{Binding SubHeaderText, ElementName=root}"
+        Opacity="0.8" Margin="0,2,0,0"/>
+  </Grid>
+</UserControl>
