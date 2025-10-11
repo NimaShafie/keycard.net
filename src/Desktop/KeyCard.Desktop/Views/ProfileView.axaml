@@ -1,10 +1,83 @@
-<!-- src/Desktop/KeyCard.Desktop/Views/ProfileView.axaml -->
-<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Class="KeyCard.Desktop.Views.ProfileView">
-  <StackPanel Margin="16" Spacing="6">
-    <TextBlock Text="Profile" FontSize="18" FontWeight="Bold"/>
-    <TextBlock Text="Name: Mock Staff"/>
-    <TextBlock Text="Role: Front Desk (Mock)"/>
-  </StackPanel>
+<!-- Views/ProfileView.axaml -->
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vms="clr-namespace:KeyCard.Desktop.ViewModels"
+    x:Class="KeyCard.Desktop.Views.ProfileView"
+    x:DataType="vms:ProfileViewModel">
+
+  <Border Background="#141419"
+          BorderBrush="#4B3A86"
+          BorderThickness="1"
+          CornerRadius="12"
+          Padding="24"
+          Margin="20"
+          MaxWidth="600"
+          HorizontalAlignment="Center"
+          VerticalAlignment="Center">
+
+    <StackPanel Spacing="20">
+      <!-- Header -->
+      <TextBlock Text="User Profile"
+                 FontSize="24"
+                 FontWeight="Bold"
+                 HorizontalAlignment="Center"/>
+
+      <Separator Background="#3F2F73"/>
+
+      <!-- Profile info -->
+      <StackPanel Spacing="16">
+        <!-- Name -->
+        <StackPanel Spacing="4">
+          <TextBlock Text="Name"
+                     FontSize="12"
+                     Opacity="0.7"
+                     FontWeight="SemiBold"/>
+          <TextBlock Text="{Binding Name}"
+                     FontSize="16"/>
+        </StackPanel>
+
+        <!-- Role -->
+        <StackPanel Spacing="4">
+          <TextBlock Text="Role"
+                     FontSize="12"
+                     Opacity="0.7"
+                     FontWeight="SemiBold"/>
+          <TextBlock Text="{Binding Role}"
+                     FontSize="16"/>
+        </StackPanel>
+
+        <!-- Mode -->
+        <StackPanel Spacing="4">
+          <TextBlock Text="Application Mode"
+                     FontSize="12"
+                     Opacity="0.7"
+                     FontWeight="SemiBold"/>
+          <TextBlock Text="{Binding Mode}"
+                     FontSize="16"/>
+        </StackPanel>
+
+        <!-- API Endpoint -->
+        <StackPanel Spacing="4">
+          <TextBlock Text="API Endpoint"
+                     FontSize="12"
+                     Opacity="0.7"
+                     FontWeight="SemiBold"/>
+          <TextBlock Text="{Binding ApiEndpoint}"
+                     FontSize="14"
+                     TextWrapping="Wrap"
+                     Opacity="0.8"/>
+        </StackPanel>
+      </StackPanel>
+
+      <Separator Background="#3F2F73"/>
+
+      <!-- Footer -->
+      <TextBlock Text="To change your profile settings, contact your administrator"
+                 FontSize="11"
+                 Opacity="0.6"
+                 TextAlignment="Center"
+                 TextWrapping="Wrap"/>
+    </StackPanel>
+  </Border>
 </UserControl>

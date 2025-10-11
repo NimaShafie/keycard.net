@@ -5,17 +5,17 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
+
+using KeyCard.Desktop.Infrastructure;
 using KeyCard.Desktop.Models;
-using KeyCard.Desktop.Mocks;
 using KeyCard.Desktop.Services;
 
 namespace KeyCard.Desktop.ViewModels
 {
-    public class FrontDeskViewModel : ViewModelBase
+    public partial class FrontDeskViewModel : ViewModelBase
     {
-        private readonly INavigationService? _nav;
-
-        // ---- Bindable properties ----
+        private readonly INavigationService _nav;
+        private readonly IBookingService _bookings;
 
         private Booking? _selected;
         public Booking? Selected
@@ -23,13 +23,11 @@ namespace KeyCard.Desktop.ViewModels
             get => _selected;
             set
             {
-                if (!Equals(_selected, value))
+                if (SetProperty(ref _selected, value))
                 {
-                    _selected = value;
-                    OnPropertyChanged();
-                    (CheckInCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                    (CheckOutCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                    (_assignRoomCore as RelayCommand)?.RaiseCanExecuteChanged();
+                    (CheckInCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    (CheckOutCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    (AssignRoomCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
                 }
             }
         }
@@ -40,17 +38,14 @@ namespace KeyCard.Desktop.ViewModels
             get => _searchText;
             set
             {
-                if (_searchText != value)
+                if (SetProperty(ref _searchText, value))
                 {
-                    _searchText = value;
-                    OnPropertyChanged();
                     ApplyFilter();
-                    OnPropertyChanged(nameof(Query)); // keep alias in sync
+                    OnPropertyChanged(nameof(Query));
                 }
             }
         }
 
-        /// <summary>Alias some XAML uses.</summary>
         public string? Query
         {
             get => SearchText;
@@ -58,9 +53,20 @@ namespace KeyCard.Desktop.ViewModels
             {
                 if (!string.Equals(_searchText, value, StringComparison.Ordinal))
                 {
-                    SearchText = value;               // triggers ApplyFilter
-                    OnPropertyChanged(nameof(Query)); // explicit notify for alias
+                    SearchText = value;
+                    OnPropertyChanged(nameof(Query));
                 }
+            }
+        }
+
+        private string? _roomNumberInput;
+        public string? RoomNumberInput
+        {
+            get => _roomNumberInput;
+            set
+            {
+                if (SetProperty(ref _roomNumberInput, value))
+                    (AssignRoomCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
             }
         }
 
@@ -70,93 +76,52 @@ namespace KeyCard.Desktop.ViewModels
             get => _isBusy;
             set
             {
-                if (_isBusy != value)
+                if (SetProperty(ref _isBusy, value))
                 {
-                    _isBusy = value;
-                    OnPropertyChanged();
-                    (RefreshCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                    (SearchCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                    (_assignRoomCore as RelayCommand)?.RaiseCanExecuteChanged();
+                    (RefreshCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    (SearchCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    (CheckInCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    (CheckOutCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    (AssignRoomCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
                 }
             }
+        }
+
+        private string? _statusMessage;
+        public string? StatusMessage
+        {
+            get => _statusMessage;
+            set => SetProperty(ref _statusMessage, value);
         }
 
         public ObservableCollection<Booking> Arrivals { get; } = new();
         public ObservableCollection<Booking> Departures { get; } = new();
         public ObservableCollection<Booking> Results { get; } = new();
 
-        // Backing stores for filtering (not bound)
         private readonly ObservableCollection<Booking> _allArrivals = new();
         private readonly ObservableCollection<Booking> _allDepartures = new();
 
-        // ---- Commands ----
         public ICommand BackToDashboardCommand { get; }
         public ICommand RefreshCommand { get; }
         public ICommand SearchCommand { get; }
         public ICommand CheckInCommand { get; }
         public ICommand CheckOutCommand { get; }
+        public ICommand AssignRoomCommand { get; }
 
-        // Keep a single core command instance and expose both names for XAML compatibility.
-        private readonly ICommand _assignRoomCore;
-        /// <summary>Some XAML uses this name.</summary>
-        public ICommand AssignRoomNumber => _assignRoomCore;
-        /// <summary>Other XAML uses this name.</summary>
-        public ICommand AssignRoomCommand => _assignRoomCore;
-
-        // ---- Ctors ----
-        public FrontDeskViewModel() : this(null) { }
-
-        public FrontDeskViewModel(INavigationService? nav)
+        public FrontDeskViewModel(INavigationService nav, IBookingService bookings)
         {
-            _nav = nav;
+            _nav = nav ?? throw new ArgumentNullException(nameof(nav));
+            _bookings = bookings ?? throw new ArgumentNullException(nameof(bookings));
 
-            BackToDashboardCommand = new RelayCommand(_ => _nav?.NavigateTo<DashboardViewModel>());
-            RefreshCommand = new RelayCommand(async _ => await RefreshAsync(), _ => !IsBusy);
+            BackToDashboardCommand = new UnifiedRelayCommand(() => _nav.NavigateTo<DashboardViewModel>());
+            RefreshCommand = new UnifiedRelayCommand(RefreshAsync, () => !IsBusy);
+            SearchCommand = new UnifiedRelayCommand(param => SearchAsync(param as string), _ => !IsBusy);
+            CheckInCommand = new UnifiedRelayCommand(CheckInAsync, () => CanCheckIn());
+            CheckOutCommand = new UnifiedRelayCommand(CheckOutAsync, () => CanCheckOut());
+            AssignRoomCommand = new UnifiedRelayCommand(AssignRoomAsync, () => CanAssignRoom());
 
-            // Search: optional CommandParameter (string). If present, uses it; otherwise re-applies filter.
-            SearchCommand = new RelayCommand(param =>
-            {
-                if (param is string s)
-                    Query = s;   // sets SearchText and applies filter
-                else
-                    ApplyFilter();
-            }, _ => !IsBusy);
-
-            CheckInCommand = new RelayCommand(b =>
-            {
-                var booking = b as Booking ?? Selected;
-                if (booking is null) return;
-                // TODO: integrate with backend to mark check-in
-            },
-            _ => Selected is not null && !IsBusy);
-
-            CheckOutCommand = new RelayCommand(b =>
-            {
-                var booking = b as Booking ?? Selected;
-                if (booking is null) return;
-                // TODO: integrate with backend to mark check-out
-            },
-            _ => Selected is not null && !IsBusy);
-
-            // Core assign-room command used by both AssignRoomNumber and AssignRoomCommand properties.
-            _assignRoomCore = new RelayCommand(b =>
-            {
-                var booking = b as Booking ?? Selected;
-                if (booking is null) return;
-
-                // TODO: choose/find room, call service, then update list item (immutable model considerations)
-                // Example placeholder:
-                // var newRoom = 500; // demo
-                // var updated = booking with { RoomNumber = newRoom }; // if Booking is a record
-                // ReplaceInCollections(updated);
-            },
-            _ => Selected is not null && !IsBusy);
-
-            // ensure lists aren’t blank when the view opens
             _ = RefreshAsync();
         }
-
-        // ---- Behaviors ----
 
         private async Task RefreshAsync()
         {
@@ -165,25 +130,31 @@ namespace KeyCard.Desktop.ViewModels
             try
             {
                 IsBusy = true;
+                StatusMessage = "Loading bookings...";
 
-                await Task.Delay(200); // simulate fetch
+                var arrivals = await _bookings.GetTodayArrivalsAsync();
+                var allBookings = await _bookings.ListAsync();
+                var today = DateOnly.FromDateTime(DateTime.Today);
+                var departures = allBookings.Where(b => b.CheckOutDate == today).ToList();
 
-                var arrivals = KeyCard.Desktop.Mocks.BookingMocks.GetArrivalsToday(10);
-                var departures = KeyCard.Desktop.Mocks.BookingMocks.GetDeparturesToday(5);
+                _allArrivals.Clear();
+                foreach (var a in arrivals) _allArrivals.Add(a);
 
-                // If you have backing stores (e.g., _allArrivals/_allDepartures), keep them in sync
-                _allArrivals?.Clear();
-                if (_allArrivals is not null) foreach (var a in arrivals) _allArrivals.Add(a);
+                _allDepartures.Clear();
+                foreach (var d in departures) _allDepartures.Add(d);
 
-                _allDepartures?.Clear();
-                if (_allDepartures is not null) foreach (var d in departures) _allDepartures.Add(d);
+                Arrivals.Clear();
+                foreach (var a in arrivals) Arrivals.Add(a);
 
-                // Always update the bound collections the view uses
-                Arrivals.Clear(); foreach (var a in arrivals) Arrivals.Add(a);
-                Departures.Clear(); foreach (var d in departures) Departures.Add(d);
+                Departures.Clear();
+                foreach (var d in departures) Departures.Add(d);
 
                 ApplyFilter();
-                Selected = null;
+                StatusMessage = $"Loaded {arrivals.Count} arrivals, {departures.Count} departures";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error: {ex.Message}";
             }
             finally
             {
@@ -191,54 +162,214 @@ namespace KeyCard.Desktop.ViewModels
             }
         }
 
+        private async Task SearchAsync(string? query)
+        {
+            if (query is not null) Query = query;
+
+            if (string.IsNullOrWhiteSpace(Query))
+            {
+                ApplyFilter();
+                return;
+            }
+
+            try
+            {
+                IsBusy = true;
+                StatusMessage = $"Searching for '{Query}'...";
+
+                var booking = await _bookings.FindBookingByCodeAsync(Query);
+
+                if (booking is not null)
+                {
+                    Results.Clear();
+                    Results.Add(booking);
+                    Selected = booking;
+                    StatusMessage = "Found booking";
+                }
+                else
+                {
+                    ApplyFilter();
+                    StatusMessage = Results.Count == 0
+                        ? "No bookings found"
+                        : $"Found {Results.Count} booking(s)";
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Search error: {ex.Message}";
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        private async Task AssignRoomAsync()
+        {
+            if (Selected is null || string.IsNullOrWhiteSpace(RoomNumberInput)) return;
+
+            if (!int.TryParse(RoomNumberInput, out var roomNumber))
+            {
+                StatusMessage = "Invalid room number";
+                return;
+            }
+
+            try
+            {
+                IsBusy = true;
+                StatusMessage = $"Assigning room {roomNumber}...";
+
+                var success = await _bookings.AssignRoomAsync(
+                    Selected.ConfirmationCode,
+                    roomNumber);
+
+                if (success)
+                {
+                    var updated = Selected with { RoomNumber = roomNumber };
+                    ReplaceBookingInCollections(Selected, updated);
+                    Selected = updated;
+                    RoomNumberInput = string.Empty;
+                    StatusMessage = $"Room {roomNumber} assigned successfully";
+                }
+                else
+                {
+                    StatusMessage = "Failed to assign room";
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error: {ex.Message}";
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        private bool CanAssignRoom() =>
+            !IsBusy &&
+            Selected is not null &&
+            !string.IsNullOrWhiteSpace(RoomNumberInput);
+
+        private async Task CheckInAsync()
+        {
+            if (Selected is null) return;
+
+            try
+            {
+                IsBusy = true;
+                StatusMessage = $"Checking in {Selected.GuestName}...";
+
+                var success = await _bookings.CheckInAsync(Selected.ConfirmationCode);
+
+                if (success)
+                {
+                    var updated = Selected with { Status = "CheckedIn" };
+                    ReplaceBookingInCollections(Selected, updated);
+                    Selected = updated;
+                    StatusMessage = $"{Selected.GuestName} checked in successfully";
+                }
+                else
+                {
+                    StatusMessage = "Check-in failed";
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error: {ex.Message}";
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        private bool CanCheckIn() =>
+            !IsBusy &&
+            Selected is not null &&
+            Selected.Status != "CheckedIn";
+
+        private async Task CheckOutAsync()
+        {
+            if (Selected is null) return;
+
+            try
+            {
+                IsBusy = true;
+                StatusMessage = $"Checking out {Selected.GuestName}...";
+
+                await Task.Delay(500);
+
+                var updated = Selected with { Status = "CheckedOut" };
+                ReplaceBookingInCollections(Selected, updated);
+                Selected = updated;
+                StatusMessage = $"{Selected.GuestName} checked out successfully";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error: {ex.Message}";
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        private bool CanCheckOut() =>
+            !IsBusy &&
+            Selected is not null &&
+            Selected.Status == "CheckedIn";
+
         private void ApplyFilter()
         {
             var term = (SearchText ?? string.Empty).Trim();
-            bool hasTerm = term.Length > 0;
+            var hasTerm = term.Length > 0;
 
-            static bool Match(Booking b, string t) =>
-                b.BookingId.ToString("D", CultureInfo.InvariantCulture).Contains(t, StringComparison.OrdinalIgnoreCase) ||
-                (b.GuestName?.Contains(t, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                b.RoomNumber.ToString(CultureInfo.InvariantCulture).Contains(t, StringComparison.OrdinalIgnoreCase);
+            var filteredArrivals = hasTerm
+                ? _allArrivals.Where(b => MatchesFilter(b, term))
+                : _allArrivals;
 
-            var filteredArrivals = hasTerm ? _allArrivals.Where(b => Match(b, term)) : _allArrivals;
-            var filteredDepartures = hasTerm ? _allDepartures.Where(b => Match(b, term)) : _allDepartures;
+            var filteredDepartures = hasTerm
+                ? _allDepartures.Where(b => MatchesFilter(b, term))
+                : _allDepartures;
 
             Arrivals.ReplaceWith(filteredArrivals);
             Departures.ReplaceWith(filteredDepartures);
             Results.ReplaceWith(filteredArrivals.Concat(filteredDepartures));
 
             if (Selected is not null && !Results.Contains(Selected))
+            {
                 Selected = null;
+            }
         }
 
-        // ---- Minimal ICommand impl ----
-        internal sealed class RelayCommand : ICommand
+        private static bool MatchesFilter(Booking b, string term)
         {
-            private readonly Func<object?, bool>? _canExecute;
-            private readonly Action<object?>? _execSync;
-            private readonly Func<object?, Task>? _execAsync;
+            return b.BookingId.ToString().Contains(term, StringComparison.OrdinalIgnoreCase)
+                || b.GuestName.Contains(term, StringComparison.OrdinalIgnoreCase)
+                || b.RoomNumber.ToString(CultureInfo.InvariantCulture).Contains(term, StringComparison.OrdinalIgnoreCase)
+                || b.ConfirmationCode.Contains(term, StringComparison.OrdinalIgnoreCase);
+        }
 
-            public RelayCommand(Action<object?> execute, Func<object?, bool>? canExecute = null)
-            { _execSync = execute ?? throw new ArgumentNullException(nameof(execute)); _canExecute = canExecute; }
+        private void ReplaceBookingInCollections(Booking old, Booking updated)
+        {
+            ReplaceInCollection(_allArrivals, old, updated);
+            ReplaceInCollection(_allDepartures, old, updated);
+            ReplaceInCollection(Arrivals, old, updated);
+            ReplaceInCollection(Departures, old, updated);
+            ReplaceInCollection(Results, old, updated);
+        }
 
-            public RelayCommand(Func<object?, Task> executeAsync, Func<object?, bool>? canExecute = null)
-            { _execAsync = executeAsync ?? throw new ArgumentNullException(nameof(executeAsync)); _canExecute = canExecute; }
-
-            public bool CanExecute(object? parameter) => _canExecute?.Invoke(parameter) ?? true;
-
-            public async void Execute(object? parameter)
+        private static void ReplaceInCollection(ObservableCollection<Booking> collection, Booking old, Booking updated)
+        {
+            var index = collection.IndexOf(old);
+            if (index >= 0)
             {
-                if (_execSync is not null) { _execSync(parameter); return; }
-                if (_execAsync is not null) { await _execAsync(parameter); }
+                collection[index] = updated;
             }
-
-            public event EventHandler? CanExecuteChanged;
-            public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 
-    // Public helper
     public static class ObservableCollectionSyncExtensions
     {
         public static void ReplaceWith<T>(this ObservableCollection<T> target, System.Collections.Generic.IEnumerable<T> source)

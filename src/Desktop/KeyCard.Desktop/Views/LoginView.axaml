@@ -1,4 +1,4 @@
-<!-- src/Desktop/KeyCard.Desktop/Views/LoginView.axaml -->
+<!-- Views/LoginView.axaml -->
 <UserControl
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -6,31 +6,110 @@
     x:Class="KeyCard.Desktop.Views.LoginView"
     x:DataType="vms:LoginViewModel">
 
-  <!-- add a 5th row -->
-  <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,*"
-        HorizontalAlignment="Center" VerticalAlignment="Center" Width="520">
+  <Grid>
+    <!-- Animated gradient background -->
+    <Border x:Name="AnimatedBackground">
+      <Border.Background>
+        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+          <GradientStop Color="#1a0033" Offset="0"/>
+          <GradientStop Color="#330066" Offset="0.5"/>
+          <GradientStop Color="#0f0f12" Offset="1"/>
+        </LinearGradientBrush>
+      </Border.Background>
+    </Border>
 
-    <TextBlock Grid.ColumnSpan="2" Text="KeyCard.NET" FontSize="24" FontWeight="Bold"
-               HorizontalAlignment="Center" Margin="0,0,0,20"/>
+    <!-- Login card -->
+    <Border x:Name="LoginCard"
+            Classes="login-card"
+            Width="440"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center">
 
-    <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="Staff Login"
-               FontSize="16" FontWeight="SemiBold"
-               HorizontalAlignment="Center" Margin="0,0,0,12"/>
+      <StackPanel Spacing="20">
+        <!-- Logo (optional) -->
+        <Image x:Name="BrandLogo"
+               Width="80" Height="80"
+               HorizontalAlignment="Center"
+               IsVisible="False"/>
 
-    <TextBox Grid.Row="2" Grid.ColumnSpan="2" Margin="0,0,0,8"
-             Watermark="Username" Text="{Binding Username}" />
+        <!-- Title -->
+        <StackPanel Spacing="8">
+          <TextBlock Text="KeyCard.NET"
+                     FontSize="28"
+                     FontWeight="Bold"
+                     HorizontalAlignment="Center"
+                     Foreground="White"/>
+          <TextBlock Text="Staff Console Login"
+                     FontSize="14"
+                     HorizontalAlignment="Center"
+                     Opacity="0.8"
+                     Foreground="White"/>
+        </StackPanel>
 
-    <TextBox Grid.Row="3" Grid.ColumnSpan="2" Margin="0,0,0,20"
-             Watermark="Password" PasswordChar="•" Text="{Binding Password}" />
+        <!-- Form -->
+        <StackPanel Spacing="14" Margin="0,12,0,0">
+          <TextBox Watermark="Username or Email"
+                   Text="{Binding Username}"
+                   Height="42"
+                   Padding="14,0"
+                   CornerRadius="8"/>
 
-    <!-- stays in row 4 (now a real row), won’t overlap -->
-    <StackPanel Grid.Row="4" Grid.ColumnSpan="2" Orientation="Horizontal"
-                HorizontalAlignment="Center" Spacing="8">
-      <Button Content="Sign in" IsDefault="True"
-              Command="{Binding LoginCommand}"/>
-      <Button Content="Mock Mode"
-              IsVisible="{Binding IsMockMode}"
-              Command="{Binding ContinueMockCommand}"/>
-    </StackPanel>
+          <TextBox Watermark="Password"
+                   PasswordChar="•"
+                   Text="{Binding Password}"
+                   Height="42"
+                   Padding="14,0"
+                   CornerRadius="8"/>
+
+          <!-- Error message -->
+          <TextBlock Text="{Binding Error}"
+                     Foreground="#FF6B6B"
+                     FontSize="12"
+                     IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                     TextWrapping="Wrap"/>
+
+          <!-- Buttons -->
+          <StackPanel Spacing="10" Margin="0,8,0,0">
+            <Button Content="Sign In"
+                    Command="{Binding LoginCommand}"
+                    IsDefault="True"
+                    Height="42"
+                    FontWeight="SemiBold"
+                    CornerRadius="8"
+                    Background="#7B1FA2"
+                    BorderBrush="#9C27B0"
+                    Foreground="White"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"/>
+
+            <Button Content="Continue in Mock Mode"
+                    Command="{Binding ContinueMockCommand}"
+                    IsVisible="{Binding IsMockMode}"
+                    Height="38"
+                    CornerRadius="8"
+                    Background="#2C2C34"
+                    BorderBrush="#4B3A86"
+                    Foreground="White"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Opacity="0.9"/>
+          </StackPanel>
+
+          <!-- Loading indicator -->
+          <ProgressBar IsIndeterminate="True"
+                       IsVisible="{Binding IsBusy}"
+                       Height="4"
+                       Margin="0,8,0,0"/>
+        </StackPanel>
+
+        <!-- Footer -->
+        <TextBlock Text="© 2025 KeyCard.NET"
+                   FontSize="11"
+                   HorizontalAlignment="Center"
+                   Opacity="0.5"
+                   Foreground="White"
+                   Margin="0,16,0,0"/>
+      </StackPanel>
+    </Border>
   </Grid>
 </UserControl>

@@ -1,10 +1,155 @@
-<!-- src/Desktop/KeyCard.Desktop/Views/SettingsView.axaml -->
-<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Class="KeyCard.Desktop.Views.SettingsView">
-  <StackPanel Margin="16" Spacing="6">
-    <TextBlock Text="Settings" FontSize="18" FontWeight="Bold"/>
-    <CheckBox Content="Use mock data" IsChecked="True"/>
-    <CheckBox Content="Enable sounds" IsChecked="False"/>
-  </StackPanel>
+<!-- Views/SettingsView.axaml -->
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vms="clr-namespace:KeyCard.Desktop.ViewModels"
+    x:Class="KeyCard.Desktop.Views.SettingsView"
+    x:DataType="vms:SettingsViewModel">
+
+  <Border Background="#141419"
+          BorderBrush="#4B3A86"
+          BorderThickness="1"
+          CornerRadius="12"
+          Padding="24"
+          Margin="20"
+          MaxWidth="700">
+
+    <ScrollViewer>
+      <StackPanel Spacing="24">
+        <!-- Header -->
+        <TextBlock Text="Application Settings"
+                   FontSize="24"
+                   FontWeight="Bold"/>
+
+        <!-- Environment Info Section -->
+        <StackPanel Spacing="12">
+          <TextBlock Text="Environment Information"
+                     FontSize="16"
+                     FontWeight="SemiBold"
+                     Foreground="#7B1FA2"/>
+
+          <Border Background="#1E1F29"
+                  BorderBrush="#3F2F73"
+                  BorderThickness="1"
+                  CornerRadius="8"
+                  Padding="16">
+            <StackPanel Spacing="10">
+              <Grid ColumnDefinitions="150,*">
+                <TextBlock Text="Mode:" Opacity="0.7"/>
+                <TextBlock Grid.Column="1" Text="{Binding CurrentMode}" FontWeight="SemiBold"/>
+              </Grid>
+
+              <Grid ColumnDefinitions="150,*">
+                <TextBlock Text="Environment:" Opacity="0.7"/>
+                <TextBlock Grid.Column="1" Text="{Binding Environment}"/>
+              </Grid>
+
+              <Grid ColumnDefinitions="150,*">
+                <TextBlock Text="API Endpoint:" Opacity="0.7"/>
+                <TextBlock Grid.Column="1"
+                           Text="{Binding ApiBaseUrl}"
+                           TextWrapping="Wrap"
+                           Opacity="0.8"/>
+              </Grid>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+
+        <Separator Background="#3F2F73"/>
+
+        <!-- General Settings -->
+        <StackPanel Spacing="12">
+          <TextBlock Text="General Settings"
+                     FontSize="16"
+                     FontWeight="SemiBold"
+                     Foreground="#7B1FA2"/>
+
+          <CheckBox Content="Use mock data (requires restart)"
+                    IsChecked="{Binding UseMocks}"/>
+
+          <CheckBox Content="Enable notification sounds"
+                    IsChecked="{Binding EnableSounds}"/>
+
+          <CheckBox Content="Auto-refresh data"
+                    IsChecked="{Binding AutoRefresh}"/>
+        </StackPanel>
+
+        <Separator Background="#3F2F73"/>
+
+        <!-- Refresh Settings -->
+        <StackPanel Spacing="12">
+          <TextBlock Text="Refresh Settings"
+                     FontSize="16"
+                     FontWeight="SemiBold"
+                     Foreground="#7B1FA2"/>
+
+          <StackPanel Spacing="8">
+            <TextBlock Text="Refresh interval (seconds):" Opacity="0.8"/>
+            <Grid ColumnDefinitions="*,100">
+              <Slider Value="{Binding RefreshIntervalSeconds}"
+                      Minimum="10"
+                      Maximum="300"
+                      TickFrequency="10"
+                      IsSnapToTickEnabled="True"/>
+              <TextBlock Grid.Column="1"
+                         Text="{Binding RefreshIntervalSeconds}"
+                         HorizontalAlignment="Right"
+                         VerticalAlignment="Center"
+                         Margin="12,0,0,0"/>
+            </Grid>
+          </StackPanel>
+        </StackPanel>
+
+        <Separator Background="#3F2F73"/>
+
+        <!-- Appearance -->
+        <StackPanel Spacing="12">
+          <TextBlock Text="Appearance"
+                     FontSize="16"
+                     FontWeight="SemiBold"
+                     Foreground="#7B1FA2"/>
+
+          <StackPanel Spacing="8">
+            <TextBlock Text="Theme:" Opacity="0.8"/>
+            <ComboBox SelectedItem="{Binding Theme}" Width="200" HorizontalAlignment="Left">
+              <ComboBoxItem Content="Dark"/>
+              <ComboBoxItem Content="Light"/>
+              <ComboBoxItem Content="System"/>
+            </ComboBox>
+          </StackPanel>
+        </StackPanel>
+
+        <Separator Background="#3F2F73"/>
+
+        <!-- Actions -->
+        <StackPanel Spacing="12">
+          <StackPanel Orientation="Horizontal" Spacing="12">
+            <Button Content="💾 Save Settings"
+                    Command="{Binding SaveSettingsCommand}"
+                    MinWidth="140"
+                    Background="#2E7D32"
+                    BorderBrush="#4CAF50"/>
+
+            <Button Content="↻ Reset to Defaults"
+                    Command="{Binding ResetToDefaultsCommand}"
+                    MinWidth="140"/>
+          </StackPanel>
+
+          <!-- Status message -->
+          <TextBlock Text="{Binding StatusMessage}"
+                     IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                     Foreground="#7B1FA2"
+                     FontWeight="SemiBold"
+                     TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <!-- Footer -->
+        <TextBlock Text="Note: Some settings require application restart to take effect"
+                   FontSize="11"
+                   Opacity="0.6"
+                   TextWrapping="Wrap"
+                   Margin="0,12,0,0"/>
+      </StackPanel>
+    </ScrollViewer>
+  </Border>
 </UserControl>

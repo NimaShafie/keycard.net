@@ -1,292 +1,332 @@
 // ViewModels/HousekeepingViewModel.cs
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-
+using KeyCard.Desktop.Infrastructure;
+using KeyCard.Desktop.Models;
 using KeyCard.Desktop.Services;
 
 namespace KeyCard.Desktop.ViewModels
 {
     public partial class HousekeepingViewModel : ViewModelBase
     {
-        private readonly IHousekeepingService _svc;
-        private readonly IAppEnvironment _env;
+        private readonly IHousekeepingService _service;
+        private readonly INavigationService _nav;
 
-
-        public ObservableCollection<string> Rooms { get; }
-        public ObservableCollection<string> Tasks { get; }
-        public bool UseMockData { get; set; } = true;
-
-        // String-based selections (kept for back-compat with older views)
-        private string? _selectedRoom;
-        public string? SelectedRoom
+        private RoomRow? _selectedRoom;
+        public RoomRow? SelectedRoom
         {
             get => _selectedRoom;
             set
             {
-                if (_selectedRoom == value) return;
-                _selectedRoom = value;
-                Raise(nameof(SelectedRoom));
+                if (SetProperty(ref _selectedRoom, value))
+                    (MarkRoomCleanCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
             }
         }
 
-        private string? _selectedTask;
-        public string? SelectedTask
+        private TaskRow? _selectedTask;
+        public TaskRow? SelectedTask
         {
             get => _selectedTask;
             set
             {
-                if (_selectedTask == value) return;
-                _selectedTask = value;
-                Raise(nameof(SelectedTask));
+                if (SetProperty(ref _selectedTask, value))
+                    (MarkTaskDoneCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
             }
         }
 
-        // NEW: tabular sources for DataGrids (with Status column)
-        public ObservableCollection<RoomRow> RoomsTable { get; }
-        public ObservableCollection<TaskRow> TasksTable { get; }
-
-        // NEW: row selections used by the DataGrids
-        public RoomRow? SelectedRoomRow { get; set; }
-        public TaskRow? SelectedTaskRow { get; set; }
-
-        // Reflection candidates (unchanged)
-        private static readonly string[] AsyncRoomMethods = { "ListRoomsAsync", "GetRoomsAsync" };
-        private static readonly string[] RoomMethods = { "ListRooms", "GetRooms" };
-        private static readonly string[] RoomProps = { "Rooms" };
-        private static readonly string[] AsyncTaskMethods = { "ListTasksAsync", "GetTasksAsync" };
-        private static readonly string[] TaskMethods = { "ListTasks", "GetTasks" };
-        private static readonly string[] TaskProps = { "Tasks" };
-
-        public HousekeepingViewModel(IHousekeepingService svc, IAppEnvironment env)
+        private bool _isBusy;
+        public bool IsBusy
         {
-            _svc = svc;
-            _env = env;
+            get => _isBusy;
+            set
+            {
+                if (SetProperty(ref _isBusy, value))
+                {
+                    (RefreshCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    (MarkRoomCleanCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    (MarkTaskDoneCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                }
+            }
+        }
 
-            Rooms = new ObservableCollection<string>();
-            Tasks = new ObservableCollection<string>();
-            RoomsTable = new ObservableCollection<RoomRow>();
-            TasksTable = new ObservableCollection<TaskRow>();
+        private string? _statusMessage;
+        public string? StatusMessage
+        {
+            get => _statusMessage;
+            set => SetProperty(ref _statusMessage, value);
+        }
+
+        public ObservableCollection<RoomRow> Rooms { get; } = new();
+        public ObservableCollection<TaskRow> Tasks { get; } = new();
+
+        public ICommand BackToDashboardCommand { get; }
+        public ICommand RefreshCommand { get; }
+        public ICommand MarkRoomCleanCommand { get; }
+        public ICommand MarkTaskDoneCommand { get; }
+
+        public HousekeepingViewModel(IHousekeepingService service, INavigationService nav)
+        {
+            _service = service ?? throw new ArgumentNullException(nameof(service));
+            _nav = nav ?? throw new ArgumentNullException(nameof(nav));
+
+            BackToDashboardCommand = new UnifiedRelayCommand(() => _nav.NavigateTo<DashboardViewModel>());
+            RefreshCommand = new UnifiedRelayCommand(RefreshAsync, () => !IsBusy);
+            MarkRoomCleanCommand = new UnifiedRelayCommand(MarkRoomCleanAsync, () => CanMarkRoomClean());
+            MarkTaskDoneCommand = new UnifiedRelayCommand(MarkTaskDoneAsync, () => CanMarkTaskDone());
 
             _ = RefreshAsync();
         }
 
-        [RelayCommand]
         private async Task RefreshAsync()
         {
+            if (IsBusy) return;
+
             try
             {
+                IsBusy = true;
+                StatusMessage = "Loading rooms and tasks...";
+
+                var rooms = await _service.GetRoomsAsync();
+                var tasks = await _service.GetTasksAsync();
+
                 Rooms.Clear();
+                foreach (var room in rooms)
+                {
+                    Rooms.Add(new RoomRow
+                    {
+                        Number = room.Number,
+                        Status = MapRoomStatus(room.Status),
+                        IsClean = room.Status == "Clean" || room.Status == "VacantClean"
+                    });
+                }
+
                 Tasks.Clear();
-                RoomsTable.Clear();
-                TasksTable.Clear();
-
-                var rooms = await TryGetListOfStringsAsync(_svc, AsyncRoomMethods)
-                            ?? TryGetListOfStrings(_svc, RoomMethods)
-                            ?? TryReadListProperty(_svc, RoomProps);
-
-                var tasks = await TryGetListOfStringsAsync(_svc, AsyncTaskMethods)
-                            ?? TryGetListOfStrings(_svc, TaskMethods)
-                            ?? TryReadListProperty(_svc, TaskProps);
-
-                if (rooms is { Count: > 0 })
+                foreach (var task in tasks)
                 {
-                    foreach (var r in rooms)
+                    Tasks.Add(new TaskRow
                     {
-                        Rooms.Add(r);
-                        RoomsTable.Add(new RoomRow { Name = r, Status = null });
-                    }
-                }
-                else
-                {
-                    AddMockRooms();
+                        Id = task.Id,
+                        RoomNumber = task.RoomId,
+                        Description = task.Title,
+                        Status = task.Status,
+                        IsCompleted = task.Status == HkTaskStatus.Completed
+                    });
                 }
 
-                if (tasks is { Count: > 0 })
-                {
-                    foreach (var t in tasks)
-                    {
-                        Tasks.Add(t);
-                        TasksTable.Add(new TaskRow { Description = t, Status = null });
-                    }
-                }
-                else
-                {
-                    AddMockTasks();
-                }
+                StatusMessage = $"Loaded {Rooms.Count} rooms, {Tasks.Count} tasks";
             }
-            catch
+            catch (Exception ex)
             {
-                Rooms.Clear();
-                Tasks.Clear();
-                RoomsTable.Clear();
-                TasksTable.Clear();
-                AddMockRooms();
-                AddMockTasks();
+                StatusMessage = $"Error: {ex.Message}";
+                LoadMockData();
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
 
-        // SINGLE command that handles both the DataGrid row selection and the legacy string selection
-        [RelayCommand]
-        private void MarkRoomClean()
+        private async Task MarkRoomCleanAsync()
         {
-            if (SelectedRoomRow is not null) { SelectedRoomRow.Status = true; return; }
-
             if (SelectedRoom is null) return;
-            var row = RoomsTable.FirstOrDefault(r =>
-                string.Equals(r.Name, SelectedRoom, StringComparison.OrdinalIgnoreCase));
-            if (row is not null) row.Status = true;
-        }
 
-        // SINGLE command that handles both selection modes
-        [RelayCommand]
-        private void MarkTaskDone()
-        {
-            if (SelectedTaskRow is not null) { SelectedTaskRow.Status = true; return; }
-
-            if (SelectedTask is null) return;
-            var row = TasksTable.FirstOrDefault(t =>
-                string.Equals(t.Description, SelectedTask, StringComparison.OrdinalIgnoreCase));
-            if (row is not null) row.Status = true;
-        }
-
-        // --- Table row view models (Status is tri-state: null/unchecked/checked) ---
-        public partial class RoomRow : ObservableObject
-        {
-            [ObservableProperty] private string name = "";
-            [ObservableProperty] private bool? status;
-        }
-
-        public partial class TaskRow : ObservableObject
-        {
-            [ObservableProperty] private string description = "";
-            [ObservableProperty] private bool? status;
-        }
-
-        // --- Reflection helpers (unchanged) ---
-        private static async Task<List<string>?> TryGetListOfStringsAsync(object svc, string[] methodNames)
-        {
-            foreach (var name in methodNames)
-            {
-                var mi = svc.GetType().GetMethod(name, BindingFlags.Public | BindingFlags.Instance, binder: null, types: Type.EmptyTypes, modifiers: null);
-                if (mi is null) continue;
-
-                try
-                {
-                    var result = mi.Invoke(svc, null);
-                    if (result is Task task)
-                    {
-                        await task.ConfigureAwait(false);
-                        var resProp = task.GetType().GetProperty("Result");
-                        var val = resProp?.GetValue(task);
-                        return ToStringList(val);
-                    }
-
-                    return ToStringList(result);
-                }
-                catch { /* try next */ }
-            }
-            return null;
-        }
-
-        private static List<string>? TryGetListOfStrings(object svc, string[] methodNames)
-        {
-            foreach (var name in methodNames)
-            {
-                var mi = svc.GetType().GetMethod(name, BindingFlags.Public | BindingFlags.Instance, binder: null, types: Type.EmptyTypes, modifiers: null);
-                if (mi is null) continue;
-
-                try
-                {
-                    var result = mi.Invoke(svc, null);
-                    return ToStringList(result);
-                }
-                catch { /* try next */ }
-            }
-            return null;
-        }
-
-        private static List<string>? TryReadListProperty(object svc, string[] propertyNames)
-        {
-            foreach (var name in propertyNames)
-            {
-                var pi = svc.GetType().GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
-                if (pi is null) continue;
-
-                try
-                {
-                    var val = pi.GetValue(svc);
-                    return ToStringList(val);
-                }
-                catch { /* try next */ }
-            }
-            return null;
-        }
-
-        private static List<string>? ToStringList(object? value)
-        {
-            if (value is null) return null;
-
-            if (value is IEnumerable<string> strEnum)
-                return strEnum.ToList();
-
-            if (value is IEnumerable en)
-            {
-                var list = new List<string>();
-                foreach (var item in en)
-                {
-                    if (item is null) continue;
-                    list.Add(item.ToString() ?? string.Empty);
-                }
-                return list;
-            }
-
-            return null;
-        }
-
-        // --- Mock helpers (populate both string and table forms) ---
-        private void AddMockRooms()
-        {
-            var rooms = new[] { "1204", "0711", "1502", "0808" };
-            foreach (var r in rooms)
-            {
-                Rooms.Add(r);
-                RoomsTable.Add(new RoomRow { Name = r, Status = null });
-            }
-        }
-
-        private void AddMockTasks()
-        {
-            var tasks = new[]
-            {
-                "Deliver extra towels to 0711",
-                "Deep clean 1502",
-                "Replace linens in 1204"
-            };
-            foreach (var t in tasks)
-            {
-                Tasks.Add(t);
-                TasksTable.Add(new TaskRow { Description = t, Status = null });
-            }
-        }
-
-        private void Raise(string propertyName)
-        {
             try
             {
-                var mi = GetType().GetMethod("OnPropertyChanged", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
-                         ?? typeof(ViewModelBase).GetMethod("OnPropertyChanged", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-                mi?.Invoke(this, new object?[] { propertyName });
+                IsBusy = true;
+                StatusMessage = $"Marking room {SelectedRoom.Number} as clean...";
+
+                var success = await _service.UpdateRoomStatusAsync(
+                    SelectedRoom.Number,
+                    RoomStatus.Clean);
+
+                if (success)
+                {
+                    SelectedRoom.IsClean = true;
+                    SelectedRoom.Status = "Clean";
+                    StatusMessage = $"Room {SelectedRoom.Number} marked as clean";
+                }
+                else
+                {
+                    StatusMessage = "Failed to update room status";
+                }
             }
-            catch { /* ignored */ }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error: {ex.Message}";
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        private bool CanMarkRoomClean() =>
+            !IsBusy &&
+            SelectedRoom is not null &&
+            SelectedRoom.IsClean == false;
+
+        private async Task MarkTaskDoneAsync()
+        {
+            if (SelectedTask is null) return;
+
+            try
+            {
+                IsBusy = true;
+                StatusMessage = "Marking task as completed...";
+
+                var success = await _service.UpdateTaskStatusAsync(
+                    SelectedTask.Id,
+                    HkTaskStatus.Completed);
+
+                if (success)
+                {
+                    SelectedTask.IsCompleted = true;
+                    SelectedTask.Status = HkTaskStatus.Completed;
+                    StatusMessage = "Task marked as completed";
+                }
+                else
+                {
+                    StatusMessage = "Failed to update task status";
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error: {ex.Message}";
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        private bool CanMarkTaskDone() =>
+            !IsBusy &&
+            SelectedTask is not null &&
+            SelectedTask.IsCompleted == false;
+
+        private void LoadMockData()
+        {
+            Rooms.Clear();
+            var mockRooms = new[]
+            {
+                (201, "Dirty"),
+                (202, "Clean"),
+                (203, "Dirty"),
+                (304, "Occupied"),
+                (402, "Dirty"),
+                (405, "Clean"),
+                (506, "Occupied")
+            };
+
+            foreach (var (number, status) in mockRooms)
+            {
+                Rooms.Add(new RoomRow
+                {
+                    Number = number,
+                    Status = status,
+                    IsClean = status == "Clean"
+                });
+            }
+
+            Tasks.Clear();
+            var mockTasks = new[]
+            {
+                (1, 201, "Full Clean"),
+                (2, 304, "Replace Towels"),
+                (3, 402, "Make Bed"),
+                (4, 405, "Inspector Visit 2 PM"),
+                (5, 0, "Lobby Vacuum")
+            };
+
+            int id = 1;
+            foreach (var (taskId, room, desc) in mockTasks)
+            {
+                Tasks.Add(new TaskRow
+                {
+                    Id = $"TASK{id++}",
+                    RoomNumber = room,
+                    Description = room > 0 ? $"Room {room} • {desc}" : desc,
+                    Status = HkTaskStatus.Pending,
+                    IsCompleted = false
+                });
+            }
+
+            StatusMessage = "Loaded mock data (service unavailable)";
+        }
+
+        private static string MapRoomStatus(string status) => status switch
+        {
+            "VacantClean" => "Clean",
+            "VacantDirty" => "Dirty",
+            "OccupiedClean" => "Occupied (Clean)",
+            "OccupiedDirty" => "Occupied (Dirty)",
+            _ => status
+        };
+    }
+
+    // Row view models
+    public partial class RoomRow : ViewModelBase
+    {
+        private int _number;
+        public int Number
+        {
+            get => _number;
+            set => SetProperty(ref _number, value);
+        }
+
+        private string _status = "Unknown";
+        public string Status
+        {
+            get => _status;
+            set => SetProperty(ref _status, value);
+        }
+
+        private bool? _isClean;
+        public bool? IsClean
+        {
+            get => _isClean;
+            set => SetProperty(ref _isClean, value);
+        }
+    }
+
+    public partial class TaskRow : ViewModelBase
+    {
+        private string _id = string.Empty;
+        public string Id
+        {
+            get => _id;
+            set => SetProperty(ref _id, value);
+        }
+
+        private int _roomNumber;
+        public int RoomNumber
+        {
+            get => _roomNumber;
+            set => SetProperty(ref _roomNumber, value);
+        }
+
+        private string _description = string.Empty;
+        public string Description
+        {
+            get => _description;
+            set => SetProperty(ref _description, value);
+        }
+
+        private HkTaskStatus _status = HkTaskStatus.Pending;
+        public HkTaskStatus Status
+        {
+            get => _status;
+            set => SetProperty(ref _status, value);
+        }
+
+        private bool? _isCompleted;
+        public bool? IsCompleted
+        {
+            get => _isCompleted;
+            set => SetProperty(ref _isCompleted, value);
         }
     }
 }

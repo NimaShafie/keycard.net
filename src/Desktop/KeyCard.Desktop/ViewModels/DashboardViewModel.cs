@@ -1,33 +1,28 @@
 // ViewModels/DashboardViewModel.cs
 using System;
 using System.Collections.ObjectModel;
+using System.Globalization;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
+using KeyCard.Desktop.Infrastructure;
 using KeyCard.Desktop.Models;
 using KeyCard.Desktop.Services;
-using KeyCard.Desktop.Mocks;
 
 namespace KeyCard.Desktop.ViewModels
 {
-    public class DashboardViewModel : ViewModelBase
+    public partial class DashboardViewModel : ViewModelBase
     {
-        private readonly INavigationService? _nav;
-
-        // ---- Bindable properties ----
+        private readonly INavigationService _nav;
+        private readonly IBookingService _bookings;
+        private readonly IAuthService _auth;
 
         private string? _currentUserDisplay;
         public string? CurrentUserDisplay
         {
             get => _currentUserDisplay;
-            set
-            {
-                if (_currentUserDisplay != value)
-                {
-                    _currentUserDisplay = value;
-                    OnPropertyChanged();
-                }
-            }
+            set => SetProperty(ref _currentUserDisplay, value);
         }
 
         private string? _searchText;
@@ -36,12 +31,8 @@ namespace KeyCard.Desktop.ViewModels
             get => _searchText;
             set
             {
-                if (_searchText != value)
-                {
-                    _searchText = value;
-                    OnPropertyChanged();
-                    // Optional: trigger filtering here if implemented
-                }
+                if (SetProperty(ref _searchText, value))
+                    ApplyFilter();
             }
         }
 
@@ -51,75 +42,61 @@ namespace KeyCard.Desktop.ViewModels
             get => _isRefreshing;
             set
             {
-                if (_isRefreshing != value)
-                {
-                    _isRefreshing = value;
-                    OnPropertyChanged();
-                    (RefreshCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                }
+                if (SetProperty(ref _isRefreshing, value))
+                    (RefreshCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
             }
         }
 
-        /// <summary>
-        /// Collection bound to the "Today's Arrivals" grid.
-        /// </summary>
         public ObservableCollection<Booking> Arrivals { get; } = new();
-
-        // ---- Commands ----
+        public ObservableCollection<Booking> FilteredArrivals { get; } = new();
 
         public ICommand GoFrontDeskCommand { get; }
         public ICommand GoHousekeepingCommand { get; }
         public ICommand RefreshCommand { get; }
+        public ICommand SearchCommand { get; }
 
-        // ---- Constructors ----
-
-        public DashboardViewModel()
-            : this(nav: null)
+        public DashboardViewModel(
+            INavigationService nav,
+            IBookingService bookings,
+            IAuthService auth)
         {
-        }
+            _nav = nav ?? throw new ArgumentNullException(nameof(nav));
+            _bookings = bookings ?? throw new ArgumentNullException(nameof(bookings));
+            _auth = auth ?? throw new ArgumentNullException(nameof(auth));
 
-        public DashboardViewModel(INavigationService? nav)
-        {
-            _nav = nav;
+            CurrentUserDisplay = _auth.DisplayName ?? "Staff Console";
 
-            // Set a sensible default; replace with your auth/env source if available.
-            CurrentUserDisplay = "Staff Console";
+            GoFrontDeskCommand = new UnifiedRelayCommand(() => _nav.NavigateTo<FrontDeskViewModel>());
+            GoHousekeepingCommand = new UnifiedRelayCommand(() => _nav.NavigateTo<HousekeepingViewModel>());
+            RefreshCommand = new UnifiedRelayCommand(RefreshAsync, () => !IsRefreshing);
+            SearchCommand = new UnifiedRelayCommand(() => ApplyFilter());
 
-            GoFrontDeskCommand = new RelayCommand(_ => OnNavigateFrontDesk());
-            GoHousekeepingCommand = new RelayCommand(_ => OnNavigateHousekeeping());
-            RefreshCommand = new RelayCommand(async _ => await RefreshAsync(), _ => !IsRefreshing);
-
-            // Optional initial load
             _ = RefreshAsync();
-        }
-
-        // ---- Behaviors ----
-
-        private void OnNavigateFrontDesk()
-        {
-            // Navigate if a nav service is provided
-            _nav?.NavigateTo<FrontDeskViewModel>();
-        }
-
-        private void OnNavigateHousekeeping()
-        {
-            _nav?.NavigateTo<HousekeepingViewModel>();
         }
 
         private async Task RefreshAsync()
         {
             if (IsRefreshing) return;
+
             try
             {
                 IsRefreshing = true;
-                await Task.Delay(250);
-                var arrivals = BookingMocks.GetArrivalsToday(12);
+
+                var arrivals = await _bookings.GetTodayArrivalsAsync();
+
                 Arrivals.Clear();
-                foreach (var b in arrivals) Arrivals.Add(b);
+                foreach (var booking in arrivals)
+                {
+                    Arrivals.Add(booking);
+                }
+
+                ApplyFilter();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                Arrivals.Clear(); // keep UI stable
+                System.Diagnostics.Debug.WriteLine($"Failed to refresh arrivals: {ex.Message}");
+                Arrivals.Clear();
+                FilteredArrivals.Clear();
             }
             finally
             {
@@ -127,43 +104,28 @@ namespace KeyCard.Desktop.ViewModels
             }
         }
 
-        // ---- Minimal ICommand implementation ----
-        private sealed class RelayCommand : ICommand
+        private void ApplyFilter()
         {
-            private readonly Func<object?, bool>? _canExecute;
-            private readonly Action<object?>? _executeSync;
-            private readonly Func<object?, Task>? _executeAsync;
+            var term = (SearchText ?? string.Empty).Trim();
 
-            public RelayCommand(Action<object?> execute, Func<object?, bool>? canExecute = null)
+            FilteredArrivals.Clear();
+
+            var filtered = string.IsNullOrWhiteSpace(term)
+                ? Arrivals
+                : Arrivals.Where(b => MatchesFilter(b, term));
+
+            foreach (var booking in filtered)
             {
-                _executeSync = execute ?? throw new ArgumentNullException(nameof(execute));
-                _canExecute = canExecute;
+                FilteredArrivals.Add(booking);
             }
+        }
 
-            public RelayCommand(Func<object?, Task> executeAsync, Func<object?, bool>? canExecute = null)
-            {
-                _executeAsync = executeAsync ?? throw new ArgumentNullException(nameof(executeAsync));
-                _canExecute = canExecute;
-            }
-
-            public bool CanExecute(object? parameter) => _canExecute?.Invoke(parameter) ?? true;
-
-            public async void Execute(object? parameter)
-            {
-                if (_executeSync is not null)
-                {
-                    _executeSync(parameter);
-                    return;
-                }
-
-                if (_executeAsync is not null)
-                {
-                    await _executeAsync(parameter);
-                }
-            }
-
-            public event EventHandler? CanExecuteChanged;
-            public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+        private static bool MatchesFilter(Booking booking, string term)
+        {
+            return booking.BookingId.ToString().Contains(term, StringComparison.OrdinalIgnoreCase)
+                || booking.GuestName.Contains(term, StringComparison.OrdinalIgnoreCase)
+                || booking.RoomNumber.ToString(CultureInfo.InvariantCulture).Contains(term, StringComparison.OrdinalIgnoreCase)
+                || booking.ConfirmationCode.Contains(term, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

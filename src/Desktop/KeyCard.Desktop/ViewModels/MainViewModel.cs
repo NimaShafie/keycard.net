@@ -1,4 +1,4 @@
-// src/Desktop/KeyCard.Desktop/ViewModels/MainViewModel.cs
+// ViewModels/MainViewModel.cs
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;

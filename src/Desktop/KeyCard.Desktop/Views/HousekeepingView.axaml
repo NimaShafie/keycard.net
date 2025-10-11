@@ -7,136 +7,173 @@
     x:Class="KeyCard.Desktop.Views.HousekeepingView"
     x:DataType="vms:HousekeepingViewModel">
 
-  <!-- Load the DataGrid control template/theme -->
-  <UserControl.Styles>
-    <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
-
-    <!-- Dark theme DataGrid styles (scoped to this view) -->
-    <Style Selector="DataGridColumnHeader">
-      <Setter Property="Background" Value="#1E1F29"/>
-      <Setter Property="Foreground" Value="#EDEDF1"/>
-      <Setter Property="BorderBrush" Value="#2E2750"/>
-    </Style>
-
-    <Style Selector="DataGridRow">
-      <Setter Property="Background" Value="#171822"/>
-      <Setter Property="Foreground" Value="#EDEDF1"/>
-      <Setter Property="BorderBrush" Value="#2E2750"/>
-    </Style>
-
-    <Style Selector="DataGridRow:odd">
-      <Setter Property="Background" Value="#131521"/>
-    </Style>
-
-    <Style Selector="DataGridCell">
-      <Setter Property="Foreground" Value="#EDEDF1"/>
-    </Style>
-  </UserControl.Styles>
-
-  <Grid RowDefinitions="Auto,*">
+  <Grid RowDefinitions="Auto,Auto,*,Auto">
     <!-- Header -->
-    <vctrl:ViewHeader Grid.Row="0" HeaderText="Dashboard / Housekeeping"/>
+    <vctrl:ViewHeader Grid.Row="0"
+                      HeaderText="Housekeeping Management"
+                      SubHeaderText="Track room status and task completion"/>
 
-    <!-- Body -->
-    <Grid Grid.Row="1" Margin="20" RowDefinitions="Auto,*,Auto" ColumnDefinitions="*,*">
+    <!-- Toolbar -->
+    <Border Grid.Row="1" Margin="8" CornerRadius="10"
+            BorderBrush="#3F2F73" BorderThickness="1" Padding="12">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Button Content="Refresh"
+                  Command="{Binding RefreshCommand}"
+                  IsEnabled="{Binding !IsBusy}"/>
+        </StackPanel>
 
-      <!-- Section headings -->
-      <TextBlock Grid.Row="0" Grid.Column="0" Text="Rooms" FontWeight="SemiBold" Margin="0,0,8,8"/>
-      <TextBlock Grid.Row="0" Grid.Column="1" Text="Tasks"  FontWeight="SemiBold" Margin="8,0,0,8"/>
+        <ProgressBar Grid.Column="1"
+                     IsIndeterminate="True"
+                     IsVisible="{Binding IsBusy}"
+                     Width="150"
+                     HorizontalAlignment="Center"/>
 
-      <!-- Counts -->
-      <TextBlock Grid.Row="0" Grid.Column="0"
-                 Text="{Binding RoomsTable.Count, StringFormat='({0})'}"
-                 Margin="56,0,0,8" Opacity="0.7"/>
-      <TextBlock Grid.Row="0" Grid.Column="1"
-                 Text="{Binding TasksTable.Count, StringFormat='({0})'}"
-                 Margin="48,0,0,8" Opacity="0.7"/>
+        <Button Grid.Column="2"
+                Content="← Dashboard"
+                Command="{Binding BackToDashboardCommand}"/>
+      </Grid>
+    </Border>
 
-      <!-- Rooms table -->
-      <Border Grid.Row="1" Grid.Column="0"
-              Background="#141419" BorderBrush="#4B3A86" BorderThickness="1"
-              CornerRadius="8" MinHeight="300" Padding="6" Margin="0,0,8,0">
-        <DataGrid ItemsSource="{Binding RoomsTable}"
-                  SelectedItem="{Binding SelectedRoomRow, Mode=TwoWay}"
-                  HeadersVisibility="Column"
-                  GridLinesVisibility="All"
-                  AutoGenerateColumns="False"
-                  CanUserSortColumns="True"
-                  CanUserResizeColumns="True"
-                  CanUserReorderColumns="True"
-                  IsReadOnly="False"
-                  RowHeight="36"
-                  Background="#141419"
-                  Foreground="#EDEDF1"
-                  HorizontalGridLinesBrush="#2E2750"
-                  VerticalGridLinesBrush="#2E2750">
+    <!-- Main content -->
+    <Grid Grid.Row="2" Margin="8" ColumnDefinitions="*,*">
+      <!-- Rooms panel -->
+      <Border Background="#141419"
+              BorderBrush="#4B3A86"
+              BorderThickness="1"
+              CornerRadius="8"
+              Padding="8">
+        <Grid RowDefinitions="Auto,*,Auto">
+          <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+            <TextBlock Text="Rooms"
+                       FontSize="16"
+                       FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding Rooms.Count, StringFormat='({0})'}"
+                       Opacity="0.7"
+                       VerticalAlignment="Center"/>
+          </StackPanel>
 
-          <DataGrid.Columns>
-            <DataGridTextColumn Header="Room" Width="2*"
-                                Binding="{Binding Name}"
-                                SortMemberPath="Name"/>
-            <DataGridTemplateColumn Header="Status" Width="*"
-                                    SortMemberPath="Status">
-              <DataGridTemplateColumn.CellTemplate>
-                <DataTemplate>
-                  <CheckBox IsThreeState="True"
-                            IsChecked="{Binding Status, Mode=TwoWay}"
-                            HorizontalAlignment="Center"/>
-                </DataTemplate>
-              </DataGridTemplateColumn.CellTemplate>
-            </DataGridTemplateColumn>
-          </DataGrid.Columns>
-        </DataGrid>
+          <DataGrid Grid.Row="1"
+                    ItemsSource="{Binding Rooms}"
+                    SelectedItem="{Binding SelectedRoom, Mode=TwoWay}"
+                    HeadersVisibility="Column"
+                    GridLinesVisibility="All"
+                    AutoGenerateColumns="False"
+                    CanUserSortColumns="True"
+                    CanUserResizeColumns="True"
+                    IsReadOnly="False"
+                    RowHeight="36"
+                    Background="#141419">
+
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="Room #"
+                                  Width="*"
+                                  Binding="{Binding Number}"
+                                  SortMemberPath="Number"/>
+              <DataGridTextColumn Header="Status"
+                                  Width="2*"
+                                  Binding="{Binding Status}"
+                                  SortMemberPath="Status"/>
+              <DataGridTemplateColumn Header="Clean"
+                                      Width="*"
+                                      SortMemberPath="IsClean">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <CheckBox IsThreeState="True"
+                              IsChecked="{Binding IsClean, Mode=TwoWay}"
+                              HorizontalAlignment="Center"
+                              IsEnabled="False"/>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+            </DataGrid.Columns>
+          </DataGrid>
+
+          <Button Grid.Row="2"
+                  Content="Mark Room Clean"
+                  Command="{Binding MarkRoomCleanCommand}"
+                  HorizontalAlignment="Stretch"
+                  HorizontalContentAlignment="Center"
+                  Margin="0,8,0,0"
+                  Background="#2E7D32"
+                  BorderBrush="#4CAF50"/>
+        </Grid>
       </Border>
 
-      <!-- Tasks table -->
-      <Border Grid.Row="1" Grid.Column="1"
-              Background="#141419" BorderBrush="#4B3A86" BorderThickness="1"
-              CornerRadius="8" MinHeight="300" Padding="6" Margin="8,0,0,0">
-        <DataGrid ItemsSource="{Binding TasksTable}"
-                  SelectedItem="{Binding SelectedTaskRow, Mode=TwoWay}"
-                  HeadersVisibility="Column"
-                  GridLinesVisibility="All"
-                  AutoGenerateColumns="False"
-                  CanUserSortColumns="True"
-                  CanUserResizeColumns="True"
-                  CanUserReorderColumns="True"
-                  IsReadOnly="False"
-                  RowHeight="36"
-                  Background="#141419"
-                  Foreground="#EDEDF1"
-                  HorizontalGridLinesBrush="#2E2750"
-                  VerticalGridLinesBrush="#2E2750">
+      <!-- Tasks panel -->
+      <Border Grid.Column="1"
+              Background="#141419"
+              BorderBrush="#4B3A86"
+              BorderThickness="1"
+              CornerRadius="8"
+              Padding="8">
+        <Grid RowDefinitions="Auto,*,Auto">
+          <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+            <TextBlock Text="Tasks"
+                       FontSize="16"
+                       FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding Tasks.Count, StringFormat='({0})'}"
+                       Opacity="0.7"
+                       VerticalAlignment="Center"/>
+          </StackPanel>
 
-          <DataGrid.Columns>
-            <DataGridTextColumn Header="Task" Width="3*"
-                                Binding="{Binding Description}"
-                                SortMemberPath="Description"/>
-            <DataGridTemplateColumn Header="Status" Width="*"
-                                    SortMemberPath="Status">
-              <DataGridTemplateColumn.CellTemplate>
-                <DataTemplate>
-                  <CheckBox IsThreeState="True"
-                            IsChecked="{Binding Status, Mode=TwoWay}"
-                            HorizontalAlignment="Center"/>
-                </DataTemplate>
-              </DataGridTemplateColumn.CellTemplate>
-            </DataGridTemplateColumn>
-          </DataGrid.Columns>
-        </DataGrid>
+          <DataGrid Grid.Row="1"
+                    ItemsSource="{Binding Tasks}"
+                    SelectedItem="{Binding SelectedTask, Mode=TwoWay}"
+                    HeadersVisibility="Column"
+                    GridLinesVisibility="All"
+                    AutoGenerateColumns="False"
+                    CanUserSortColumns="True"
+                    CanUserResizeColumns="True"
+                    IsReadOnly="False"
+                    RowHeight="36"
+                    Background="#141419">
+
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="Description"
+                                  Width="3*"
+                                  Binding="{Binding Description}"
+                                  SortMemberPath="Description"/>
+              <DataGridTextColumn Header="Status"
+                                  Width="*"
+                                  Binding="{Binding Status}"
+                                  SortMemberPath="Status"/>
+              <DataGridTemplateColumn Header="Done"
+                                      Width="*"
+                                      SortMemberPath="IsCompleted">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <CheckBox IsThreeState="True"
+                              IsChecked="{Binding IsCompleted, Mode=TwoWay}"
+                              HorizontalAlignment="Center"
+                              IsEnabled="False"/>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+            </DataGrid.Columns>
+          </DataGrid>
+
+          <Button Grid.Row="2"
+                  Content="Mark Task Complete"
+                  Command="{Binding MarkTaskDoneCommand}"
+                  HorizontalAlignment="Stretch"
+                  HorizontalContentAlignment="Center"
+                  Margin="0,8,0,0"
+                  Background="#1976D2"
+                  BorderBrush="#2196F3"/>
+        </Grid>
       </Border>
-
-      <!-- Buttons -->
-      <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" Spacing="8" Margin="0,10,8,0">
-        <Button Content="Mark Clean" Command="{Binding MarkRoomCleanCommand}"/>
-        <Button Content="Refresh"    Command="{Binding RefreshCommand}"/>
-      </StackPanel>
-
-      <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="8,10,0,0">
-        <Button Content="Mark Done" Command="{Binding MarkTaskDoneCommand}"/>
-        <Button Content="Refresh"   Command="{Binding RefreshCommand}"/>
-      </StackPanel>
-
     </Grid>
+
+    <!-- Status bar -->
+    <Border Grid.Row="3"
+            Background="#1E1F29"
+            BorderBrush="#3F2F73"
+            BorderThickness="0,1,0,0"
+            Padding="12,8">
+      <TextBlock Text="{Binding StatusMessage}"
+                 Opacity="0.9"
+                 IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+    </Border>
   </Grid>
 </UserControl>
