@@ -1,7 +1,7 @@
 namespace KeyCard.BusinessLogic.ViewModels.Auth
 {
     public record AuthResultViewModel(
-        Guid UserId,
+        int UserId,
         string FullName,
         string Email,
         string Role

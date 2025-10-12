@@ -1,4 +1,4 @@
-using KeyCard.BusinessLogic.Commands.Bookings;
+using KeyCard.BusinessLogic.ServiceInterfaces;
 using KeyCard.BusinessLogic.ViewModels.Auth;
 using KeyCard.BusinessLogic.ViewModels.RequestClaims;
 
@@ -8,12 +8,23 @@ namespace KeyCard.BusinessLogic.Commands.Auth
 {
     public record GuestSignupCommand(
         string Email,
-        string FullName,
+        string FirstName,
+        string? LastName,
         string Password
     ) : Request, IRequest<AuthResultViewModel>;
 
-    //public async Task<AuthResultViewModel> Handle(GuestSignupCommand command, CancellationToken cancellationToken)
-    //{
-        //return await _bookingService.CancelBookingAsync(command, cancellationToken);
-    //}
+    public class GuestSignupCommandHandler : IRequestHandler<GuestSignupCommand, AuthResultViewModel>
+    {
+        private readonly IAuthService _authService;
+
+        public GuestSignupCommandHandler(IAuthService authService)
+        {
+            _authService = authService;
+        }
+
+        public async Task<AuthResultViewModel> Handle(GuestSignupCommand command, CancellationToken cancellationToken)
+        {
+            return await _authService.GuestSignupAsync(command, cancellationToken);
+        }
+    }
 }

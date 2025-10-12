@@ -7,6 +7,7 @@ using KeyCard.BusinessLogic.ViewModels.Auth;
 using KeyCard.Infrastructure.Models.User;
 
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -43,6 +44,7 @@ public class AuthController : ControllerBase
             };
 
             authClaims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
+            var expiresInMinutes = int.Parse(_config["Jwt:ExpiresInMinutes"] ?? "60");
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
             var token = new JwtSecurityToken(
@@ -69,6 +71,18 @@ public class AuthController : ControllerBase
     [HttpPost("signup/guest")]
     [ProducesResponseType(typeof(AuthResultViewModel), 200)]
     public async Task<IActionResult> GuestSignup([FromBody] GuestSignupCommand command, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(command, cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Admin: Create any user (Guest, Employee, or HouseKeeping)
+    /// </summary>
+    [HttpPost("admin/CreateUser")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(AuthResultViewModel), 200)]
+    public async Task<IActionResult> CreateUser([FromBody] AdminCreateUserCommand command, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(command, cancellationToken);
         return Ok(result);

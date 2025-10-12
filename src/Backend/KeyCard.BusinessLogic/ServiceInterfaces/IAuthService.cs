@@ -6,5 +6,6 @@ namespace KeyCard.BusinessLogic.ServiceInterfaces
     public interface IAuthService
     {
         Task<AuthResultViewModel> GuestSignupAsync(GuestSignupCommand command, CancellationToken cancellationToken);
+        Task<AuthResultViewModel> AdminCreateUserAsync(AdminCreateUserCommand command, CancellationToken cancellationToken);
     }
 }
