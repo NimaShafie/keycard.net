@@ -1,5 +1,6 @@
-using KeyCard.BusinessLogic.Commands.Bookings;
-using KeyCard.BusinessLogic.Commands.DigitalKey;
+using KeyCard.BusinessLogic.Commands.Admin.Bookings;
+using KeyCard.BusinessLogic.Commands.Admin.DigitalKey;
+using KeyCard.BusinessLogic.Commands.Guest.Bookings;
 using KeyCard.BusinessLogic.ServiceInterfaces;
 using KeyCard.BusinessLogic.ViewModels.Booking;
 using KeyCard.Core.Common;
@@ -23,6 +24,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
             _digitalKeyService = digitalKeyService;
         }
 
+        #region Admin
         public async Task<BookingViewModel> CreateBookingAsync(CreateBookingCommand command, CancellationToken cancellationToken)
         {
             // Validate Room availability
@@ -194,6 +196,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
 
             // Update booking status
             booking.ChangeStatus(BookingStatus.CheckedIn);
+            booking.CheckInTime = DateTime.UtcNow;
             booking.LastUpdatedAt = DateTime.UtcNow;
             booking.LastUpdatedBy = command.User!.UserId; // later replace with current user via IUserContext
 
@@ -226,6 +229,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
 
             // Update booking status
             booking.ChangeStatus(BookingStatus.CheckedOut);
+            booking.CheckOutTime = DateTime.UtcNow;
             booking.LastUpdatedAt = DateTime.UtcNow;
             booking.LastUpdatedBy = command.User!.UserId; // later: replace with IUserContext
 
@@ -258,7 +262,103 @@ namespace KeyCard.Infrastructure.ServiceImplementation
             return true;
         }
 
+        #endregion
 
+        #region Guest
+        public async Task<List<BookingViewModel>> GetBookingsByGuestIdAsync(GetMyBookingsCommand command, CancellationToken cancellationToken)
+        {
+            return await _context.Bookings
+                .Where(b => b.GuestProfileId == command.GuestId && !b.IsDeleted)
+                .Include(b => b.Room)
+                .Include(b => b.GuestProfile)
+                .Select(b => new BookingViewModel(
+                    b.Id,
+                    b.ConfirmationCode,
+                    b.CheckInDate,
+                    b.CheckOutDate,
+                    b.Status,
+                    b.GuestProfile.FullName,
+                    b.Room.RoomNumber,
+                    b.TotalAmount))
+                .ToListAsync(cancellationToken);
+        }
 
+        public async Task<string> GetBookingStatusByIdAsync(GetBookingStatusByIdCommand command, CancellationToken cancellationToken)
+        {
+            var status = await _context.Bookings
+                .Where(b => b.Id == command.BookingId && b.GuestProfileId == command.User!.UserId && !b.IsDeleted)
+                .Select(b => b.Status.ToString())
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (status == null)
+                throw new KeyNotFoundException("Booking not found.");
+            
+            return status;
+        }
+
+        public async Task<bool> GuestCheckInAsync(GuestCheckInCommand command, CancellationToken cancellationToken)
+        {
+            var booking = await _context.Bookings
+                .Include(b => b.Room)
+                .FirstOrDefaultAsync(b => b.Id == command.BookingId && !b.IsDeleted, cancellationToken);
+
+            if (booking == null)
+                throw new KeyNotFoundException($"Booking with ID {command.BookingId} not found.");
+
+            if (booking.GuestProfileId != command.GuestId)
+                throw new UnauthorizedAccessException("You are not authorized to check in this booking.");
+
+            if (booking.Status == BookingStatus.CheckedIn)
+                return true;
+
+            if (booking.Status != BookingStatus.Reserved)
+                throw new InvalidOperationException($"Cannot check in a booking with status '{booking.Status}'.");
+
+            // Update booking status
+            booking.ChangeStatus(BookingStatus.CheckedIn);
+            booking.CheckInTime = DateTime.UtcNow;
+            booking.LastUpdatedAt = DateTime.UtcNow;
+            booking.LastUpdatedBy = command.User!.UserId;
+
+            // Update room status
+            booking.Room.ChangeStatus(RoomStatus.Occupied);
+            booking.Room.LastUpdatedAt = DateTime.UtcNow;
+            booking.Room.LastUpdatedBy = command.User!.UserId;
+
+            _context.Bookings.Update(booking);
+            _context.Rooms.Update(booking.Room);
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            await _digitalKeyService.IssueKeyAsync(new IssueDigitalKeyCommand(BookingId: booking.Id) { User = command.User }, cancellationToken);
+
+            return true;
+           
+        }
+
+        public async Task<BookingViewModel> LookUpBookingAsync(LookupBookingCommand command, CancellationToken cancellationToken)
+        {
+            var booking = await _context.Bookings
+                .Include(b => b.GuestProfile)
+                .Include(b => b.Room)
+                .Where(b => b.ConfirmationCode == command.Code && b.GuestProfile.Email == command.Email && !b.IsDeleted)
+                .Select(b => new BookingViewModel(
+                    b.Id,
+                    b.ConfirmationCode,
+                    b.CheckInDate,
+                    b.CheckOutDate,
+                    b.Status,
+                    b.GuestProfile.FullName,
+                    b.Room.RoomNumber,
+                    b.TotalAmount
+                ))
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (booking == null)
+                throw new KeyNotFoundException("Booking not found with the provided confirmation code and email.");
+
+            return booking;
+        }
+        #endregion
     }
 }

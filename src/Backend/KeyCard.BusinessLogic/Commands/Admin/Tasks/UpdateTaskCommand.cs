@@ -1,8 +1,9 @@
 using KeyCard.BusinessLogic.ServiceInterfaces;
 using KeyCard.BusinessLogic.ViewModels.RequestClaims;
+
 using MediatR;
 
-namespace KeyCard.BusinessLogic.Commands.Tasks
+namespace KeyCard.BusinessLogic.Commands.Admin.Tasks
 {
     public record UpdateTaskCommand(int Id, string TaskName, string? Notes, int? AssignedToId, string Status)
         : Request, IRequest<bool>;

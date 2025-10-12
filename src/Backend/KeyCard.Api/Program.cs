@@ -102,13 +102,13 @@ builder.Services.AddAuthorization(); // roles/claims later
 
 builder.Services.AddSwaggerGen(c =>
 {
+
     c.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "KeyCard.NET API",
         Version = "v1",
         Description = "Hotel management backend API"
     });
-
 
     var jwtSecurityScheme = new OpenApiSecurityScheme
     {

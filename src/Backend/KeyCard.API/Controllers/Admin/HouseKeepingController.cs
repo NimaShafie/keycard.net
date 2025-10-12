@@ -1,5 +1,5 @@
 using KeyCard.Api.Helper;
-using KeyCard.BusinessLogic.Commands.Tasks;
+using KeyCard.BusinessLogic.Commands.Admin.Tasks;
 using KeyCard.BusinessLogic.ViewModels.Task;
 using KeyCard.BusinessLogic.ViewModels.UserClaims;
 
@@ -8,10 +8,10 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace KeyCard.Api.Controllers
+namespace KeyCard.Api.Controllers.Admin
 {
     [ApiController]
-    [Route("api/v1/[controller]")]
+    [Route("api/admin/[controller]")]
     [Authorize(Roles = "Admin,HouseKeeping,Employee")]
     public class HousekeepingController : ControllerBase
     {
@@ -29,8 +29,8 @@ namespace KeyCard.Api.Controllers
         [HttpGet]
         public async Task<ActionResult<List<TaskViewModel>>> GetAll()
         {
-            GetAllTasksCommand command = new GetAllTasksCommand();
-            command.User = this._user;
+            var command = new GetAllTasksCommand();
+            command.User = _user;
 
             var result = await _mediator.Send(command);
             return Ok(result);
@@ -39,7 +39,7 @@ namespace KeyCard.Api.Controllers
         [HttpPost]
         public async Task<ActionResult<TaskViewModel>> Create([FromBody] CreateTaskCommand command)
         {
-            command.User = this._user;
+            command.User = _user;
             var result = await _mediator.Send(command);
             return CreatedAtAction(nameof(GetAll), new { id = result.Id }, result);
         }
@@ -47,7 +47,7 @@ namespace KeyCard.Api.Controllers
         [HttpPut("{id:int}")]
         public async Task<ActionResult> Update(int id, [FromBody] UpdateTaskCommand command)
         {
-            command.User = this._user;
+            command.User = _user;
 
             if (id != command.Id) return BadRequest("Task ID mismatch.");
             var success = await _mediator.Send(command);
@@ -57,7 +57,7 @@ namespace KeyCard.Api.Controllers
         [HttpPost("{id:int}/complete")]
         public async Task<ActionResult> Complete(int id)
         {
-            var command = new CompleteTaskCommand(id) { User = this._user };
+            var command = new CompleteTaskCommand(id) { User = _user };
             var success = await _mediator.Send(command);
             return success ? Ok("Task completed.") : NotFound("Task not found.");
         }
@@ -65,7 +65,7 @@ namespace KeyCard.Api.Controllers
         [HttpDelete("{id:int}")]
         public async Task<ActionResult> Delete(int id)
         {
-            var command = new DeleteTaskCommand(id) { User = this._user };
+            var command = new DeleteTaskCommand(id) { User = _user };
             var success = await _mediator.Send(command);
             return success ? Ok("Task deleted.") : NotFound("Task not found.");
         }

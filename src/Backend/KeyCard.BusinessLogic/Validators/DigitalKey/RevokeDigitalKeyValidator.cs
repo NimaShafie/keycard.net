@@ -1,6 +1,6 @@
 using FluentValidation;
 
-using KeyCard.BusinessLogic.Commands.DigitalKey;
+using KeyCard.BusinessLogic.Commands.Admin.DigitalKey;
 
 namespace KeyCard.BusinessLogic.Validators.Keys
 {

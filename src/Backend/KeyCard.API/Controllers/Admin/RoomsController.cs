@@ -2,10 +2,15 @@ using KeyCard.Api.Helper;
 using KeyCard.BusinessLogic.ViewModels.UserClaims;
 
 using MediatR;
+
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace KeyCard.Api.Controllers
+namespace KeyCard.Api.Controllers.Admin
 {
+    [ApiController]
+    [Route("api/admin/[controller]")]
+    [Authorize(Roles = "Admin,HouseKeeping,Employee")]
     public class RoomsController : ControllerBase
     {
         private readonly IMediator _mediator;

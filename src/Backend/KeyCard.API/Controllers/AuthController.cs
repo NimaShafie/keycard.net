@@ -68,7 +68,7 @@ public class AuthController : ControllerBase
     /// <summary>
     /// Guest signup (no admin privileges required)
     /// </summary>
-    [HttpPost("signup/guest")]
+    [HttpPost("guest/signup")]
     [ProducesResponseType(typeof(AuthResultViewModel), 200)]
     public async Task<IActionResult> GuestSignup([FromBody] GuestSignupCommand command, CancellationToken cancellationToken)
     {

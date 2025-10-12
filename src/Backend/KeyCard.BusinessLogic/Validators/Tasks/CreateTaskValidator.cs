@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 using FluentValidation;
 
-using KeyCard.BusinessLogic.Commands.Tasks;
+using KeyCard.BusinessLogic.Commands.Admin.Tasks;
 
 namespace KeyCard.BusinessLogic.Validators.Tasks
 {

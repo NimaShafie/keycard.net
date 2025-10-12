@@ -3,7 +3,7 @@ using KeyCard.BusinessLogic.ViewModels.RequestClaims;
 
 using MediatR;
 
-namespace KeyCard.BusinessLogic.Commands.Bookings
+namespace KeyCard.BusinessLogic.Commands.Admin.Bookings
 {
     public record CheckOutBookingCommand(int BookingId) : Request, IRequest<bool>;
 

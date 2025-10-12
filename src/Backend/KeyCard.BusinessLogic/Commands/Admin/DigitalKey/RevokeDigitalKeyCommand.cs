@@ -4,7 +4,7 @@ using KeyCard.BusinessLogic.ViewModels.RequestClaims;
 
 using MediatR;
 
-namespace KeyCard.BusinessLogic.Commands.DigitalKey
+namespace KeyCard.BusinessLogic.Commands.Admin.DigitalKey
 {
     public record RevokeDigitalKeyCommand (int BookingId) : Request, IRequest<bool>;
 

@@ -1,4 +1,4 @@
-using KeyCard.BusinessLogic.Commands.Tasks;
+using KeyCard.BusinessLogic.Commands.Admin.Tasks;
 using KeyCard.BusinessLogic.ServiceInterfaces;
 using KeyCard.BusinessLogic.ViewModels.Task;
 using KeyCard.Core.Common;

@@ -1,4 +1,4 @@
-using KeyCard.BusinessLogic.Commands.DigitalKey;
+using KeyCard.BusinessLogic.Commands.Admin.DigitalKey;
 using KeyCard.BusinessLogic.ViewModels.Booking;
 
 namespace KeyCard.BusinessLogic.ServiceInterfaces

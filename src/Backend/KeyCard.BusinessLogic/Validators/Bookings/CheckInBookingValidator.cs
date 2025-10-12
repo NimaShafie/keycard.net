@@ -1,5 +1,6 @@
 using FluentValidation;
-using KeyCard.BusinessLogic.Commands.Bookings;
+
+using KeyCard.BusinessLogic.Commands.Admin.Bookings;
 
 namespace KeyCard.BusinessLogic.Validators.Bookings
 {

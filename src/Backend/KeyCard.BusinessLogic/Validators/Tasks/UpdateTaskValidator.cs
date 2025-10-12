@@ -1,5 +1,6 @@
 using FluentValidation;
-using KeyCard.BusinessLogic.Commands.Tasks;
+
+using KeyCard.BusinessLogic.Commands.Admin.Tasks;
 using KeyCard.Core.Common;
 
 

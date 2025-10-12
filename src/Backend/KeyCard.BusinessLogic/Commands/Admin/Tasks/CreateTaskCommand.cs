@@ -4,7 +4,7 @@ using KeyCard.BusinessLogic.ViewModels.Task;
 
 using MediatR;
 
-namespace KeyCard.BusinessLogic.Commands.Tasks
+namespace KeyCard.BusinessLogic.Commands.Admin.Tasks
 {
     public record CreateTaskCommand(string TaskName, string? Notes, int? RoomId, int? AssignedToId)
         : Request, IRequest<TaskViewModel>;

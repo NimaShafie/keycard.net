@@ -13,6 +13,9 @@ namespace KeyCard.Infrastructure.Models.Bookings
         public DateTime CheckOutDate { get; set; }
         public BookingStatus Status { get; set; } = BookingStatus.Reserved;
 
+        public DateTime? CheckInTime { get; set; }
+        public DateTime? CheckOutTime { get; set; }
+
         public int Adults { get; set; }
         public int Children { get; set; }
         public decimal TotalAmount { get; set; }

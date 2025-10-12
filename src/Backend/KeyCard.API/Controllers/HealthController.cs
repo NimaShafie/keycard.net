@@ -1,10 +1,12 @@
-using KeyCard.Infrastructure.Models.AppDbContext; // adjust if your context namespace differs
+using KeyCard.Infrastructure.Models.AppDbContext; 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace KeyCard.Api.Controllers
 {
     [ApiController]
     [Route("api/v1/[controller]")]
+    [AllowAnonymous]
     public class HealthController : ControllerBase
     {
         private readonly ApplicationDBContext _context;

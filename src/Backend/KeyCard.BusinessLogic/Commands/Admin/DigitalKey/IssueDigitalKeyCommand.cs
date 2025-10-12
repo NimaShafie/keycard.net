@@ -1,11 +1,10 @@
-using KeyCard.BusinessLogic.Commands.Bookings;
 using KeyCard.BusinessLogic.ServiceInterfaces;
 using KeyCard.BusinessLogic.ViewModels.Booking;
 using KeyCard.BusinessLogic.ViewModels.RequestClaims;
 
 using MediatR;
 
-namespace KeyCard.BusinessLogic.Commands.DigitalKey
+namespace KeyCard.BusinessLogic.Commands.Admin.DigitalKey
 {
     public record IssueDigitalKeyCommand (int BookingId) : Request, IRequest<DigitalKeyViewModel>;
 

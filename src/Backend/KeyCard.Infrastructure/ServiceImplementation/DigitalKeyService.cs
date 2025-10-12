@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 
-using KeyCard.BusinessLogic.Commands.DigitalKey;
+using KeyCard.BusinessLogic.Commands.Admin.DigitalKey;
 using KeyCard.BusinessLogic.ServiceInterfaces;
 using KeyCard.BusinessLogic.ViewModels.Booking;
 using KeyCard.Core.Common;

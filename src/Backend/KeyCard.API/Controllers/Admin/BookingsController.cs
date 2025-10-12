@@ -1,15 +1,18 @@
 using KeyCard.Api.Helper;
-using KeyCard.BusinessLogic.Commands.Bookings;
+using KeyCard.BusinessLogic.Commands.Admin.Bookings;
 using KeyCard.BusinessLogic.ViewModels.Booking;
 using KeyCard.BusinessLogic.ViewModels.UserClaims;
+
 using MediatR;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace KeyCard.Api.Controllers;
+namespace KeyCard.Api.Controllers.Admin;
 
 [ApiController]
-[Route("api/v1/[controller]")]
+[Route("api/admin/[controller]")]
+[Authorize(Roles = "FrontDesk,Admin")]
 public class BookingsController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -23,21 +26,19 @@ public class BookingsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "FrontDesk,Admin,Guest")]
     public async Task<ActionResult<BookingViewModel>> CreateBooking([FromBody] CreateBookingCommand request)
     {
-        request.User = this._user;
+        request.User = _user;
         var result = await _mediator.Send(request);
         return Ok(result);
     }
 
     // GET /api/v1/bookings/{id}
     [HttpGet("{id:int}")]
-    [Authorize(Roles = "FrontDesk,Admin,Guest")]
     public async Task<ActionResult<BookingViewModel>> GetBookingById(int id)
     {
-        GetBookingByIdCommand command = new GetBookingByIdCommand(id);
-        command.User = this._user;
+        var command = new GetBookingByIdCommand(id);
+        command.User = _user;
 
         var result = await _mediator.Send(command);
         if (result == null) return NotFound();
@@ -45,26 +46,24 @@ public class BookingsController : ControllerBase
     }
 
     [HttpGet("GetAllBookings")]
-    [Authorize(Roles = "FrontDesk,Admin")]
     public async Task<ActionResult<IEnumerable<BookingViewModel>>> GetAllBookings(
     [FromQuery] DateTime? fromDate,
     [FromQuery] DateTime? toDate,
     [FromQuery] string? status,
     [FromQuery] string? guestName)
     {
-        GetAllBookingsCommand command = new GetAllBookingsCommand(fromDate, toDate, status, guestName);
-        command.User = this._user;
+        var command = new GetAllBookingsCommand(fromDate, toDate, status, guestName);
+        command.User = _user;
 
         var result = await _mediator.Send(command);
         return Ok(result);
     }
 
     [HttpPost("{id:int}/CancelBooking")]
-    [Authorize(Roles = "FrontDesk,Guest,Admin")]
     public async Task<ActionResult> CancelBooking(int id)
     {
         var command = new CancelBookingCommand(id);
-        command.User = this._user;
+        command.User = _user;
 
         var success = await _mediator.Send(command);
 
@@ -75,7 +74,6 @@ public class BookingsController : ControllerBase
     }
 
     [HttpPost("{id:int}/checkin")]
-    [Authorize(Roles = "FrontDesk,Admin")]
     public async Task<ActionResult> CheckIn(int id)
     {
         var success = await _mediator.Send(new CheckInBookingCommand(id));
@@ -87,7 +85,6 @@ public class BookingsController : ControllerBase
     }
 
     [HttpPost("{id:int}/checkout")]
-    [Authorize(Roles = "FrontDesk,Admin")]
     public async Task<ActionResult> CheckOut(int id)
     {
         var success = await _mediator.Send(new CheckOutBookingCommand(id));
