@@ -1,0 +1,20 @@
+{
+  "profiles": {
+    "KeyCard (Mock)": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development",
+        "KeyCard__Mode": "Mock",
+        "KeyCard__UseMocks": "true"
+      }
+    },
+    "KeyCard (Live)": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Production",
+        "KeyCard__Mode": "Live",
+        "KeyCard__UseMocks": "false"
+      }
+    }
+  }
+}

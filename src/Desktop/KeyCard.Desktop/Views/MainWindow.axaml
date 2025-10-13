@@ -1,18 +1,26 @@
-<!-- src/Desktop/KeyCard.Desktop/Views/MainWindow.axaml -->
+<!-- Views/MainWindow.axaml -->
 <Window
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vms="clr-namespace:KeyCard.Desktop.ViewModels"
+    xmlns:st="clr-namespace:Avalonia.Styling;assembly=Avalonia.Styling"
     x:Class="KeyCard.Desktop.Views.MainWindow"
+    xmlns:conv="clr-namespace:KeyCard.Desktop.Converters"
     x:DataType="vms:MainViewModel"
     Width="1100" Height="700"
     WindowStartupLocation="CenterScreen"
     Title="KeyCard.NET — Staff Console"
     Background="#0F0F12">
 
-  <Grid RowDefinitions="Auto,*">
+  <Window.Resources>
+    <conv:ModeToBrushConverter x:Key="ModeToBrushConverter"/>
+    <conv:BoolToOpacityConverter x:Key="BoolToOpacityConverter" TrueOpacity="0.6" FalseOpacity="1"/>
+    <conv:ModeIsMockConverter x:Key="ModeIsMockConverter"/>
+  </Window.Resources>
+
+  <Grid RowDefinitions="Auto,Auto,*">
     <!-- Top Bar -->
-    <Border Height="64" Padding="16,0">
+    <Border Grid.Row="1" Height="64" Padding="16,0">
       <Border.Background>
         <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
           <GradientStop Color="#6F3BF5" Offset="0"/>
@@ -51,6 +59,17 @@
                      VerticalAlignment="Center"
                      Opacity="0.92"/>
 
+          <Border x:Name="ModeChip"
+                  CornerRadius="8"
+                  Padding="8,4"
+                  Margin="0,0,8,0"
+                  VerticalAlignment="Center">
+            <TextBlock x:Name="ModeChipText"
+                       Text="{Binding ModeLabel}"
+                       FontWeight="SemiBold"
+                       VerticalAlignment="Center"/>
+          </Border>
+
           <Button Classes="profileButton"
                   Command="{Binding OpenProfileMenuCommand}">
             <Button.Content>
@@ -76,8 +95,24 @@
       </Grid>
     </Border>
 
+    <!-- MODE BANNER -->
+    <Border Grid.Row="0"
+            HorizontalAlignment="Stretch"
+            CornerRadius="8"
+            Padding="8,4"
+            Margin="8,6,8,6"
+            Background="#2B2B33"
+            BorderBrush="{Binding ModeLabel, Converter={StaticResource ModeToBrushConverter}}"
+            BorderThickness="1">
+      <TextBlock Text="{Binding ModeLabel}"
+                 HorizontalAlignment="Center"
+                 FontWeight="SemiBold"
+                 VerticalAlignment="Center"
+                 Foreground="{Binding ModeLabel, Converter={StaticResource ModeToBrushConverter}}"/>
+    </Border>
+
     <!-- Page content -->
-    <Border Grid.Row="1" Margin="12">
+    <Border Grid.Row="2" Margin="12">
       <Border.Background>
         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
           <GradientStop Color="#111117" Offset="0"/>
@@ -98,7 +133,32 @@
       <Setter Property="Padding" Value="0"/>
     </Style>
 
-    <!-- NEW: consistent, centered topbar button -->
+    <!-- Border#ModeChip -->
+    <Style Selector="Border#ModeChip">
+      <Setter Property="Background" Value="#2B2B33"/>
+      <Setter Property="BorderBrush"
+              Value="{Binding ModeLabel, Converter={StaticResource ModeToBrushConverter}}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+
+    <!-- DataGridRow:selected -->
+    <Style Selector="DataGridRow:selected">
+      <Setter Property="Opacity"
+              Value="{Binding DataContext,
+                              RelativeSource={RelativeSource AncestorType=DataGridRow},
+                              Converter={StaticResource BoolToOpacityConverter}}"/>
+    </Style>
+
+    <!-- TextBlock#ModeChipText -->
+    <Style Selector="TextBlock#ModeChipText">
+      <Setter Property="Foreground"
+              Value="{Binding ModeLabel,
+                              Converter={StaticResource ModeToBrushConverter},
+                              FallbackValue=#CFCFF1,
+                              TargetNullValue=#CFCFF1}"/>
+    </Style>
+
+    <!-- Topbar button look -->
     <Style Selector="Button.topbarBtn">
       <Setter Property="Height" Value="36"/>
       <Setter Property="MinWidth" Value="110"/>

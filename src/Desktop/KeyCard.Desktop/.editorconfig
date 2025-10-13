@@ -1,0 +1,6 @@
+# naming style: allow underscores in member names for ApiRoutes
+[*.cs]
+dotnet_diagnostic.CA1707.severity = none
+dotnet_diagnostic.CA1848.severity = silent
+dotnet_diagnostic.CA1847.severity = silent
+dotnet_diagnostic.CA1305.severity = silent
