@@ -5,6 +5,7 @@ using FluentValidation;
 using KeyCard.BusinessLogic;
 using KeyCard.BusinessLogic.ServiceInterfaces;
 using KeyCard.Core.Middlewares;
+using KeyCard.Infrastructure.Helper;
 using KeyCard.Infrastructure.Models.AppDbContext;
 using KeyCard.Infrastructure.Models.User;
 using KeyCard.Infrastructure.ServiceImplementation;
@@ -19,11 +20,10 @@ using Microsoft.OpenApi.Models;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddRealtime();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-
-builder.Services.AddSignalR();
 
 // MediatR scanning KeyCard.Application
 builder.Services.AddMediatR(cfg =>
@@ -80,21 +80,6 @@ builder.Services
 
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromMinutes(1) // keep small
-        };
-
-        // (Optional) allow SignalR bearer auth via query for WebSockets:
-        options.Events = new JwtBearerEvents
-        {
-            OnMessageReceived = context =>
-            {
-                var accessToken = context.Request.Query["access_token"];
-                var path = context.HttpContext.Request.Path;
-                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
-                {
-                    context.Token = accessToken;
-                }
-                return Task.CompletedTask;
-            }
         };
     });
 
@@ -165,6 +150,7 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.UseApiResponseWrapperMiddleware();
+app.MapRealtimeEndpoints();
 
 using (var scope = app.Services.CreateScope())
 {

@@ -4,11 +4,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-using KeyCard.BusinessLogic.HubInterfaces;
+using KeyCard.BusinessLogic.ViewModels.Booking;
+using KeyCard.Infrastructure.Hubs.RealTime;
 
-namespace KeyCard.Infrastructure.Hubs
+namespace KeyCard.Infrastructure.Hubs;
+
+public interface IBookingsClient
 {
-    internal class BookingHub : IBookingHub
-    {
-    }
+    Task BookingUpdated(BookingViewModel dto);
+    Task DigitalKeyCreated(DigitalKeyViewModel dto);
+}
+public class BookingsHub : KeyCardHubBase<IBookingsClient>
+{
+    public BookingsHub(ConnectionRegistry r) : base(r) { }
 }
