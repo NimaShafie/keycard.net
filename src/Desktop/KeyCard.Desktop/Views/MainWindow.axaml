@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vms="clr-namespace:KeyCard.Desktop.ViewModels"
     xmlns:st="clr-namespace:Avalonia.Styling;assembly=Avalonia.Styling"
+    xmlns:svc="clr-namespace:KeyCard.Desktop.Services"
     x:Class="KeyCard.Desktop.Views.MainWindow"
     xmlns:conv="clr-namespace:KeyCard.Desktop.Converters"
     x:DataType="vms:MainViewModel"
@@ -30,7 +31,7 @@
       </Border.Background>
 
       <Grid ColumnDefinitions="*,Auto,*">
-        <!-- LEFT: Dashboard button (improved visuals + centered text) -->
+        <!-- LEFT: Dashboard button -->
         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
           <Button Content="Dashboard"
                   Classes="topbarBtn"
@@ -95,7 +96,7 @@
       </Grid>
     </Border>
 
-    <!-- MODE BANNER -->
+    <!-- MODE BANNER (visible only when ModeLabel == "MOCK") -->
     <Border Grid.Row="0"
             HorizontalAlignment="Stretch"
             CornerRadius="8"
@@ -103,7 +104,8 @@
             Margin="8,6,8,6"
             Background="#2B2B33"
             BorderBrush="{Binding ModeLabel, Converter={StaticResource ModeToBrushConverter}}"
-            BorderThickness="1">
+            BorderThickness="1"
+            IsVisible="{Binding ModeLabel, Converter={StaticResource ModeIsMockConverter}}">
       <TextBlock Text="{Binding ModeLabel}"
                  HorizontalAlignment="Center"
                  FontWeight="SemiBold"

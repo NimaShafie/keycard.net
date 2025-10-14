@@ -3,6 +3,7 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vms="clr-namespace:KeyCard.Desktop.ViewModels"
+    xmlns:svc="clr-namespace:KeyCard.Desktop.Services"
     x:Class="KeyCard.Desktop.Views.LoginView"
     x:DataType="vms:LoginViewModel">
 
@@ -82,17 +83,20 @@
                     HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Center"/>
 
-            <Button Content="Continue in Mock Mode"
-                    Command="{Binding ContinueMockCommand}"
-                    IsVisible="{Binding IsMockMode}"
-                    Height="38"
-                    CornerRadius="8"
-                    Background="#2C2C34"
-                    BorderBrush="#4B3A86"
-                    Foreground="White"
-                    HorizontalAlignment="Stretch"
-                    HorizontalContentAlignment="Center"
-                    Opacity="0.9"/>
+            <!-- Gate by BOTH: global Env.IsMock AND VM's IsMockMode -->
+            <StackPanel IsVisible="{Binding Source={x:Static svc:AppGlobals.Env}, Path=IsMock}">
+              <Button Content="Continue in Mock Mode"
+                      Command="{Binding ContinueMockCommand}"
+                      IsVisible="{Binding IsMockMode}"
+                      Height="38"
+                      CornerRadius="8"
+                      Background="#2C2C34"
+                      BorderBrush="#4B3A86"
+                      Foreground="White"
+                      HorizontalAlignment="Stretch"
+                      HorizontalContentAlignment="Center"
+                      Opacity="0.9"/>
+            </StackPanel>
           </StackPanel>
 
           <!-- Loading indicator -->

@@ -16,14 +16,16 @@
     <AvaloniaXaml Remove="**\*.axaml" />
   </ItemGroup>
 
-  <!-- App settings copy -->
+  <!-- Ensure config JSONs aren't double-tracked as <None> by default globs -->
   <ItemGroup>
-    <None Update="appsettings.json">
+    <None Remove="Configuration\**\*.json" />
+  </ItemGroup>
+
+  <!-- configuration JSON files get copied to output -->
+  <ItemGroup>
+    <Content Include="Configuration\**\*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="appsettings.Development.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    </Content>
   </ItemGroup>
 
   <!-- Compile ALL .axaml (recursively) -->
