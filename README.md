@@ -77,3 +77,20 @@ docker compose -f compose.dev.yml up -d --build
 * API:   http://localhost:8080
 * Web:   http://localhost:8081
 * Login with seeded admin from .env
+
+
+#### 4) Desktop App On Windows
+How to run KeyCard Desktop
+
+Open PowerShell and set environment variables:
+"Mock mode (test data): Use the desktop app with mock data and no backend connection."
+$env:DOTNET_ENVIRONMENT='Development'
+$env:KeyCard__UseMocks='true'
+dotnet run --project src/Desktop/KeyCard.Desktop/KeyCard.Desktop.csproj
+
+"Live mode (real data): Connect the desktop app to the backend API."
+Use the "KeyCard Live" launch profile, or run:
+$env:DOTNET_ENVIRONMENT='Production'
+$env:KeyCard__UseMocks='false'
+dotnet run --project src/Desktop/KeyCard.Desktop/KeyCard.Desktop.csproj
+

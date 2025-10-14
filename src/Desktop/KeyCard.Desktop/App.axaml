@@ -3,6 +3,7 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:infra="clr-namespace:KeyCard.Desktop.Infrastructure"
+    xmlns:converters="clr-namespace:KeyCard.Desktop.Converters"
     x:Class="KeyCard.Desktop.App"
     RequestedThemeVariant="Dark">
 

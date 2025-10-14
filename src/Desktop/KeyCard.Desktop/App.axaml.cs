@@ -1,4 +1,4 @@
-// src/Desktop/KeyCard.Desktop/App.axaml.cs
+// /App.axaml.cs
 using System;
 
 using Avalonia;
@@ -7,6 +7,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 
+using KeyCard.Desktop.Services;
 using KeyCard.Desktop.ViewModels;
 using KeyCard.Desktop.Views;
 
@@ -36,58 +37,113 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
-            return;
-
-        // 1) Always create + show a window first so the lifetime stays alive
-        var main = new MainWindow
-        {
-            WindowStartupLocation = WindowStartupLocation.CenterScreen,
-            Title = "KeyCard.NET — Staff Console"
-        };
-        desktop.MainWindow = main;
-        main.Show();
-
-        // 2) Now wire DI + VM. If anything fails, keep the window and display the error.
         try
         {
-            if (_xamlLoadError is not null)
-                throw new InvalidOperationException("App XAML failed to load.", _xamlLoadError);
+            System.IO.File.AppendAllText(
+                System.IO.Path.Combine(System.IO.Path.GetTempPath(), "keycard_desktop.log"),
+                $"OnFrameworkInitializationCompleted: lifetime={ApplicationLifetime?.GetType().FullName}{Environment.NewLine}");
+        }
+        catch { }
 
-            // Resolve the shell (MainViewModel) from DI; fall back to ActivatorUtilities if needed
-            var shell = SafeResolve<MainViewModel>();
-
-            // Ensure we start at Login if nothing has set a page yet
-            if (shell.Current is null)
+        // Desktop lifetime (Windows/macOS/Linux)
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            // 1) create + show a window so lifetime stays alive
+            var main = new MainWindow
             {
-                var login = SafeResolve<LoginViewModel>();
-                shell.Current = login;
+                WindowStartupLocation = WindowStartupLocation.CenterScreen,
+                Title = "KeyCard.NET — Staff Console"
+            };
+
+            // Resolve env if registered; otherwise fall back to a default instance.
+            var env = TryResolve<IAppEnvironment>();
+            var modeLabel = (env?.IsMock ?? true) ? "MOCK" : "LIVE";
+            main.Title = $"KeyCard.NET — Staff Console [{modeLabel}]";
+            desktop.MainWindow = main;
+            main.Show();
+            desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
+
+            // 2) wire DI + VM (with your existing safety net)
+            try
+            {
+                if (_xamlLoadError is not null)
+                    throw new InvalidOperationException("App XAML failed to load.", _xamlLoadError);
+
+                var shell = SafeResolve<MainViewModel>();
+                if (shell.Current is null)
+                {
+                    var login = SafeResolve<LoginViewModel>();
+                    shell.Current = login;
+                }
+
+                main.DataContext = shell;
+
+                _ = TryResolve<DashboardViewModel>();
+                _ = TryResolve<FrontDeskViewModel>();
+                _ = TryResolve<HousekeepingViewModel>();
+                _ = TryResolve<ProfileViewModel>();
+                _ = TryResolve<SettingsViewModel>();
+            }
+            catch (Exception ex)
+            {
+                main.Content = new ScrollViewer
+                {
+                    Content = new TextBlock
+                    {
+                        Text = "Startup error:\n\n" + ex,
+                        TextWrapping = TextWrapping.Wrap
+                    },
+                    Margin = new Thickness(20)
+                };
             }
 
-            // Bind the shell VM to the already-shown window
-            main.DataContext = shell;
-
-            // Optional: warm up commonly navigated VMs so missing registrations show at startup
-            _ = TryResolve<DashboardViewModel>();
-            _ = TryResolve<FrontDeskViewModel>();
-            _ = TryResolve<HousekeepingViewModel>();
-            _ = TryResolve<ProfileViewModel>();
-            _ = TryResolve<SettingsViewModel>();
+            base.OnFrameworkInitializationCompleted();
+            return;
         }
-        catch (Exception ex)
+
+        // Single-view lifetime (fallback; some environments use this)
+        if (ApplicationLifetime is ISingleViewApplicationLifetime single)
         {
-            // Replace window content with a readable error instead of exiting
-            main.Content = new ScrollViewer
+            // Build a simple host view using your MainWindow content & VM
+            var hostView = new ContentControl();
+
+            try
             {
-                Content = new TextBlock
+                if (_xamlLoadError is not null)
+                    throw new InvalidOperationException("App XAML failed to load.", _xamlLoadError);
+
+                var shell = SafeResolve<MainViewModel>();
+                if (shell.Current is null)
                 {
-                    Text = "Startup error:\n\n" + ex,
-                    TextWrapping = TextWrapping.Wrap
-                },
-                Margin = new Thickness(20)
-            };
+                    var login = SafeResolve<LoginViewModel>();
+                    shell.Current = login;
+                }
+
+                // Reuse MainWindow’s visual tree by instantiating it and extracting the Content
+                var tmpWindow = new MainWindow();
+                hostView.Content = tmpWindow.Content;
+                hostView.DataContext = shell;
+            }
+            catch (Exception ex)
+            {
+                hostView.Content = new ScrollViewer
+                {
+                    Content = new TextBlock
+                    {
+                        Text = "Startup error:\n\n" + ex,
+                        TextWrapping = TextWrapping.Wrap
+                    },
+                    Margin = new Thickness(20)
+                };
+            }
+
+            single.MainView = hostView;
+
+            base.OnFrameworkInitializationCompleted();
+            return;
         }
 
+        // If neither lifetime matched, at least finish cleanly
         base.OnFrameworkInitializationCompleted();
     }
 
@@ -99,15 +155,12 @@ public partial class App : Application
 
     private T? TryResolve<T>() where T : class
     {
-        // 1) DI
         var svc = _services.GetService<T>();
         if (svc is not null) return svc;
 
-        // 2) ActivatorUtilities (injects any known deps from the container)
         try { return ActivatorUtilities.CreateInstance<T>(_services); }
         catch { /* fall through */ }
 
-        // 3) public or non-public parameterless ctor
         try { return (T?)Activator.CreateInstance(typeof(T), nonPublic: true); }
         catch { return null; }
     }

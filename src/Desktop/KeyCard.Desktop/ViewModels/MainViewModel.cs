@@ -21,7 +21,9 @@ public partial class MainViewModel : ObservableObject
     private readonly ISignalRService _signalR;
     private readonly IAuthService _auth;
     private readonly INavigationService _nav;
+    private readonly IAppEnvironment _env;
 
+    public string ModeLabel { get; }
     public ObservableCollection<Booking> BookingItems { get; } = new();
 
     [ObservableProperty] private ViewModelBase? current;
@@ -36,16 +38,24 @@ public partial class MainViewModel : ObservableObject
             .Take(2)
             .Select(s => char.ToUpperInvariant(s[0])));
 
-    public MainViewModel(IBookingService bookings, ISignalRService signalR, IAuthService auth, INavigationService nav)
+    public MainViewModel(
+        IBookingService bookings,
+        ISignalRService signalR,
+        IAuthService auth,
+        INavigationService nav,
+        IAppEnvironment env)                 // <-- accept Services.IAppEnvironment
     {
         _bookings = bookings;
         _signalR = signalR;
         _auth = auth;
         _nav = nav;
+        _env = env;                          // <-- set it
 
         // reflect initial state & subscribe to changes
         ApplyAuth();
         _auth.StateChanged += (_, __) => ApplyAuth();
+
+        ModeLabel = _env.IsMock ? "MOCK" : "LIVE";
 
         // Schedule initial navigation so we don't block the UI thread
         Dispatcher.UIThread.Post(() =>
@@ -61,8 +71,6 @@ public partial class MainViewModel : ObservableObject
     {
         IsAuthenticated = _auth.IsAuthenticated;
         DisplayName = _auth.DisplayName ?? string.Empty;
-
-        // refresh computed initials
         OnPropertyChanged(nameof(AvatarInitials));
     }
 
@@ -85,9 +93,7 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void OpenProfileMenu()
     {
-        // Touch instance state so CA1822 doesn't suggest 'static'
-        _ = IsAuthenticated;
-        // Flyout opening is handled by XAML; no further action needed here.
+        _ = IsAuthenticated; // keep instance reference
     }
 
     [RelayCommand]
