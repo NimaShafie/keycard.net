@@ -7,6 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <ApplicationIcon>Assets\Branding\KeyCard.ico</ApplicationIcon>
   </PropertyGroup>
 
   <!-- Remove any accidental wrong build actions on .axaml -->
@@ -32,6 +33,10 @@
   <ItemGroup>
     <AvaloniaXaml Include="App.axaml" />
     <AvaloniaXaml Include="Views\**\*.axaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
   </ItemGroup>
 
   <!-- Pair code-behind to XAML (recursively) -->

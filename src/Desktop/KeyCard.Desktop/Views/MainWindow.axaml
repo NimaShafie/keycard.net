@@ -11,7 +11,8 @@
     Width="1100" Height="700"
     WindowStartupLocation="CenterScreen"
     Title="KeyCard.NET — Staff Console"
-    Background="#0F0F12">
+    Background="#0F0F12"
+    Icon="avares://KeyCard.Desktop/Assets/Branding/KeyCard.ico">
 
   <Window.Resources>
     <conv:ModeToBrushConverter x:Key="ModeToBrushConverter"/>
@@ -19,9 +20,28 @@
     <conv:ModeIsMockConverter x:Key="ModeIsMockConverter"/>
   </Window.Resources>
 
+  <!-- Root layout -->
   <Grid RowDefinitions="Auto,Auto,*">
+
+    <!-- MODE BANNER (visible only in MOCK) -->
+    <Border Grid.Row="0"
+            HorizontalAlignment="Stretch"
+            CornerRadius="8"
+            Padding="8,4"
+            Margin="8,6,8,6"
+            Background="#2B2B33"
+            BorderBrush="{Binding ModeLabel, Converter={StaticResource ModeToBrushConverter}}"
+            BorderThickness="1"
+            IsVisible="{Binding ModeLabel, Converter={StaticResource ModeIsMockConverter}}">
+      <TextBlock Text="{Binding ModeLabel}"
+                 HorizontalAlignment="Center"
+                 FontWeight="SemiBold"
+                 VerticalAlignment="Center"
+                 Foreground="{Binding ModeLabel, Converter={StaticResource ModeToBrushConverter}}"/>
+    </Border>
+
     <!-- Top Bar -->
-    <Border Grid.Row="1" Height="64" Padding="16,0">
+    <Border Grid.Row="1" Height="80" Padding="16,0">
       <Border.Background>
         <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
           <GradientStop Color="#6F3BF5" Offset="0"/>
@@ -31,7 +51,7 @@
       </Border.Background>
 
       <Grid ColumnDefinitions="*,Auto,*">
-        <!-- LEFT: Dashboard button -->
+        <!-- LEFT: Dashboard -->
         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
           <Button Content="Dashboard"
                   Classes="topbarBtn"
@@ -39,14 +59,39 @@
                   IsVisible="{Binding IsAuthenticated}"/>
         </StackPanel>
 
-        <!-- CENTER: app title -->
-        <TextBlock Grid.Column="1"
-                   Text="KeyCard.NET"
-                   FontSize="22"
-                   FontWeight="Bold"
+        <!-- CENTER: tighter pill + more visible logo behind title -->
+        <Border Grid.Column="1"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Padding="14,10"
+          CornerRadius="16"
+          Background="#1B1530"
+          BorderBrush="#A78BFA"
+          BorderThickness="1"
+          ClipToBounds="True">
+
+          <Grid>
+            <Image Source="avares://KeyCard.Desktop/Assets/keycard-logo-transparent-small.png"
                    HorizontalAlignment="Center"
                    VerticalAlignment="Center"
-                   Foreground="White"/>
+                   Width="{Binding $parent[Border].Bounds.Height, RelativeSource=Self}"
+              Opacity="0.22"
+              Margin="52,0,0,0"
+              RenderTransformOrigin="0.5,0.5"
+              IsHitTestVisible="False">
+              <Image.RenderTransform>
+                <RotateTransform Angle="90"/>
+              </Image.RenderTransform>
+            </Image>
+
+            <TextBlock Text="KeyCard.NET"
+                       FontSize="26"
+                       FontWeight="ExtraBold"
+                       Foreground="White"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"/>
+          </Grid>
+        </Border>
 
         <!-- RIGHT: profile area -->
         <StackPanel Grid.Column="2"
@@ -96,25 +141,8 @@
       </Grid>
     </Border>
 
-    <!-- MODE BANNER (visible only when ModeLabel == "MOCK") -->
-    <Border Grid.Row="0"
-            HorizontalAlignment="Stretch"
-            CornerRadius="8"
-            Padding="8,4"
-            Margin="8,6,8,6"
-            Background="#2B2B33"
-            BorderBrush="{Binding ModeLabel, Converter={StaticResource ModeToBrushConverter}}"
-            BorderThickness="1"
-            IsVisible="{Binding ModeLabel, Converter={StaticResource ModeIsMockConverter}}">
-      <TextBlock Text="{Binding ModeLabel}"
-                 HorizontalAlignment="Center"
-                 FontWeight="SemiBold"
-                 VerticalAlignment="Center"
-                 Foreground="{Binding ModeLabel, Converter={StaticResource ModeToBrushConverter}}"/>
-    </Border>
-
     <!-- Page content -->
-    <Border Grid.Row="2" Margin="12">
+    <Border Grid.Row="2" Margin="20">
       <Border.Background>
         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
           <GradientStop Color="#111117" Offset="0"/>
@@ -122,10 +150,25 @@
         </LinearGradientBrush>
       </Border.Background>
 
-      <Border CornerRadius="12" BorderBrush="#5C46A3" BorderThickness="1" Padding="12">
+      <!-- Inner container holds your current view -->
+      <Border CornerRadius="12"
+              BorderBrush="#5C46A3"
+              BorderThickness="1"
+              Padding="18"
+              Background="#18000000">
         <ContentControl Content="{Binding Current}"/>
       </Border>
     </Border>
+
+    <!-- *** OVERLAY WATERMARK (on top of content; non-interactive) *** -->
+    <Image Source="avares://KeyCard.Desktop/Assets/keycard-logo-transparent.png"
+           Grid.RowSpan="3"
+           HorizontalAlignment="Right"
+           VerticalAlignment="Bottom"
+           Margin="18"
+           Width="430" Height="430"
+           Opacity="0.13"
+           IsHitTestVisible="False"/>
   </Grid>
 
   <Window.Styles>
