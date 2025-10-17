@@ -14,8 +14,13 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
         {
             await SeedRolesAndAdminAsync(serviceProvider);
             await SeedHotelsAsync(serviceProvider);
+
             await SeedRoomTypesAsync(serviceProvider);
             await SeedRoomsAsync(serviceProvider);
+
+            await SeedAmenitiesAsync(serviceProvider);          
+            await SeedRoomTypeAmenitiesAsync(serviceProvider); 
+
             await SeedStaffUsersAsync(serviceProvider);
             await SeedGuestUsersAsync(serviceProvider);
         }
@@ -179,7 +184,100 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
         }
         #endregion
 
-        #region Guests
+        #region Amenities
+        private static async Task SeedAmenitiesAsync(IServiceProvider serviceProvider)
+        {
+            var context = serviceProvider.GetRequiredService<ApplicationDBContext>();
+            if (await context.Amenities.AnyAsync()) return;
+
+            var amenities = new List<Amenity>
+            {
+                new Amenity { Key = "wifi", Label = "Free WiFi", IconKey = "wifi", CreatedAt = DateTime.UtcNow, CreatedBy = 0 },
+                new Amenity { Key = "tv", Label = "Smart TV", IconKey = "tv", CreatedAt = DateTime.UtcNow, CreatedBy = 0 },
+                new Amenity {Key = "coffee", Label = "Coffee Maker", IconKey = "coffee", CreatedAt = DateTime.UtcNow, CreatedBy = 0 },
+                new Amenity {Key = "espresso", Label = "Espresso Machine", IconKey = "coffee", CreatedAt = DateTime.UtcNow, CreatedBy = 0 },
+                new Amenity {Key = "guests", Label = "Max Guests", IconKey = "users", CreatedAt = DateTime.UtcNow, CreatedBy = 0 },
+            };
+
+            context.Amenities.AddRange(amenities);
+            await context.SaveChangesAsync();
+        }
+        #endregion
+
+        #region RoomTypeAmenities
+
+        private static async Task SeedRoomTypeAmenitiesAsync(IServiceProvider serviceProvider)
+        {
+            var context = serviceProvider.GetRequiredService<ApplicationDBContext>();
+            if (await context.RoomTypeAmenities.AnyAsync()) return;
+
+            var hotel = await context.Hotels.FirstAsync();
+            var roomTypes = await context.RoomTypes
+                .Where(rt => rt.HotelId == hotel.Id)
+                .ToListAsync();
+
+            var amenityIds = await context.Amenities
+                .ToDictionaryAsync(a => a.Key, a => a.Id);
+
+            foreach (var rt in roomTypes)
+            {
+                // All rooms: WiFi
+                context.RoomTypeAmenities.Add(new RoomTypeAmenity
+                {
+                    RoomTypeId = rt.Id,
+                    AmenityId = amenityIds["wifi"],
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = 0
+                });
+
+                // TV size by type
+                var tvInches = rt.Name switch
+                {
+                    "Single Bed" => 32,
+                    "Double Bed" => 32,
+                    "King Size" => 43,
+                    "Deluxe Suite" => 55,
+                    "Penthouse Suite" => 65,
+                    _ => 32
+                };
+                context.RoomTypeAmenities.Add(new RoomTypeAmenity
+                {
+                    RoomTypeId = rt.Id,
+                    AmenityId = amenityIds["tv"],
+                    ValueInt = tvInches,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = 0
+                });
+
+                // Coffee vs Espresso
+                if (rt.Name is "Deluxe Suite" or "Penthouse Suite")
+                {
+                    context.RoomTypeAmenities.Add(new RoomTypeAmenity
+                    {
+                        RoomTypeId = rt.Id,
+                        AmenityId = amenityIds["espresso"],
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedBy = 0
+                    });
+                }
+                else
+                {
+                    context.RoomTypeAmenities.Add(new RoomTypeAmenity
+                    {
+                        RoomTypeId = rt.Id,
+                        AmenityId = amenityIds["coffee"],
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedBy = 0
+                    });
+                }
+            }
+
+            await context.SaveChangesAsync();
+        }
+
+
+        #endregion
+
         #region Guests
         private static async Task SeedGuestUsersAsync(IServiceProvider serviceProvider)
         {
@@ -228,8 +326,6 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                 }
             }
         }
-        #endregion
-
         #endregion
 
         #region Staff

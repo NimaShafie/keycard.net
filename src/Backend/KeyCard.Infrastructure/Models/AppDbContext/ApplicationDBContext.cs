@@ -18,6 +18,8 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
         public DbSet<Hotel> Hotels => Set<Hotel>();
         public DbSet<RoomType> RoomTypes => Set<RoomType>();
         public DbSet<Room> Rooms => Set<Room>();
+        public DbSet<Amenity> Amenities => Set<Amenity>();
+        public DbSet<RoomTypeAmenity> RoomTypeAmenities => Set<RoomTypeAmenity>();
         public DbSet<Booking> Bookings => Set<Booking>();
         public DbSet<Payment> Payments => Set<Payment>();
         public DbSet<Invoice> Invoices => Set<Invoice>();
@@ -49,7 +51,7 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                 .HasForeignKey(r => r.RoomTypeId)
                 .OnDelete(DeleteBehavior.NoAction);  // final link—no cascade
 
-            // Other relationships
+            // booking relationships
             builder.Entity<Booking>()
                 .HasOne(b => b.Room)
                 .WithMany(r => r.Bookings)
@@ -74,6 +76,7 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                 .HasForeignKey<DigitalKey>(dk => dk.BookingId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // housekeeping relationships
             builder.Entity<HousekeepingTask>()
                 .HasOne(ht => ht.AssignedTo)
                 .WithMany()
@@ -85,6 +88,32 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                 .WithMany()
                 .HasForeignKey(t => t.RoomId)
                 .IsRequired(false);
+
+            // for RoomTypeAmenity
+            builder.Entity<Amenity>(b =>
+            {
+                b.Property(x => x.Key).IsRequired().HasMaxLength(64);
+                b.Property(x => x.Label).IsRequired().HasMaxLength(100);
+                b.Property(x => x.Description).HasMaxLength(256);
+                b.Property(x => x.IconKey).HasMaxLength(64);
+                b.HasIndex(x => x.Key).IsUnique();
+            });
+
+            // RoomTypeAmenity (many-to-many with payload)
+            builder.Entity<RoomTypeAmenity>(b =>
+            {
+                b.HasOne(x => x.RoomType)
+                    .WithMany(rt => rt.RoomTypeAmenities)
+                    .HasForeignKey(x => x.RoomTypeId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                b.HasOne(x => x.Amenity)
+                    .WithMany(a => a.RoomTypeAmenities)
+                    .HasForeignKey(x => x.AmenityId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                b.HasIndex(x => x.AmenityId); // helpful for reverse lookups
+            });
         }
 
     }

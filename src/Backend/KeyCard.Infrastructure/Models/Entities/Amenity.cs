@@ -8,17 +8,14 @@ using KeyCard.Core.Common;
 
 namespace KeyCard.Infrastructure.Models.Entities
 {
-    public class RoomType : IDeletable, IAuditable
+    public class Amenity : IAuditable, IDeletable
     {
         public int Id { get; set; }
-        public string Name { get; set; } = default!;
-        public string Description { get; set; } = default!;
-        public int Capacity { get; set; }
-        public decimal BaseRate { get; set; }
-        public decimal? SeasonalRate { get; set; }
+        public string Key { get; set; } = null!;      // e.g., "wifi", "tv", "coffee"
+        public string Label { get; set; } = null!;    // e.g., "Free WiFi"
+        public string? Description { get; set; }
+        public string? IconKey { get; set; }          // UI hint (optional)
 
-        public int HotelId { get; set; }
-        public Hotel Hotel { get; set; } = default!;
         public ICollection<RoomTypeAmenity> RoomTypeAmenities { get; set; } = new List<RoomTypeAmenity>();
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -26,7 +23,5 @@ namespace KeyCard.Infrastructure.Models.Entities
         public DateTime? LastUpdatedAt { get; set; }
         public int? LastUpdatedBy { get; set; }
         public bool IsDeleted { get; set; }
-
     }
-
 }
