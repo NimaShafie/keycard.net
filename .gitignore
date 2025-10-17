@@ -55,7 +55,8 @@ UpgradeLog*.htm
 *.sln.iml
 
 # VS Code
-#.vscode/
+.vscode/
+!/.vs/launch.vs.json
 
 # Coverage
 coverage/

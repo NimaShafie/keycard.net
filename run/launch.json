@@ -1,0 +1,72 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // 1) Launch only the backend
+      "name": "KeyCard API (Backend)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build:api",
+      "program": "${workspaceFolder}/src/Backend/KeyCard.Api/bin/Debug/net8.0/KeyCard.Api.dll",
+      "cwd": "${workspaceFolder}/src/Backend/KeyCard.Api",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "DOTNET_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:8080"
+        // Connection string stays in user-secrets: ConnectionStrings:DefaultConnection
+      }
+    },
+    {
+      // 2) Launch only the Desktop app (Local -> points at http://localhost:8080)
+      "name": "KeyCard Desktop (Local)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build:desktop",
+      "program": "${workspaceFolder}/src/Desktop/KeyCard.Desktop/bin/Debug/net8.0/KeyCard.Desktop.dll",
+      "cwd": "${workspaceFolder}/src/Desktop/KeyCard.Desktop",
+      "env": {
+        "DOTNET_ENVIRONMENT": "Local",
+        "KeyCard__Api__HttpBaseUrl": "http://localhost:8080",
+        "KeyCard__UseMocks": "false"
+      }
+    },
+    {
+      // 3) Launch only the Web app
+      "name": "KeyCard Web (Blazor Server)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build:web",
+      "program": "${workspaceFolder}/src/Web/KeyCard.Web/bin/Debug/net8.0/KeyCard.Web.dll",
+      "cwd": "${workspaceFolder}/src/Web/KeyCard.Web",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "DOTNET_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:8081"
+      }
+    }
+  ],
+  "compounds": [
+    {
+      // 4) Backend + Desktop
+      "name": "Run: API + Desktop",
+      "configurations": [ "KeyCard API (Backend)", "KeyCard Desktop (Local)" ],
+      "stopAll": true
+    },
+    {
+      // 5) Backend + Web
+      "name": "Run: API + Web",
+      "configurations": [ "KeyCard API (Backend)", "KeyCard Web (Blazor Server)" ],
+      "stopAll": true
+    },
+    {
+      // 6) Backend + Desktop + Web
+      "name": "Run: API + Desktop + Web",
+      "configurations": [
+        "KeyCard API (Backend)",
+        "KeyCard Desktop (Local)",
+        "KeyCard Web (Blazor Server)"
+      ],
+      "stopAll": true
+    }
+  ]
+}
