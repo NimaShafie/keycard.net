@@ -7,6 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <ApplicationIcon>Assets\Branding\KeyCard.ico</ApplicationIcon>
   </PropertyGroup>
 
   <!-- Remove any accidental wrong build actions on .axaml -->
@@ -16,20 +17,26 @@
     <AvaloniaXaml Remove="**\*.axaml" />
   </ItemGroup>
 
-  <!-- App settings copy -->
+  <!-- Ensure config JSONs aren't double-tracked as <None> by default globs -->
   <ItemGroup>
-    <None Update="appsettings.json">
+    <None Remove="Configuration\**\*.json" />
+  </ItemGroup>
+
+  <!-- configuration JSON files get copied to output -->
+  <ItemGroup>
+    <Content Include="Configuration\**\*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="appsettings.Development.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    </Content>
   </ItemGroup>
 
   <!-- Compile ALL .axaml (recursively) -->
   <ItemGroup>
     <AvaloniaXaml Include="App.axaml" />
     <AvaloniaXaml Include="Views\**\*.axaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
   </ItemGroup>
 
   <!-- Pair code-behind to XAML (recursively) -->

@@ -104,7 +104,7 @@ namespace KeyCard.Desktop.ViewModels
         private void ContinueMock()
         {
             if (!IsMockMode) return;
-            // ✅ Mark as authenticated for mock users
+            // Mark as authenticated for mock users
             _ = _auth.LoginMockAsync(CancellationToken.None);
             _nav.NavigateTo<DashboardViewModel>();
         }

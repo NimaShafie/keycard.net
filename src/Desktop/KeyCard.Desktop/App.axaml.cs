@@ -57,11 +57,27 @@ public partial class App : Application
 
             // Resolve env if registered; otherwise fall back to a default instance.
             var env = TryResolve<IAppEnvironment>();
+            KeyCard.Desktop.Services.AppGlobals.Env = env;
             var modeLabel = (env?.IsMock ?? true) ? "MOCK" : "LIVE";
             main.Title = $"KeyCard.NET — Staff Console [{modeLabel}]";
             desktop.MainWindow = main;
             main.Show();
             desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
+
+            // ---- NEW: guard against missing LIVE service registrations ----
+            // If the container doesn’t have IBookingService in LIVE mode,
+            // we throw early with a clear message (so you see exactly what’s missing).
+            if (!(env?.IsMock ?? true))
+            {
+                var hasBooking = _services.GetService<IBookingService>() is not null;
+                if (!hasBooking)
+                {
+                    throw new InvalidOperationException(
+                        "LIVE mode detected but IBookingService is not registered. " +
+                        "Ensure Program.cs calls AddKeyCardDesktopServices() (see Services/ServiceRegistration.cs).");
+                }
+            }
+            // -----------------------------------------------------------------
 
             // 2) wire DI + VM (with your existing safety net)
             try
