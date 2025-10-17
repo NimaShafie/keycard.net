@@ -25,6 +25,11 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
         public DbSet<Invoice> Invoices => Set<Invoice>();
         public DbSet<HousekeepingTask> HousekeepingTasks => Set<HousekeepingTask>();
         public DbSet<DigitalKey> DigitalKeys => Set<DigitalKey>();
+        protected override void ConfigureConventions(ModelConfigurationBuilder builder)
+        {
+            builder.Properties<decimal>().HavePrecision(18, 2);
+            builder.Properties<decimal?>().HavePrecision(18, 2);
+        }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
