@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 
 using Avalonia;
@@ -153,19 +154,35 @@ namespace KeyCard.Desktop
                             // low-level API client registrations
                             services.AddKeyCardApi(ctx.Configuration, appEnv);
 
+                            // === Typed client wiring (NSwag) ===
+                            // HttpClient factory for typed client
+                            services.AddHttpClient("KeyCardApi", (sp, http) =>
+                            {
+                                var env = sp.GetRequiredService<IAppEnvironment>();
+                                http.BaseAddress = new Uri(env.ApiBaseUrl, UriKind.Absolute);
+                            });
+                            // Single generated client (your current file exposes KeyCardApiClient)
+                            services.AddTransient(sp =>
+                            {
+                                var http = sp.GetRequiredService<IHttpClientFactory>().CreateClient("KeyCardApi");
+                                return new KeyCard.Desktop.Generated.KeyCardApiClient(http);
+                            });
+
                             // LIVE: register services so app doesn't crash even if backend is down.
-                            // Booking goes to the real live service (already resilient to HTTP failures).
+                            // Keep your existing registration:
                             services.AddSingleton<IBookingService, BookingService>();
 
                             // Auth + Housekeeping: TEMPORARY safe fallback to mocks in LIVE so the app boots.
-                            // We also log a breadcrumb so it’s visible this is a fallback.
                             WriteBreadcrumb("LIVE mode: IAuthService & IHousekeepingService temporarily bound to mock implementations (backend not required to boot).");
                             services.AddSingleton<IAuthService, MockAuthService>();
                             services.AddSingleton<IHousekeepingService, MockHousekeepingService>();
 
-                            // When you’re ready, replace the two above with real adapters:
+                            // Replace with real adapters (these are added AFTER the mocks, so they win)
                             services.AddSingleton<IAuthService, LiveAuthServiceAdapter>();
                             services.AddSingleton<IHousekeepingService, LiveHousekeepingServiceAdapter>();
+
+                            // Prefer typed-first booking adapter over the generic BookingService
+                            services.AddSingleton<IBookingService, LiveBookingServiceAdapter>();
                         }
                     }
 
@@ -201,9 +218,6 @@ namespace KeyCard.Desktop
                     services.AddTransient<ProfileViewModel>();
                     services.AddTransient<SettingsViewModel>();
 
-                    // Do NOT register MainWindow in DI; it's created in App.axaml.cs
-                    // services.AddTransient<MainWindow>();
-
                     // App
                     services.AddSingleton<App>();
                 })
@@ -227,12 +241,31 @@ namespace KeyCard.Desktop
                 mode, envSvc.IsMock, envSvc.ApiBaseUrl);
             WriteBreadcrumb($"Starting Avalonia — Mode={mode}, IsMock={envSvc.IsMock}, ApiBaseUrl={envSvc.ApiBaseUrl}");
 
+            // 🔎 Non-blocking LIVE health probe; only logs to breadcrumbs
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    if (!envSvc.IsMock && !string.IsNullOrWhiteSpace(envSvc.ApiBaseUrl))
+                    {
+                        using var http = new HttpClient { BaseAddress = new Uri(envSvc.ApiBaseUrl) };
+                        http.Timeout = TimeSpan.FromSeconds(5);
+                        var resp = await http.GetAsync("/api/v1/Health");
+                        var txt = await resp.Content.ReadAsStringAsync();
+                        WriteBreadcrumb($"Live health probe: {(int)resp.StatusCode} {resp.ReasonPhrase} Body='{txt}'");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    WriteBreadcrumb("Live health probe failed: " + ex.Message);
+                }
+            });
+
             Environment.SetEnvironmentVariable("AVALONIA_PLATFORM", "Win32");
             WriteBreadcrumb("AVALONIA_PLATFORM=Win32");
 
             try
             {
-                // Standard classic desktop startup (App.axaml.cs shows the window)
                 BuildAvaloniaApp(host).StartWithClassicDesktopLifetime(args);
                 WriteBreadcrumb("Avalonia exited normally");
             }
