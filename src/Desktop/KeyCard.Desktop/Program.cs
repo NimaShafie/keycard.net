@@ -11,10 +11,14 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.ReactiveUI;
 
 using KeyCard.Desktop.Configuration;
-using KeyCard.Desktop.Services;
-using KeyCard.Desktop.Views;
-using KeyCard.Desktop.ViewModels;
 using KeyCard.Desktop.Infrastructure.Api;
+using KeyCard.Desktop.Services;
+using KeyCard.Desktop.Services.Api;
+using KeyCard.Desktop.Services.Live;
+using KeyCard.Desktop.Services.Mock;
+using KeyCard.Desktop.Startup;
+using KeyCard.Desktop.ViewModels;
+using KeyCard.Desktop.Views;
 
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Configuration;
@@ -123,7 +127,7 @@ namespace KeyCard.Desktop
                     services.Configure<ApiOptions>(ctx.Configuration.GetSection("Api"));
                     services.Configure<SignalROptions>(ctx.Configuration.GetSection("SignalR"));
                     // Bind API routes for LIVE services (e.g., BookingService)
-                    services.Configure<ApiRoutesOptions>(ctx.Configuration.GetSection("Api:Routes"));
+                    services.Configure<RoutesOptions>(ctx.Configuration.GetSection("Api:Routes"));
 
                     services.AddSingleton<IAppEnvironment, AppEnvironment>();
 
@@ -145,9 +149,9 @@ namespace KeyCard.Desktop
 
                         if (appEnv.IsMock)
                         {
-                            services.AddSingleton<IAuthService, MockAuthService>();
-                            services.AddSingleton<IBookingService, MockBookingService>();
-                            services.AddSingleton<IHousekeepingService, MockHousekeepingService>();
+                            services.AddSingleton<IAuthService, Services.Mock.AuthService>();
+                            services.AddSingleton<IBookingService, Services.Mock.BookingService>();
+                            services.AddSingleton<IHousekeepingService, Services.Mock.HousekeepingService>();
                         }
                         else
                         {
@@ -169,21 +173,21 @@ namespace KeyCard.Desktop
                             });
 
                             // LIVE: register services so app doesn't crash even if backend is down.
-                            // Keep your existing registration:
-                            services.AddSingleton<IBookingService, BookingService>();
+                            services.AddSingleton<IBookingService, KeyCard.Desktop.Services.Api.BookingService>();
 
                             // Auth + Housekeeping: TEMPORARY safe fallback to mocks in LIVE so the app boots.
                             WriteBreadcrumb("LIVE mode: IAuthService & IHousekeepingService temporarily bound to mock implementations (backend not required to boot).");
-                            services.AddSingleton<IAuthService, MockAuthService>();
-                            services.AddSingleton<IHousekeepingService, MockHousekeepingService>();
+                            services.AddSingleton<IAuthService, Services.Mock.AuthService>();
+                            services.AddSingleton<IHousekeepingService, Services.Mock.HousekeepingService>();
 
                             // Replace with real adapters (these are added AFTER the mocks, so they win)
-                            services.AddSingleton<IAuthService, LiveAuthServiceAdapter>();
-                            services.AddSingleton<IHousekeepingService, LiveHousekeepingServiceAdapter>();
+                            services.AddSingleton<IAuthService, AuthServiceAdapter>();
+                            services.AddSingleton<IHousekeepingService, HousekeepingServiceAdapter>();
 
                             // Prefer typed-first booking adapter over the generic BookingService
-                            services.AddSingleton<IBookingService, LiveBookingServiceAdapter>();
+                            services.AddSingleton<IBookingService, BookingServiceAdapter>();
                         }
+                        services.AddRoomsService(appEnv);
                     }
 
                     // SignalR selector — return NoOp if URL absent to avoid crashes in LIVE with no backend.
@@ -200,7 +204,7 @@ namespace KeyCard.Desktop
 
                         try
                         {
-                            return ActivatorUtilities.CreateInstance<SignalRService>(sp, url);
+                            return ActivatorUtilities.CreateInstance<KeyCard.Desktop.Services.Live.SignalRService>(sp, url);
                         }
                         catch (Exception ex)
                         {
@@ -241,7 +245,7 @@ namespace KeyCard.Desktop
                 mode, envSvc.IsMock, envSvc.ApiBaseUrl);
             WriteBreadcrumb($"Starting Avalonia — Mode={mode}, IsMock={envSvc.IsMock}, ApiBaseUrl={envSvc.ApiBaseUrl}");
 
-            // 🔎 Non-blocking LIVE health probe; only logs to breadcrumbs
+            // Non-blocking LIVE health probe; only logs to breadcrumbs
             _ = Task.Run(async () =>
             {
                 try

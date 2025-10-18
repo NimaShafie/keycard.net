@@ -1,4 +1,4 @@
-// Services/LiveBookingServiceAdapter.cs
+// Services/Live/BookingServiceAdapter.cs
 #nullable enable
 using System.Collections.Generic;
 using System.Threading;
@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 
 using KeyCard.Desktop.Models;
 
-namespace KeyCard.Desktop.Services
+namespace KeyCard.Desktop.Services.Live
 {
-    public sealed class LiveBookingServiceAdapter : IBookingService
+    public sealed class BookingServiceAdapter : IBookingService
     {
-        public LiveBookingServiceAdapter() { }
+        public BookingServiceAdapter() { }
 
         public Task<IReadOnlyList<Booking>> ListAsync(CancellationToken ct = default)
         {

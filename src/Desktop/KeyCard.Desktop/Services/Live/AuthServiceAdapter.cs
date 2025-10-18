@@ -1,4 +1,4 @@
-// Services/LiveAuthServiceAdapter.cs
+// Services/Live/AuthServiceAdapter.cs
 using System;
 using System.Net;
 using System.Net.Http;
@@ -8,26 +8,28 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
+using KeyCard.Desktop.Services.Api;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace KeyCard.Desktop.Services
+namespace KeyCard.Desktop.Services.Live
 {
     /// <summary>
     /// Live Auth adapter. Calls backend; never throws to UI. On failures returns false and logs.
     /// </summary>
-    public sealed class LiveAuthServiceAdapter : IAuthService
+    public sealed class AuthServiceAdapter : IAuthService
     {
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly ILogger<LiveAuthServiceAdapter> _logger;
-        private readonly ApiRoutesOptions _routes;
+        private readonly ILogger<AuthServiceAdapter> _logger;
+        private readonly RoutesOptions _routes;
 
         private string? _jwt; // ✅ keep last token
 
-        public LiveAuthServiceAdapter(
+        public AuthServiceAdapter(
             IHttpClientFactory httpClientFactory,
-            IOptions<ApiRoutesOptions> routes,
-            ILogger<LiveAuthServiceAdapter> logger)
+            IOptions<RoutesOptions> routes,
+            ILogger<AuthServiceAdapter> logger)
         {
             _httpClientFactory = httpClientFactory;
             _routes = routes.Value;

@@ -4,8 +4,14 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vms="clr-namespace:KeyCard.Desktop.ViewModels"
     xmlns:vctrl="clr-namespace:KeyCard.Desktop.Views.Controls"
+    xmlns:conv="clr-namespace:KeyCard.Desktop.Converters"
     x:Class="KeyCard.Desktop.Views.FrontDeskView"
     x:DataType="vms:FrontDeskViewModel">
+
+  <UserControl.Resources>
+    <conv:NamePartConverter x:Key="NamePartConverter"/>
+    <conv:RoomTypeConverter x:Key="RoomTypeConverter"/>
+  </UserControl.Resources>
 
   <Grid RowDefinitions="Auto,Auto,*,Auto">
     <!-- Header -->
@@ -16,7 +22,6 @@
     <!-- Toolbar -->
     <Border Grid.Row="1" Margin="8" CornerRadius="10"
             BorderBrush="#3F2F73" BorderThickness="1" Padding="12">
-      <!-- Use a spacer column to mimic ColumnSpacing -->
       <Grid ColumnDefinitions="*,12,Auto">
         <!-- Search -->
         <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
@@ -45,8 +50,8 @@
     </Border>
 
     <!-- Main content -->
-    <!-- Add a 12px spacer column between list and actions -->
-    <Grid Grid.Row="2" Margin="8" ColumnDefinitions="2*,12,*">
+    <!-- ONLY CHANGE HERE: widen list / shrink actions (~73% / 27%) -->
+    <Grid Grid.Row="2" Margin="8" ColumnDefinitions="11*,12,4*">
       <!-- Bookings list -->
       <Border Grid.Column="0"
               Background="#141419"
@@ -54,13 +59,10 @@
               BorderThickness="1"
               CornerRadius="8"
               Padding="8">
-        <!-- Add a spacer row between title and grid -->
         <Grid RowDefinitions="Auto,8,*">
           <TextBlock Text="Today's Activity"
                      FontSize="16"
                      FontWeight="SemiBold"/>
-
-          <!-- 8px spacer row is Row 1 -->
 
           <DataGrid Grid.Row="2"
               ItemsSource="{Binding Results}"
@@ -79,12 +81,24 @@
               <DataGridTextColumn Header="Confirmation" Width="*"
                                   Binding="{Binding ConfirmationCode}"
                                   SortMemberPath="ConfirmationCode"/>
-              <DataGridTextColumn Header="Guest" Width="2*"
-                                  Binding="{Binding GuestName}"
+
+              <!-- Split guest into First/Last -->
+              <DataGridTextColumn Header="First" Width="*"
+                                  Binding="{Binding GuestName, Converter={StaticResource NamePartConverter}, ConverterParameter=First}"
                                   SortMemberPath="GuestName"/>
+              <DataGridTextColumn Header="Last" Width="*"
+                                  Binding="{Binding GuestName, Converter={StaticResource NamePartConverter}, ConverterParameter=Last}"
+                                  SortMemberPath="GuestName"/>
+
               <DataGridTextColumn Header="Room" Width="*"
                                   Binding="{Binding RoomNumber}"
                                   SortMemberPath="RoomNumber"/>
+
+              <!-- New: Room Type -->
+              <DataGridTextColumn Header="Room Type" Width="*"
+                                  Binding="{Binding RoomNumber, Converter={StaticResource RoomTypeConverter}}"
+                                  SortMemberPath="RoomNumber"/>
+
               <DataGridTextColumn Header="Check-In" Width="*"
                                   Binding="{Binding CheckIn}"
                                   SortMemberPath="CheckIn"/>
@@ -141,6 +155,11 @@
             <TextBox Watermark="Room number"
                      Text="{Binding RoomNumberInput}"
                      IsEnabled="{Binding !IsBusy}"/>
+            <!-- Inline error from duplicate/conflict validation -->
+            <TextBlock Text="{Binding AssignRoomError}"
+                       Foreground="#ff7777"
+                       FontSize="12"
+                       IsVisible="{Binding AssignRoomError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
             <Button Content="Assign Room"
                     Command="{Binding AssignRoomCommand}"
                     HorizontalAlignment="Stretch"
@@ -166,7 +185,6 @@
                     BorderBrush="#F44336"/>
           </StackPanel>
 
-          <!-- Placeholder for future features -->
           <TextBlock Text="Additional actions coming soon..."
                      Opacity="0.5"
                      FontSize="11"

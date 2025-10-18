@@ -1,4 +1,4 @@
-// Services/ApiBookingService.cs
+// Services/Api/BookingService.cs
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -7,12 +7,12 @@ using System.Threading.Tasks;
 using KeyCard.Desktop.Generated;
 using KeyCard.Desktop.Models;
 
-namespace KeyCard.Desktop.Services;
+namespace KeyCard.Desktop.Services.Api;
 
-public sealed class ApiBookingService : IBookingService
+public sealed class BookingService : IBookingService
 {
     private readonly KeyCardApiClient _client;
-    public ApiBookingService(KeyCardApiClient client) => _client = client;
+    public BookingService(KeyCardApiClient client) => _client = client;
 
     public async Task<IReadOnlyList<Booking>> ListAsync(CancellationToken ct = default)
         => (await _client.BookingsAllAsync(ct)).Select(x => x.ToModel()).ToList();

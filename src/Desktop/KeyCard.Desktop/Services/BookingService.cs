@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using KeyCard.Desktop.Models;
+using KeyCard.Desktop.Services.Api;
 
 namespace KeyCard.Desktop.Services;
 
@@ -22,11 +23,11 @@ public sealed class BookingService : IBookingService
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<BookingService> _logger;
-    private readonly ApiRoutesOptions _routes;
+    private readonly RoutesOptions _routes;
 
     public BookingService(
         IHttpClientFactory httpClientFactory,
-        IOptions<ApiRoutesOptions> routes,
+        IOptions<RoutesOptions> routes,
         ILogger<BookingService> logger)
     {
         _httpClientFactory = httpClientFactory;

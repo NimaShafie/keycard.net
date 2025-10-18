@@ -2,6 +2,7 @@
 using System;
 
 using KeyCard.Desktop.Services;
+using KeyCard.Desktop.Services.Mock;
 
 namespace KeyCard.Desktop.ViewModels
 {
@@ -55,7 +56,7 @@ namespace KeyCard.Desktop.ViewModels
 
         private string DetermineRole()
         {
-            if (_auth is MockAuthService)
+            if (_auth is AuthService)
                 return "Front Desk (Mock)";
 
             var name = _auth.DisplayName?.ToLowerInvariant() ?? string.Empty;

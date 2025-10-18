@@ -3,6 +3,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
@@ -16,6 +17,7 @@ namespace KeyCard.Desktop.ViewModels
     {
         private readonly INavigationService _nav;
         private readonly IBookingService _bookings;
+        private readonly IRoomsService _rooms;
 
         private Booking? _selected;
         public Booking? Selected
@@ -70,6 +72,13 @@ namespace KeyCard.Desktop.ViewModels
             }
         }
 
+        private string? _assignRoomError;
+        public string? AssignRoomError
+        {
+            get => _assignRoomError;
+            private set => SetProperty(ref _assignRoomError, value);
+        }
+
         private bool _isBusy;
         public bool IsBusy
         {
@@ -108,10 +117,11 @@ namespace KeyCard.Desktop.ViewModels
         public ICommand CheckOutCommand { get; }
         public ICommand AssignRoomCommand { get; }
 
-        public FrontDeskViewModel(INavigationService nav, IBookingService bookings)
+        public FrontDeskViewModel(INavigationService nav, IBookingService bookings, IRoomsService rooms)
         {
             _nav = nav ?? throw new ArgumentNullException(nameof(nav));
             _bookings = bookings ?? throw new ArgumentNullException(nameof(bookings));
+            _rooms = rooms ?? throw new ArgumentNullException(nameof(rooms));
 
             BackToDashboardCommand = new UnifiedRelayCommand(() => _nav.NavigateTo<DashboardViewModel>());
             RefreshCommand = new UnifiedRelayCommand(RefreshAsync, () => !IsBusy);
@@ -132,6 +142,7 @@ namespace KeyCard.Desktop.ViewModels
                 IsBusy = true;
                 StatusMessage = "Loading bookings...";
 
+                // Pull bookings
                 var arrivals = await _bookings.GetTodayArrivalsAsync();
                 var allBookings = await _bookings.ListAsync();
                 var today = DateOnly.FromDateTime(DateTime.Today);
@@ -204,19 +215,71 @@ namespace KeyCard.Desktop.ViewModels
             }
         }
 
+        private static bool Overlaps(DateOnly aStart, DateOnly aEnd, DateOnly bStart, DateOnly bEnd)
+        {
+            // Checkout is exclusive
+            return aStart < bEnd && bStart < aEnd;
+        }
+
+        private bool IsRoomAvailableFor(Booking target, int roomNumber)
+        {
+            // Check against what we currently have loaded in the view
+            var all = Results.Concat(Arrivals).Concat(Departures).Distinct();
+
+            foreach (var b in all)
+            {
+                if (b.BookingId == target.BookingId) continue;
+                if (b.Status.Equals("CheckedOut", StringComparison.OrdinalIgnoreCase)) continue;
+                if (b.RoomNumber != roomNumber) continue;
+
+                if (Overlaps(target.CheckInDate, target.CheckOutDate, b.CheckInDate, b.CheckOutDate))
+                    return false;
+            }
+            return true;
+        }
+
         private async Task AssignRoomAsync()
         {
             if (Selected is null || string.IsNullOrWhiteSpace(RoomNumberInput)) return;
 
             if (!int.TryParse(RoomNumberInput, out var roomNumber))
             {
+                AssignRoomError = "Invalid room number";
                 StatusMessage = "Invalid room number";
+                return;
+            }
+
+            // 1) Validate existence using live/mock rooms service
+            bool exists;
+            try
+            {
+                exists = await _rooms.ExistsAsync(roomNumber, CancellationToken.None);
+            }
+            catch
+            {
+                // If service fails, we fall back to allowing the assignment as long as there is no conflict.
+                exists = true;
+            }
+
+            if (!exists)
+            {
+                AssignRoomError = $"Room {roomNumber} does not exist.";
+                StatusMessage = AssignRoomError;
+                return;
+            }
+
+            // 2) Local conflict detection
+            if (!IsRoomAvailableFor(Selected, roomNumber))
+            {
+                AssignRoomError = $"Room {roomNumber} is already occupied for {Selected.CheckInDate:MM/dd}–{Selected.CheckOutDate:MM/dd}.";
+                StatusMessage = AssignRoomError;
                 return;
             }
 
             try
             {
                 IsBusy = true;
+                AssignRoomError = null;
                 StatusMessage = $"Assigning room {roomNumber}...";
 
                 var success = await _bookings.AssignRoomAsync(

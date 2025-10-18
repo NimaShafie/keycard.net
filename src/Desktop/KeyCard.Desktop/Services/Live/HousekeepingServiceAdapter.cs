@@ -1,4 +1,4 @@
-// Services/LiveHousekeepingServiceAdapter.cs
+// Services/Live/HousekeepingServiceAdapter.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,15 +12,15 @@ using Microsoft.Extensions.Logging;
 using KeyCard.Desktop.Models;
 using KeyCard.Desktop.Generated;
 
-namespace KeyCard.Desktop.Services
+namespace KeyCard.Desktop.Services.Live
 {
     /// <summary>
     /// Live HK adapter. Prefers typed client; falls back to raw HTTP. Never throws to UI.
     /// </summary>
-    public sealed class LiveHousekeepingServiceAdapter : IHousekeepingService
+    public sealed class HousekeepingServiceAdapter : IHousekeepingService
     {
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly ILogger<LiveHousekeepingServiceAdapter> _logger;
+        private readonly ILogger<HousekeepingServiceAdapter> _logger;
         private readonly KeyCardApiClient? _typed;   // nullable on purpose
 
         private static readonly JsonSerializerOptions _json = new()
@@ -28,9 +28,9 @@ namespace KeyCard.Desktop.Services
             PropertyNameCaseInsensitive = true
         };
 
-        public LiveHousekeepingServiceAdapter(
+        public HousekeepingServiceAdapter(
             IHttpClientFactory httpClientFactory,
-            ILogger<LiveHousekeepingServiceAdapter> logger,
+            ILogger<HousekeepingServiceAdapter> logger,
             KeyCardApiClient? typedClient = null) // DI will pass this if registered
         {
             _httpClientFactory = httpClientFactory;

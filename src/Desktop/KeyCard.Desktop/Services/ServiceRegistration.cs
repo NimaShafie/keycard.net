@@ -1,6 +1,9 @@
 // Services/ServiceRegistration.cs
 using System;
 
+using KeyCard.Desktop.Services.Api;
+using KeyCard.Desktop.Services.Mock;
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,7 +20,7 @@ public static class ServiceRegistration
         IConfiguration configuration)
     {
         // Bind API route options for consumers (e.g., BookingService)
-        services.Configure<ApiRoutesOptions>(configuration.GetSection("Api:Routes"));
+        services.Configure<RoutesOptions>(configuration.GetSection("Api:Routes"));
 
         // Decide base URL from configuration
         var https = configuration["KeyCard:Api:HttpsBaseUrl"]?.Trim();
@@ -43,7 +46,7 @@ public static class ServiceRegistration
 
         if (isMock)
         {
-            services.AddSingleton<IBookingService, MockBookingService>();
+            services.AddSingleton<IBookingService, Mock.BookingService>();
         }
         else
         {

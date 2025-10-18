@@ -1,4 +1,4 @@
-// Services/ApiHousekeepingService.cs
+// Services/Api/HousekeepingService.cs
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 using KeyCard.Desktop.Models;
 
-namespace KeyCard.Desktop.Services
+namespace KeyCard.Desktop.Services.Api
 {
-    public sealed class ApiHousekeepingService : IHousekeepingService
+    public sealed class HousekeepingService : IHousekeepingService
     {
         private readonly HttpClient _http;
-        public ApiHousekeepingService(HttpClient http) => _http = http;
+        public HousekeepingService(HttpClient http) => _http = http;
 
         public Task<IReadOnlyList<Room>> GetRoomsAsync()
             => _http.GetFromJsonAsync<IReadOnlyList<Room>>("/api/housekeeping/rooms")!;

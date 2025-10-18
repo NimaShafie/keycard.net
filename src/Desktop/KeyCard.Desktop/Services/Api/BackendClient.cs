@@ -1,4 +1,4 @@
-// Services/Api/IBackendClient.cs
+// Services/Api/BackendClient.cs
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;

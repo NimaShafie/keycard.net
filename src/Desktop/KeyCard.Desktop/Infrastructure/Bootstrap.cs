@@ -1,9 +1,11 @@
 // Infrastructure/Bootstrap.cs
 using System;
 using System.Net.Http.Headers;
+using System.Net.Http; // for HttpResponseMessage
 
 using KeyCard.Desktop.Generated;
 using KeyCard.Desktop.Services;
+using KeyCard.Desktop.Services.Api;
 using KeyCard.Desktop.ViewModels;
 
 using Microsoft.AspNetCore.SignalR.Client;
@@ -59,9 +61,20 @@ namespace KeyCard.Desktop.Infrastructure
             services.AddSingleton<ISignalRService>(sp =>
             {
                 var env = sp.GetRequiredService<IAppEnvironment>();
-                return env.IsMock
-                    ? new NoOpSignalRService()
-                    : new SignalRService(env.BookingsHubUrl);
+
+                if (env.IsMock || string.IsNullOrWhiteSpace(env.BookingsHubUrl))
+                    return new NoOpSignalRService();
+
+                try
+                {
+                    // Use the LIVE SignalR service if available
+                    return ActivatorUtilities.CreateInstance<global::KeyCard.Desktop.Services.Live.SignalRService>(sp, env.BookingsHubUrl);
+                }
+                catch
+                {
+                    // Fall back gracefully so the app can still boot
+                    return new NoOpSignalRService();
+                }
             });
 
             // Business services
@@ -69,24 +82,25 @@ namespace KeyCard.Desktop.Infrastructure
             {
                 var env = sp.GetRequiredService<IAppEnvironment>();
                 return env.IsMock
-                    ? new MockBookingService()
-                    : new ApiBookingService(sp.GetRequiredService<KeyCardApiClient>());
+                    ? new global::KeyCard.Desktop.Services.Mock.BookingService()
+                    : new global::KeyCard.Desktop.Services.Api.BookingService(
+                        sp.GetRequiredService<global::KeyCard.Desktop.Generated.KeyCardApiClient>());
             });
 
             services.AddSingleton<IHousekeepingService>(sp =>
             {
                 var env = sp.GetRequiredService<IAppEnvironment>();
                 return env.IsMock
-                    ? new MockHousekeepingService()
-                    : ActivatorUtilities.CreateInstance<ApiHousekeepingService>(sp);
+                    ? new global::KeyCard.Desktop.Services.Mock.HousekeepingService()
+                    : ActivatorUtilities.CreateInstance<global::KeyCard.Desktop.Services.Api.HousekeepingService>(sp);
             });
 
             services.AddSingleton<IAuthService>(sp =>
             {
                 var env = sp.GetRequiredService<IAppEnvironment>();
                 return env.IsMock
-                    ? new MockAuthService()
-                    : new ApiAuthService();
+                    ? new global::KeyCard.Desktop.Services.Mock.AuthService()
+                    : new global::KeyCard.Desktop.Services.Api.AuthService();
             });
 
             // Infrastructure services

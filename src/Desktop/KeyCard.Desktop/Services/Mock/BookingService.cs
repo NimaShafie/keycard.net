@@ -1,4 +1,4 @@
-// Services/MockBookingService.cs
+// Services/Mock/BookingService.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 
 using KeyCard.Desktop.Models;
 
-namespace KeyCard.Desktop.Services;
+namespace KeyCard.Desktop.Services.Mock;
 
-public sealed class MockBookingService : IBookingService
+public sealed class BookingService : IBookingService
 {
     // Keep a single in-memory snapshot for the app lifetime
     private static readonly Booking[] _data = CreateSeed();

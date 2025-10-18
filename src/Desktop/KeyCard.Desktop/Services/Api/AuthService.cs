@@ -1,22 +1,26 @@
-// Services/MockAuthService.cs
+// Services/Api/AuthService.cs
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace KeyCard.Desktop.Services
+namespace KeyCard.Desktop.Services.Api
 {
-    public sealed class MockAuthService : IAuthService
+    public sealed class AuthService : IAuthService
     {
         public bool IsAuthenticated { get; private set; }
         public string? DisplayName { get; private set; }
+
         public event EventHandler? StateChanged;
 
-        public Task<bool> LoginAsync(string username, string password, CancellationToken ct = default)
+        // ---- canonical ----
+        public async Task<bool> LoginAsync(string username, string password, CancellationToken ct = default)
         {
-            IsAuthenticated = true;
-            DisplayName = string.IsNullOrWhiteSpace(username) ? "Mock Staff" : username;
+            // TODO: call real API. For now, succeed if both provided.
+            await Task.Yield();
+            IsAuthenticated = !string.IsNullOrWhiteSpace(username) && !string.IsNullOrWhiteSpace(password);
+            DisplayName = IsAuthenticated ? username : null;
             StateChanged?.Invoke(this, EventArgs.Empty);
-            return Task.FromResult(true);
+            return IsAuthenticated;
         }
 
         public Task<bool> LoginMockAsync(CancellationToken ct = default)
@@ -27,7 +31,7 @@ namespace KeyCard.Desktop.Services
             return Task.FromResult(true);
         }
 
-        // aliases
+        // ---- compatibility aliases ----
         public Task<bool> SignInAsync(string username, string password, CancellationToken ct = default)
             => LoginAsync(username, password, ct);
 

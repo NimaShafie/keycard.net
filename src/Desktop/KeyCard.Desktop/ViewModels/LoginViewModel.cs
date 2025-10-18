@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 
 using KeyCard.Desktop.Services;
+using KeyCard.Desktop.Services.Mock;
 
 namespace KeyCard.Desktop.ViewModels
 {
@@ -54,7 +55,7 @@ namespace KeyCard.Desktop.ViewModels
         }
 
         // Single source of truth for mock flag
-        public bool IsMockMode => _env.IsMock || _auth is MockAuthService;
+        public bool IsMockMode => _env.IsMock || _auth is AuthService;
 
         // In Mock, allow Sign in / Enter with empty fields
         public bool CanLogin =>

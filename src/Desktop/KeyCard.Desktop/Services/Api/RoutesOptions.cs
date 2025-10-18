@@ -1,13 +1,13 @@
-// Services/ApiRoutesOptions.cs
+// Services/Api/RoutesOptions.cs
 using System;
 
-namespace KeyCard.Desktop.Services
+namespace KeyCard.Desktop.Services.Api
 {
     /// <summary>
     /// Strongly-typed view over "Api:Routes" from configuration.
     /// Used by LIVE services (e.g., BookingService) to resolve endpoint paths.
     /// </summary>
-    public sealed class ApiRoutesOptions
+    public sealed class RoutesOptions
     {
         public string? StaffLogin { get; set; }
 

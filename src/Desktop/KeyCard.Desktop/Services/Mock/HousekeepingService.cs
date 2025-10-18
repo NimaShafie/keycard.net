@@ -1,12 +1,12 @@
-// Services/MockHousekeepingService.cs
+// Services/Mock/HousekeepingService.cs
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using KeyCard.Desktop.Models;
 
-namespace KeyCard.Desktop.Services
+namespace KeyCard.Desktop.Services.Mock
 {
-    public sealed class MockHousekeepingService : IHousekeepingService
+    public sealed class HousekeepingService : IHousekeepingService
     {
         private readonly List<Room> _rooms = new();
         private readonly List<HousekeepingTask> _tasks = new();
