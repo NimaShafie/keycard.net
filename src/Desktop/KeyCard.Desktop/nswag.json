@@ -1,0 +1,32 @@
+{
+  "runtime": "Net80",
+  "documentGenerator": {
+    "fromDocument": {
+      "json": "Generated/swagger.v1.json",
+      "output": null
+    }
+  },
+  "codeGenerators": {
+    "openApiToCSharpClient": {
+      "className": "KeyCardApiClient",
+      "namespace": "KeyCard.Desktop.Generated",
+      "generateClientClasses": true,
+      "generateClientInterfaces": false,
+      "generateDtoTypes": true,
+      "useBaseUrl": false,
+      "injectHttpClient": true,
+      "httpClientType": "System.Net.Http.HttpClient",
+      "disposeHttpClient": false,
+      "generateOptionalParameters": true,
+      "generatePrepareRequestAndProcessResponseAsAsyncMethods": true,
+      "useRequestAndResponseSerializationSettings": true,
+      "clientClassAccessModifier": "public",
+      "generateResponseClasses": true,
+      "wrapDtoExceptions": false,
+      "dateTimeType": "System.DateTimeOffset",
+      "timeType": "System.TimeSpan",
+      "handleReferences": true,
+      "output": "Generated/KeyCardApiClient.g.cs"
+    }
+  }
+}

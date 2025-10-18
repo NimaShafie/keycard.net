@@ -1,7 +1,8 @@
-// src/Desktop/KeyCard.Desktop/Services/LiveAuthServiceAdapter.cs
+// Services/LiveAuthServiceAdapter.cs
 using System;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading;
@@ -20,6 +21,8 @@ namespace KeyCard.Desktop.Services
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<LiveAuthServiceAdapter> _logger;
         private readonly ApiRoutesOptions _routes;
+
+        private string? _jwt; // ✅ keep last token
 
         public LiveAuthServiceAdapter(
             IHttpClientFactory httpClientFactory,
@@ -60,7 +63,16 @@ namespace KeyCard.Desktop.Services
 
                 if (resp.IsSuccessStatusCode)
                 {
-                    var name = await TryExtractDisplayNameAsync(resp, username, ct).ConfigureAwait(false);
+                    // Try to pull display name AND token (if present)
+                    var (name, token) = await TryExtractNameAndTokenAsync(resp, username, ct).ConfigureAwait(false);
+
+                    if (!string.IsNullOrWhiteSpace(token))
+                    {
+                        _jwt = token;
+                        Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _jwt);
+                        _logger.LogInformation("JWT attached to HttpClient Authorization header.");
+                    }
+
                     RaiseStateChangedIfChanged(true, name);
                     return true;
                 }
@@ -109,6 +121,8 @@ namespace KeyCard.Desktop.Services
 
         public void Logout()
         {
+            _jwt = null;
+            Client.DefaultRequestHeaders.Authorization = null;
             RaiseStateChangedIfChanged(false, string.Empty);
         }
 
@@ -124,12 +138,14 @@ namespace KeyCard.Desktop.Services
             }
         }
 
-        private static async Task<string> TryExtractDisplayNameAsync(HttpResponseMessage resp, string fallback, CancellationToken ct)
+        private static async Task<(string displayName, string? token)> TryExtractNameAndTokenAsync(
+            HttpResponseMessage resp, string fallback, CancellationToken ct)
         {
+            string? name = null;
+            string? token = null;
+
             try
             {
-                // Accept a variety of shapes from the backend without coupling:
-                // { displayName: "X" } OR { name: "X" } OR { user: "X" } OR wrap { data: {...} }
                 await using var stream = await resp.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
                 using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct).ConfigureAwait(false);
                 var root = doc.RootElement;
@@ -148,21 +164,30 @@ namespace KeyCard.Desktop.Services
                     return null;
                 }
 
-                var name = pickName(root);
-                if (name is not null) return name;
+                // Token can be { token: "..." } or { data: { token: "..." } }
+                static string? pickToken(JsonElement e)
+                {
+                    if (e.ValueKind != JsonValueKind.Object) return null;
+                    if (e.TryGetProperty("token", out var t) && t.ValueKind == JsonValueKind.String)
+                        return t.GetString();
+                    return null;
+                }
+
+                name = pickName(root);
+                token = pickToken(root);
 
                 if (root.TryGetProperty("data", out var data))
                 {
-                    name = pickName(data);
-                    if (name is not null) return name;
+                    name ??= pickName(data);
+                    token ??= pickToken(data);
                 }
             }
             catch
             {
-                // Ignore parse errors; fall back below.
+                // ignore parse errors; fall back below
             }
 
-            return string.IsNullOrWhiteSpace(fallback) ? "User" : fallback;
+            return (string.IsNullOrWhiteSpace(name) ? (string.IsNullOrWhiteSpace(fallback) ? "User" : fallback) : name, token);
         }
     }
 }

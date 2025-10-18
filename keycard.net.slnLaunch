@@ -1,0 +1,22 @@
+[
+  {
+    "Name": "KeyCard Backend + Desktop + Web",
+    "Projects": [
+      {
+        "Path": "src\\Desktop\\KeyCard.Desktop\\KeyCard.Desktop.csproj",
+        "Action": "Start",
+        "DebugTarget": "KeyCard (Live)"
+      },
+      {
+        "Path": "src\\Backend\\KeyCard.Api\\KeyCard.Api.csproj",
+        "Action": "Start",
+        "DebugTarget": "https"
+      },
+      {
+        "Path": "src\\Web\\KeyCard.Web\\KeyCard.Web.csproj",
+        "Action": "Start",
+        "DebugTarget": "KeyCard.Web"
+      }
+    ]
+  }
+]

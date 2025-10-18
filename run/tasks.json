@@ -1,0 +1,29 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build:api",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["build", "src/Backend/KeyCard.Api/KeyCard.Api.csproj"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "build:desktop",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["build", "src/Desktop/KeyCard.Desktop/KeyCard.Desktop.csproj"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "build:web",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["build", "src/Web/KeyCard.Web/KeyCard.Web.csproj"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": "$msCompile"
+    }
+  ]
+}

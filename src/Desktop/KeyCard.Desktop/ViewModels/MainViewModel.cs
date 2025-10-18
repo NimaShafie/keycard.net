@@ -1,7 +1,10 @@
 // ViewModels/MainViewModel.cs
 using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -112,4 +115,80 @@ public partial class MainViewModel : ObservableObject
     // Top-left Dashboard button
     [RelayCommand]
     private void NavigateDashboard() => _nav.NavigateTo<DashboardViewModel>();
+
+    // --------------------------
+    // 🔎 LIVE smoke-test helpers
+    // --------------------------
+
+    /// <summary>
+    /// Simple LIVE health ping to /api/v1/Health. No-op in MOCK.
+    /// Hook to a hidden dev button or call from Settings.
+    /// </summary>
+    [RelayCommand]
+    public async Task TestHealthAsync(CancellationToken ct)
+    {
+        if (_env.IsMock || string.IsNullOrWhiteSpace(_env.ApiBaseUrl))
+        {
+            Debug.WriteLine("[TestHealth] Skipped (MOCK mode or empty ApiBaseUrl).");
+            return;
+        }
+
+        try
+        {
+            using var http = new HttpClient { BaseAddress = new Uri(_env.ApiBaseUrl, UriKind.Absolute) };
+            http.Timeout = TimeSpan.FromSeconds(5);
+            var resp = await http.GetAsync("/api/v1/Health", ct);
+            var body = await resp.Content.ReadAsStringAsync(ct);
+            Debug.WriteLine($"[TestHealth] {(int)resp.StatusCode} {resp.ReasonPhrase} — {body}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine("[TestHealth] FAILED: " + ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Optional LIVE roundtrip:
+    /// 1) If not authenticated, tries to login using KEYCARD_DEV_EMAIL/PASSWORD env vars.
+    /// 2) Loads bookings (admin) via existing service.
+    /// </summary>
+    [RelayCommand]
+    public async Task TestLiveRoundtripAsync(CancellationToken ct)
+    {
+        if (_env.IsMock)
+        {
+            Debug.WriteLine("[TestLiveRoundtrip] Skipped (MOCK mode).");
+            return;
+        }
+
+        try
+        {
+            if (!_auth.IsAuthenticated)
+            {
+                var email = Environment.GetEnvironmentVariable("KEYCARD_DEV_EMAIL");
+                var password = Environment.GetEnvironmentVariable("KEYCARD_DEV_PASSWORD");
+
+                if (!string.IsNullOrWhiteSpace(email) && !string.IsNullOrWhiteSpace(password))
+                {
+                    Debug.WriteLine($"[TestLiveRoundtrip] Attempting login for {email}…");
+                    // Your IAuthService already exposes LoginAsync(string,string,ct)
+                    await _auth.LoginAsync(email, password, ct);
+                    ApplyAuth();
+                    Debug.WriteLine($"[TestLiveRoundtrip] Login success? IsAuthenticated={_auth.IsAuthenticated}");
+                }
+                else
+                {
+                    Debug.WriteLine("[TestLiveRoundtrip] Missing KEYCARD_DEV_EMAIL/PASSWORD env vars; skipping login.");
+                }
+            }
+
+            // Regardless of auth outcome, try to hit bookings to surface errors early
+            var items = await _bookings.ListAsync(ct);
+            Debug.WriteLine($"[TestLiveRoundtrip] Bookings fetched: {items.Count()}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine("[TestLiveRoundtrip] FAILED: " + ex);
+        }
+    }
 }

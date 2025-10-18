@@ -50,12 +50,18 @@ UpgradeLog*.htm
 *.pfx
 *.snk
 
+# SQLite (dev DB)
+src/Backend/KeyCard.Api/App_Data/*.db
+src/Backend/KeyCard.Api/App_Data/*.db-wal
+src/Backend/KeyCard.Api/App_Data/*.db-shm
+
 # JetBrains Rider
 .idea/
 *.sln.iml
 
 # VS Code
 .vscode/
+!/.vs/launch.vs.json
 
 # Coverage
 coverage/

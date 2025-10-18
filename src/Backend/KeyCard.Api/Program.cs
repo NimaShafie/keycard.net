@@ -1,7 +1,6 @@
+using System.Diagnostics;
 using System.Text;
-
 using FluentValidation;
-
 using KeyCard.BusinessLogic;
 using KeyCard.BusinessLogic.ServiceInterfaces;
 using KeyCard.Core.Middlewares;
@@ -9,48 +8,80 @@ using KeyCard.Infrastructure.Helper;
 using KeyCard.Infrastructure.Models.AppDbContext;
 using KeyCard.Infrastructure.Models.User;
 using KeyCard.Infrastructure.ServiceImplementation;
-
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Microsoft.Data.SqlClient;
+using System.IO;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddRealtime();
-
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 
-// MediatR scanning KeyCard.Application
+// MediatR + FluentValidation
 builder.Services.AddMediatR(cfg =>
-    cfg.RegisterServicesFromAssembly(typeof(KeyCard.BusinessLogic.AssemblyMarker).Assembly)
-);
-
-// FluentValidation (auto register validators)
+    cfg.RegisterServicesFromAssembly(typeof(KeyCard.BusinessLogic.AssemblyMarker).Assembly));
 builder.Services.AddValidatorsFromAssembly(typeof(AssemblyMarker).Assembly);
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
-
 builder.Services.AddEndpointsApiExplorer();
 
-
-builder.Services.AddIdentity<ApplicationUser, ApplicationUserRole>()
+builder.Services
+    .AddIdentity<ApplicationUser, ApplicationUserRole>()
     .AddEntityFrameworkStores<ApplicationDBContext>()
     .AddDefaultTokenProviders();
 
-builder.Services.AddDbContext<ApplicationDBContext>(opts =>
-    opts.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+/* -------- DB PROVIDER AUTO-SELECTION --------
+   Modes:
+   - Database:Provider = "SqlServer" | "Sqlite" | "Auto" (default: Auto)
+   - If Auto: try SqlServer (and start LocalDB on Windows if needed),
+     else fallback to Sqlite (file DB).
+*/
+var providerSetting = builder.Configuration["Database:Provider"] ?? "Auto";
+var sqlCs = builder.Configuration.GetConnectionString("DefaultConnection");
+var sqliteRelative = builder.Configuration["Database:SqlitePath"] ?? "App_Data/keycard_dev.db";
 
+// Build an ABSOLUTE path for SQLite under the app content root and ensure folder exists
+string sqliteFullPath = GetOrCreateSqlitePath(builder.Environment.ContentRootPath, sqliteRelative);
+
+// Decide provider
+bool useSqlServer = false;
+if (!string.Equals(providerSetting, "Sqlite", StringComparison.OrdinalIgnoreCase))
+{
+    useSqlServer = await TryEnsureSqlServerAvailable(sqlCs);
+    if (!useSqlServer && OperatingSystem.IsWindows())
+    {
+        TryStartLocalDbInstance("MSSQLLocalDB");
+        useSqlServer = await TryEnsureSqlServerAvailable(sqlCs);
+    }
+}
+
+// Register DbContext
+builder.Services.AddDbContext<ApplicationDBContext>(opts =>
+{
+    if (useSqlServer)
+    {
+        opts.UseSqlServer(sqlCs);
+    }
+    else
+    {
+        // Use absolute path + shared cache (safe for multiple connections)
+        opts.UseSqlite($"Data Source={sqliteFullPath};Cache=Shared");
+    }
+});
+
+// app services
 builder.Services.AddTransient<IBookingService, BookingService>();
 builder.Services.AddTransient<IAuthService, AuthService>();
 builder.Services.AddTransient<ITaskService, TaskService>();
 builder.Services.AddTransient<IDigitalKeyService, DigitalKeyService>();
 builder.Services.AddTransient<IRoomsService, RoomsService>();
 
+// JWT
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var jwtKey = jwtSection["Key"]!;
 var jwtIssuer = jwtSection["Issuer"]!;
@@ -67,28 +98,23 @@ builder.Services
     {
         options.RequireHttpsMetadata = true;
         options.SaveToken = true;
-
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
             ValidIssuer = jwtIssuer,
-
             ValidateAudience = true,
             ValidAudience = jwtAudience,
-
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = signingKey,
-
             ValidateLifetime = true,
-            ClockSkew = TimeSpan.FromMinutes(1) // keep small
+            ClockSkew = TimeSpan.FromMinutes(1)
         };
     });
 
-builder.Services.AddAuthorization(); // roles/claims later
+builder.Services.AddAuthorization();
 
 builder.Services.AddSwaggerGen(c =>
 {
-
     c.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "KeyCard.NET API",
@@ -116,24 +142,19 @@ builder.Services.AddSwaggerGen(c =>
     {
         { jwtSecurityScheme, Array.Empty<string>() }
     });
-
 });
 
 builder.Services.AddCors(opts =>
 {
     opts.AddPolicy("CorsPolicy", policy =>
     {
-        policy
-            .AllowAnyOrigin()
-            .AllowAnyHeader()
-            .AllowAnyMethod();
+        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
     });
 });
 
-
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Swagger in Dev
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -141,26 +162,84 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
-// Enable CORS for all origins, methods, and headers
 app.UseCors("CorsPolicy");
-
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
 app.UseApiResponseWrapperMiddleware();
 app.MapRealtimeEndpoints();
 
+// DB init: Migrate when on SQL Server, otherwise EnsureCreated for SQLite file
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     var dbContext = services.GetRequiredService<ApplicationDBContext>();
 
-    // Apply pending migrations
-    await dbContext.Database.MigrateAsync();
+    if (useSqlServer)
+    {
+        await dbContext.Database.MigrateAsync();
+        Console.WriteLine("✅ Using SQL Server (migrated).");
+    }
+    else
+    {
+        await dbContext.Database.EnsureCreatedAsync();
+        Console.WriteLine($"✅ Using SQLite at: {sqliteFullPath}");
+    }
+
     await DbSeeder.SeedAsync(services);
 }
 
 app.Run();
+
+/* ----------------- helpers ----------------- */
+
+static async Task<bool> TryEnsureSqlServerAvailable(string? connectionString)
+{
+    if (string.IsNullOrWhiteSpace(connectionString)) return false;
+
+    try
+    {
+        using var conn = new SqlConnection(connectionString);
+        await conn.OpenAsync();
+        await conn.CloseAsync();
+        return true;
+    }
+    catch
+    {
+        return false;
+    }
+}
+
+static void TryStartLocalDbInstance(string instanceName)
+{
+    try
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = "sqllocaldb",
+            Arguments = $"start {instanceName}",
+            CreateNoWindow = true,
+            UseShellExecute = false,
+            RedirectStandardError = true,
+            RedirectStandardOutput = true
+        };
+        using var p = Process.Start(psi);
+        p?.WaitForExit(3000);
+    }
+    catch { /* ignore; we’ll fall back to SQLite */ }
+}
+
+static string GetOrCreateSqlitePath(string contentRoot, string relativePath)
+{
+    // Normalize to absolute path under the app’s content root
+    var full = Path.GetFullPath(Path.Combine(contentRoot, relativePath));
+
+    var dir = Path.GetDirectoryName(full);
+    if (!string.IsNullOrWhiteSpace(dir) && !Directory.Exists(dir))
+    {
+        Directory.CreateDirectory(dir);
+    }
+
+    return full;
+}
