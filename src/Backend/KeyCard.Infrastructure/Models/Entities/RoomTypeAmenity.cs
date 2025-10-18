@@ -14,9 +14,7 @@ namespace KeyCard.Infrastructure.Models.Entities
         public int RoomTypeId { get; set; }
         public int AmenityId { get; set; }
 
-        public string? ValueText { get; set; }
-        public int? ValueInt { get; set; }
-        public decimal? ValueDecimal { get; set; }
+        public string? Value { get; set; }
 
         public RoomType RoomType { get; set; } = null!;
         public Amenity Amenity { get; set; } = null!;

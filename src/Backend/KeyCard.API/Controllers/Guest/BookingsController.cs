@@ -1,6 +1,5 @@
 using KeyCard.Api.Helper;
 using KeyCard.BusinessLogic.Commands.Guest.Bookings;
-using KeyCard.BusinessLogic.ServiceInterfaces;
 
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -14,7 +13,7 @@ namespace KeyCard.Api.Controllers.Guest
     {
         private readonly IMediator _mediator;
 
-        public BookingsController(IMediator mediator, IBookingService bookingService)
+        public BookingsController(IMediator mediator)
         {
             _mediator = mediator;
         }

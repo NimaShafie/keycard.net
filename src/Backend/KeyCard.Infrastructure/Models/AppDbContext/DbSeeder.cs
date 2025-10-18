@@ -244,7 +244,7 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                 {
                     RoomTypeId = rt.Id,
                     AmenityId = amenityIds["tv"],
-                    ValueInt = tvInches,
+                    Value = tvInches.ToString() + " inch",
                     CreatedAt = DateTime.UtcNow,
                     CreatedBy = 0
                 });
