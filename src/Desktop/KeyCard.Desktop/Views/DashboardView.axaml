@@ -4,8 +4,22 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vms="clr-namespace:KeyCard.Desktop.ViewModels"
     xmlns:vctrl="clr-namespace:KeyCard.Desktop.Views.Controls"
+    xmlns:conv="clr-namespace:KeyCard.Desktop.Converters"
     x:Class="KeyCard.Desktop.Views.DashboardView"
     x:DataType="vms:DashboardViewModel">
+
+  <!-- Local converter instances -->
+  <UserControl.Resources>
+    <conv:BoolNotConverter x:Key="BoolNot"/>
+    <conv:StringHasTextConverter x:Key="HasText"/>
+    <conv:StatusBrushConverter x:Key="StatusBrushConverter"/>
+  </UserControl.Resources>
+
+  <!-- Keyboard shortcuts -->
+  <UserControl.KeyBindings>
+    <!-- F5 triggers refresh -->
+    <KeyBinding Gesture="F5" Command="{Binding RefreshCommand}"/>
+  </UserControl.KeyBindings>
 
   <Grid RowDefinitions="Auto,Auto,*" Margin="8">
     <!-- Header -->
@@ -16,45 +30,51 @@
     <!-- Toolbar -->
     <Border Grid.Row="1" Margin="8,8,8,0" CornerRadius="10"
             BorderBrush="#3F2F73" BorderThickness="1" Padding="12">
-      <Grid ColumnDefinitions="Auto,*,Auto">
-        <!-- Quick actions -->
-        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-          <Button Content="📋 Front Desk"
+      <!-- Make the left section stretch, keep filter and refresh on right -->
+      <Grid ColumnDefinitions="*,12,Auto,12,Auto">
+        <!-- Stretching primary buttons (fill available space) -->
+        <Grid Grid.Column="0" ColumnDefinitions="*,8,*" VerticalAlignment="Center">
+          <Button Grid.Column="0"
+                  Content="📋 Front Desk"
                   Command="{Binding GoFrontDeskCommand}"
-                  MinWidth="130"/>
-          <Button Content="🧹 Housekeeping"
+                  MinHeight="36"
+                  HorizontalAlignment="Stretch"/>
+          <Button Grid.Column="2"
+                  Content="🧹 Housekeeping"
                   Command="{Binding GoHousekeepingCommand}"
-                  MinWidth="130"/>
-        </StackPanel>
+                  MinHeight="36"
+                  HorizontalAlignment="Stretch"/>
+        </Grid>
 
         <!-- Search -->
-        <StackPanel Grid.Column="1"
+        <StackPanel Grid.Column="2"
                     Orientation="Horizontal"
                     Spacing="8"
-                    HorizontalAlignment="Right"
-                    VerticalAlignment="Center"
-                    Margin="12,0">
-          <TextBlock Text="Filter:"
-                     VerticalAlignment="Center"
-                     Foreground="#CFCFEA" />
-          <TextBox Width="240"
+                    VerticalAlignment="Center">
+          <TextBlock Text="Filter:" VerticalAlignment="Center" Foreground="#CFCFEA" />
+          <TextBox x:Name="SearchBox"
+                   Width="240"
                    Watermark="Search by name, booking, or room"
                    Text="{Binding SearchText}" />
-          <Button Content="Search"
-                  Command="{Binding SearchCommand}"/>
+          <Button Content="Search" Command="{Binding SearchCommand}"/>
         </StackPanel>
 
-        <!-- Refresh -->
-        <StackPanel Grid.Column="2"
+        <!-- Refresh + spinner + 'Synced' blip -->
+        <StackPanel Grid.Column="4"
                     Orientation="Horizontal"
                     Spacing="10"
                     VerticalAlignment="Center">
-          <Button Content="↻ Refresh"
+          <Button x:Name="RefreshBtn"
+                  Content="↻ Refresh"
                   Command="{Binding RefreshCommand}"
-                  IsEnabled="{Binding !IsRefreshing}"/>
+                  IsEnabled="{Binding IsRefreshing, Converter={StaticResource BoolNot}}"/>
           <ProgressBar IsIndeterminate="True"
                        IsVisible="{Binding IsRefreshing}"
                        Width="100"/>
+          <TextBlock x:Name="SyncBlip"
+                     Text="{Binding SyncMessage}"
+                     Opacity="0.9"
+                     IsVisible="{Binding SyncMessage, Converter={StaticResource HasText}}"/>
         </StackPanel>
       </Grid>
     </Border>
@@ -121,10 +141,21 @@
                                   Width="*"
                                   Binding="{Binding CheckOut, StringFormat='{}{0:MMM d}'}"
                                   SortMemberPath="CheckOut"/>
-              <DataGridTextColumn Header="Status"
-                                  Width="*"
-                                  Binding="{Binding Status}"
-                                  SortMemberPath="Status"/>
+              <!-- Color badge for status -->
+              <DataGridTemplateColumn Header="Status" Width="*">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <Border CornerRadius="12"
+                            Padding="6,2"
+                            HorizontalAlignment="Center"
+                            Background="{Binding Status, Converter={StaticResource StatusBrushConverter}, ConverterParameter=bg}">
+                      <TextBlock Text="{Binding Status}"
+                                 FontSize="12"
+                                 Foreground="{Binding Status, Converter={StaticResource StatusBrushConverter}, ConverterParameter=fg}"/>
+                    </Border>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
             </DataGrid.Columns>
           </DataGrid>
         </Border>

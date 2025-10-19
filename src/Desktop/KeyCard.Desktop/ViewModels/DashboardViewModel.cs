@@ -6,6 +6,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
+using Avalonia.Threading; // for DispatcherTimer
+
 using KeyCard.Desktop.Infrastructure;
 using KeyCard.Desktop.Models;
 using KeyCard.Desktop.Services;
@@ -24,7 +26,6 @@ namespace KeyCard.Desktop.ViewModels
             get => _currentUserDisplay;
             set => SetProperty(ref _currentUserDisplay, value);
         }
-
         private string? _searchText;
         public string? SearchText
         {
@@ -45,6 +46,13 @@ namespace KeyCard.Desktop.ViewModels
                 if (SetProperty(ref _isRefreshing, value))
                     (RefreshCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
             }
+        }
+
+        private string? _syncMessage;
+        public string? SyncMessage
+        {
+            get => _syncMessage;
+            private set => SetProperty(ref _syncMessage, value);
         }
 
         public ObservableCollection<Booking> Arrivals { get; } = new();
@@ -86,17 +94,21 @@ namespace KeyCard.Desktop.ViewModels
 
                 Arrivals.Clear();
                 foreach (var booking in arrivals)
-                {
                     Arrivals.Add(booking);
-                }
 
                 ApplyFilter();
+
+                // show a short-lived "Synced" blip
+                SyncMessage = "Synced";
+                _ = DispatcherTimer.RunOnce(() => SyncMessage = null, TimeSpan.FromSeconds(1.25));
+                _ = Avalonia.Threading.DispatcherTimer.RunOnce(() => SyncMessage = null, TimeSpan.FromSeconds(1.25));
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Failed to refresh arrivals: {ex.Message}");
                 Arrivals.Clear();
                 FilteredArrivals.Clear();
+                SyncMessage = null;
             }
             finally
             {
@@ -115,9 +127,7 @@ namespace KeyCard.Desktop.ViewModels
                 : Arrivals.Where(b => MatchesFilter(b, term));
 
             foreach (var booking in filtered)
-            {
                 FilteredArrivals.Add(booking);
-            }
         }
 
         private static bool MatchesFilter(Booking booking, string term)

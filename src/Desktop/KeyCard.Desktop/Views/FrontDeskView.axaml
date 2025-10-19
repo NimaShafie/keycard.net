@@ -8,9 +8,17 @@
     x:Class="KeyCard.Desktop.Views.FrontDeskView"
     x:DataType="vms:FrontDeskViewModel">
 
+  <!-- Keyboard shortcuts -->
+  <UserControl.KeyBindings>
+    <!-- F5 refresh -->
+    <KeyBinding Gesture="F5" Command="{Binding RefreshCommand}"/>
+  </UserControl.KeyBindings>
+
   <UserControl.Resources>
     <conv:NamePartConverter x:Key="NamePartConverter"/>
     <conv:RoomTypeConverter x:Key="RoomTypeConverter"/>
+    <!-- NEW: for colored status badges -->
+    <conv:StatusBrushConverter x:Key="StatusBrushConverter"/>
   </UserControl.Resources>
 
   <Grid RowDefinitions="Auto,Auto,*,Auto">
@@ -25,7 +33,8 @@
       <Grid ColumnDefinitions="*,12,Auto">
         <!-- Search -->
         <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
-          <TextBox Width="300"
+          <TextBox x:Name="SearchBox"
+                   Width="300"
                    Watermark="Search by booking ID, name, or confirmation code"
                    Text="{Binding SearchText}"/>
           <Button Content="Search"
@@ -43,7 +52,7 @@
           <ProgressBar IsIndeterminate="True"
                        IsVisible="{Binding IsBusy}"
                        Width="100"/>
-          <Button Content="← Dashboard"
+          <Button Content="← Back"
                   Command="{Binding BackToDashboardCommand}"/>
         </StackPanel>
       </Grid>
@@ -105,9 +114,22 @@
               <DataGridTextColumn Header="Check-Out" Width="*"
                                   Binding="{Binding CheckOut}"
                                   SortMemberPath="CheckOut"/>
-              <DataGridTextColumn Header="Status" Width="*"
-                                  Binding="{Binding Status}"
-                                  SortMemberPath="Status"/>
+
+              <!-- NEW: colored badge for Status -->
+              <DataGridTemplateColumn Header="Status" Width="*">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <Border CornerRadius="12"
+                            Padding="6,2"
+                            HorizontalAlignment="Center"
+                            Background="{Binding Status, Converter={StaticResource StatusBrushConverter}, ConverterParameter=bg}">
+                      <TextBlock Text="{Binding Status}"
+                                 FontSize="12"
+                                 Foreground="{Binding Status, Converter={StaticResource StatusBrushConverter}, ConverterParameter=fg}"/>
+                    </Border>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
             </DataGrid.Columns>
           </DataGrid>
         </Grid>

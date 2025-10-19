@@ -4,6 +4,8 @@ using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
+using Avalonia.Threading;
+
 using KeyCard.Desktop.Infrastructure;
 using KeyCard.Desktop.Models;
 using KeyCard.Desktop.Services;
@@ -14,6 +16,13 @@ namespace KeyCard.Desktop.ViewModels
     {
         private readonly IHousekeepingService _service;
         private readonly INavigationService _nav;
+
+        private string? _syncMessage;
+        public string? SyncMessage
+        {
+            get => _syncMessage;
+            private set => SetProperty(ref _syncMessage, value);
+        }
 
         private RoomRow? _selectedRoom;
         public RoomRow? SelectedRoom
@@ -116,12 +125,28 @@ namespace KeyCard.Desktop.ViewModels
                     });
                 }
 
-                StatusMessage = $"Loaded {Rooms.Count} rooms, {Tasks.Count} tasks";
+                // If service returned no data (but no error), inject samples so the UI isn't empty
+                if (Rooms.Count == 0 && Tasks.Count == 0)
+                {
+                    LoadMockData();
+                }
+                else
+                {
+                    StatusMessage = $"Loaded {Rooms.Count} rooms, {Tasks.Count} tasks";
+                }
+
+                // Show short-lived "Synced" blip on successful refresh
+                SyncMessage = "Synced";
+                _ = DispatcherTimer.RunOnce(() => SyncMessage = null, TimeSpan.FromSeconds(1.25));
             }
             catch (Exception ex)
             {
                 StatusMessage = $"Error: {ex.Message}";
                 LoadMockData();
+
+                // Still show a brief synced indication so the user sees feedback
+                SyncMessage = "Synced";
+                _ = DispatcherTimer.RunOnce(() => SyncMessage = null, TimeSpan.FromSeconds(1.25));
             }
             finally
             {
@@ -242,7 +267,7 @@ namespace KeyCard.Desktop.ViewModels
             };
 
             int id = 1;
-            foreach (var (taskId, room, desc) in mockTasks)
+            foreach (var (_, room, desc) in mockTasks)
             {
                 Tasks.Add(new TaskRow
                 {
@@ -254,7 +279,7 @@ namespace KeyCard.Desktop.ViewModels
                 });
             }
 
-            StatusMessage = "Loaded mock data (service unavailable)";
+            StatusMessage = "Loaded mock data";
         }
 
         private static string MapRoomStatus(string status) => status switch

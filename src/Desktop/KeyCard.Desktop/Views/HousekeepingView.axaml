@@ -29,8 +29,9 @@
                      Width="150"
                      HorizontalAlignment="Center"/>
 
+        <!-- rename only; same command to avoid duplicate Dashboard labels -->
         <Button Grid.Column="2"
-                Content="← Dashboard"
+                Content="← Back"
                 Command="{Binding BackToDashboardCommand}"/>
       </Grid>
     </Border>

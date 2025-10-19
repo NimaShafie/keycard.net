@@ -8,10 +8,26 @@
     <LangVersion>latest</LangVersion>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <ApplicationIcon>Assets\Branding\KeyCard.ico</ApplicationIcon>
+
+    <!-- Swagger codegen configuration -->
     <SwaggerUrl>https://localhost:5149/swagger/v1/swagger.json</SwaggerUrl>
     <SwaggerJsonPath>$(ProjectDir)Generated\swagger.v1.json</SwaggerJsonPath>
+
+    <!-- Preserve your original default -->
     <AutoFetchSwagger>true</AutoFetchSwagger>
+
+    <!-- You can still manually force NSwag by setting this true -->
     <RunNSwag>false</RunNSwag>
+  </PropertyGroup>
+
+  <!-- Auto-drive AutoFetchSwagger by launch profile or env var (no manual edits needed) -->
+  <PropertyGroup>
+    <!-- Visual Studio sets this to the selected profile name -->
+    <AutoFetchSwagger Condition="'$(ActiveDebugProfile)' == 'KeyCard (Live)'">true</AutoFetchSwagger>
+    <AutoFetchSwagger Condition="'$(ActiveDebugProfile)' == 'KeyCard (Mock)'">false</AutoFetchSwagger>
+
+    <!-- CI/CLI override: AUTO_FETCH_SWAGGER=true/false -->
+    <AutoFetchSwagger Condition="'$(AUTO_FETCH_SWAGGER)' != ''">$(AUTO_FETCH_SWAGGER)</AutoFetchSwagger>
   </PropertyGroup>
 
   <!-- Remove any accidental wrong build actions on .axaml -->
@@ -81,23 +97,36 @@
 
   <!-- Try to fetch swagger.json into the cache if API is reachable (Windows PS + *nix curl).
        This target NEVER fails the build; it just tries. -->
-  <Target Name="FetchSwaggerIfAvailable" BeforeTargets="BeforeBuild" Condition="'$(AutoFetchSwagger)' == 'true'">
+  <Target Name="FetchSwaggerIfAvailable"
+          BeforeTargets="BeforeBuild"
+          Condition="'$(AutoFetchSwagger)' == 'true'">
 
-    <!-- Windows/PowerShell path -->
-    <Exec Condition="'$(OS)' == 'Windows_NT' AND '$(SwaggerUrl)' != ''" IgnoreExitCode="true" Command="powershell -NoProfile -ExecutionPolicy Bypass -Command ^&#xD;&#xA;$u=&quot;$(SwaggerUrl)&quot;; ^&#xD;&#xA;$d=&quot;$(SwaggerJsonPath)&quot;; ^&#xD;&#xA;$dir=[System.IO.Path]::GetDirectoryName($d); if (!(Test-Path $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }; ^&#xD;&#xA;$tmp=&quot;$d.tmp&quot;; ^&#xD;&#xA;try { Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 -Uri $u -OutFile $tmp; } catch { exit 0 }; ^&#xD;&#xA;if (Test-Path $d) { if ((Get-FileHash $d).Hash -eq (Get-FileHash $tmp).Hash) { Remove-Item $tmp -Force; Write-Host &quot;Swagger unchanged&quot;; } else { Move-Item -Force $tmp $d; Write-Host &quot;Swagger updated&quot;; } } else { Move-Item -Force $tmp $d; Write-Host &quot;Swagger cached&quot;; }" />
+    <!-- Windows/PowerShell path (quoted values; safe, quiet folder creation) -->
+    <Exec Condition="'$(OS)' == 'Windows_NT' AND '$(SwaggerUrl)' != ''"
+          IgnoreExitCode="true"
+          Command="powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;$u='$(SwaggerUrl)'; $d='$(SwaggerJsonPath)'; $dir=[System.IO.Path]::GetDirectoryName($d); if(-not [string]::IsNullOrWhiteSpace($dir) -and -not (Test-Path -LiteralPath $dir)){[void][System.IO.Directory]::CreateDirectory($dir)}; $tmp=$d + '.tmp'; try { Invoke-WebRequest -TimeoutSec 5 -Uri $u -OutFile $tmp } catch { exit 0 }; if (Test-Path -LiteralPath $d) { if ((Get-FileHash -LiteralPath $d).Hash -eq (Get-FileHash -LiteralPath $tmp).Hash) { Remove-Item -LiteralPath $tmp -Force; Write-Host 'Swagger unchanged' } else { Move-Item -LiteralPath $tmp -Force -Destination $d; Write-Host 'Swagger updated' } } else { Move-Item -LiteralPath $tmp -Force -Destination $d; Write-Host 'Swagger cached' }&quot;" />
 
     <!-- *nix/mac curl path -->
-    <Exec Condition="'$(OS)' != 'Windows_NT' AND '$(SwaggerUrl)' != ''" IgnoreExitCode="true" Command="bash -c &quot;&#xD;&#xA;u=&quot;$(SwaggerUrl)&quot;;&#xD;&#xA;d=&quot;$(SwaggerJsonPath)&quot;;&#xD;&#xA;mkdir -p &quot;$(ProjectDir)Generated&quot;;&#xD;&#xA;tmp=&quot;$d.tmp&quot;;&#xD;&#xA;if curl -fsSL --connect-timeout 5 &quot;$u&quot; -o &quot;$tmp&quot;; then&#xD;&#xA;  if [ -f &quot;$d&quot; ] &amp;&amp; cmp -s &quot;$d&quot; &quot;$tmp&quot;; then&#xD;&#xA;    rm &quot;$tmp&quot;; echo Swagger unchanged;&#xD;&#xA;  else&#xD;&#xA;    mv -f &quot;$tmp&quot; &quot;$d&quot;; echo Swagger updated;&#xD;&#xA;  fi&#xD;&#xA;fi&#xD;&#xA;&quot; " />
+    <Exec Condition="'$(OS)' != 'Windows_NT' AND '$(SwaggerUrl)' != ''"
+          IgnoreExitCode="true"
+          Command="bash -c &quot;&#x0A;u=&quot;$(SwaggerUrl)&quot;;&#x0A;d=&quot;$(SwaggerJsonPath)&quot;;&#x0A;mkdir -p &quot;$(ProjectDir)Generated&quot;;&#x0A;tmp=&quot;$d.tmp&quot;;&#x0A;if curl -fsSL --connect-timeout 5 &quot;$u&quot; -o &quot;$tmp&quot;; then&#x0A;  if [ -f &quot;$d&quot; ] &amp;&amp; cmp -s &quot;$d&quot; &quot;$tmp&quot;; then&#x0A;    rm &quot;$tmp&quot;; echo Swagger unchanged;&#x0A;  else&#x0A;    mv -f &quot;$tmp&quot; &quot;$d&quot;; echo Swagger updated;&#x0A;  fi&#x0A;fi&#x0A;&quot; " />
   </Target>
 
   <!-- Generate typed client ONLY if cache exists OR explicitly forced -->
-  <Target Name="GenerateTypedApiClient" BeforeTargets="BeforeBuild" DependsOnTargets="FetchSwaggerIfAvailable" Condition="Exists('$(SwaggerJsonPath)') OR '$(RunNSwag)' == 'true'">
+  <Target Name="GenerateTypedApiClient"
+          BeforeTargets="BeforeBuild"
+          DependsOnTargets="FetchSwaggerIfAvailable"
+          Condition="Exists('$(SwaggerJsonPath)') OR '$(RunNSwag)' == 'true'">
+
     <Message Text="NSwag: Generating typed API client from $(SwaggerJsonPath)" Importance="High" />
 
     <!-- Prefer Net80/Net70/Net60; $(NSwagExe_*) already includes the proper dotnet command -->
-    <Exec Condition="Exists('$(ProjectDir)nswag.json') AND '$(NSwagExe_Net80)' != ''" Command="$(NSwagExe_Net80) run &quot;$(ProjectDir)nswag.json&quot;" />
-    <Exec Condition="Exists('$(ProjectDir)nswag.json') AND '$(NSwagExe_Net80)' == '' AND '$(NSwagExe_Net70)' != ''" Command="$(NSwagExe_Net70) run &quot;$(ProjectDir)nswag.json&quot;" />
-    <Exec Condition="Exists('$(ProjectDir)nswag.json') AND '$(NSwagExe_Net80)' == '' AND '$(NSwagExe_Net70)' == '' AND '$(NSwagExe_Net60)' != ''" Command="$(NSwagExe_Net60) run &quot;$(ProjectDir)nswag.json&quot;" />
+    <Exec Condition="Exists('$(ProjectDir)nswag.json') AND '$(NSwagExe_Net80)' != ''"
+          Command="$(NSwagExe_Net80) run &quot;$(ProjectDir)nswag.json&quot;" />
+    <Exec Condition="Exists('$(ProjectDir)nswag.json') AND '$(NSwagExe_Net80)' == '' AND '$(NSwagExe_Net70)' != ''"
+          Command="$(NSwagExe_Net70) run &quot;$(ProjectDir)nswag.json&quot;" />
+    <Exec Condition="Exists('$(ProjectDir)nswag.json') AND '$(NSwagExe_Net80)' == '' AND '$(NSwagExe_Net70)' == '' AND '$(NSwagExe_Net60)' != ''"
+          Command="$(NSwagExe_Net60) run &quot;$(ProjectDir)nswag.json&quot;" />
   </Target>
   <!-- ====== /NSwag ====== -->
 
