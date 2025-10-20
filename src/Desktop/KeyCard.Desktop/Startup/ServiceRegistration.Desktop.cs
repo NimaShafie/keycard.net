@@ -19,6 +19,13 @@ namespace KeyCard.Desktop.Startup
         /// Expects an IHttpClientFactory already configured for your API base address,
         /// or will create a bare HttpClient if not found.
         /// </summary>
+        ///
+        public static IServiceCollection AddDesktopServices(this IServiceCollection services)
+        {
+            ArgumentNullException.ThrowIfNull(services);
+            // register other desktop services here…
+            return services;
+        }
         public static IServiceCollection AddRoomsService(
             this IServiceCollection services,
             IAppEnvironment appEnv // your existing abstraction with IsMock - already in the project

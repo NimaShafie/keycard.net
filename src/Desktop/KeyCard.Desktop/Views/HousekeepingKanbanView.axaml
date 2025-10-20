@@ -1,0 +1,243 @@
+<!-- Views/HousekeepingKanbanView.axaml -->
+<UserControl
+    x:Class="KeyCard.Desktop.Views.HousekeepingKanbanView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="clr-namespace:KeyCard.Desktop.ViewModels"
+    mc:Ignorable="d"
+    x:DataType="vm:HousekeepingViewModel">
+
+  <UserControl.Styles>
+    <!-- Card style for tasks -->
+    <Style Selector="Border.task-card">
+      <Setter Property="Padding" Value="12" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Margin" Value="8 8 8 12" />
+      <Setter Property="Background" Value="#1FFFFFFF" />
+      <Setter Property="BorderBrush" Value="#3F7C3AED" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+    <!-- Column header -->
+    <Style Selector="TextBlock.column-title">
+      <Setter Property="FontSize" Value="16"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Margin" Value="0 0 0 8"/>
+    </Style>
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="Auto,Auto,*,Auto" ColumnDefinitions="*">
+
+    <!-- Header (matches Front Desk header style) -->
+    <Border Margin="8" Padding="12"
+            CornerRadius="14"
+            BorderThickness="1"
+            BorderBrush="#503A2F6B"
+            Background="#17171A">
+      <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto">
+        <Button Grid.RowSpan="2"
+                MinWidth="72"
+                Margin="0 0 12 0"
+                Command="{Binding BackToDashboardCommand}">← Back</Button>
+
+        <TextBlock Grid.Column="1"
+                   Text="Housekeeping Kanban"
+                   FontSize="22"
+                   FontWeight="Bold" />
+        <TextBlock Grid.Column="1" Grid.Row="1"
+                   Margin="0 4 0 0"
+                   Opacity="0.8"
+                   Text="Track housekeeping tasks by status, assign attendants, and drag cards between columns." />
+
+        <!-- Quick actions / new task mini panel -->
+        <StackPanel Grid.Column="2"
+                    Orientation="Horizontal"
+                    Spacing="8"
+                    VerticalAlignment="Top">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock VerticalAlignment="Center" Text="Room"/>
+            <TextBox Width="64" Text="{Binding Kanban.NewRoom, Mode=TwoWay}"/>
+            <TextBlock VerticalAlignment="Center" Text="Title"/>
+            <TextBox Width="160" Text="{Binding Kanban.NewTitle, Mode=TwoWay}"/>
+            <TextBlock VerticalAlignment="Center" Text="Notes"/>
+            <TextBox Width="180" Text="{Binding Kanban.NewNotes, Mode=TwoWay}"/>
+            <Button Command="{Binding Kanban.AddTaskCommand}">Add Task</Button>
+            <Button Command="{Binding RefreshCommand}">Refresh</Button>
+          </StackPanel>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- Filter/search row -->
+    <Border Grid.Row="1"
+            Margin="8"
+            Padding="10"
+            CornerRadius="10"
+            BorderThickness="1"
+            BorderBrush="#403A2F6B"
+            Background="#131316">
+      <Grid ColumnDefinitions="Auto,*,Auto" >
+        <TextBlock VerticalAlignment="Center" Text="Filter" Margin="0,0,8,0"/>
+        <TextBox Grid.Column="1"
+                 Watermark="Search by room, title, notes, attendant…"
+                 Text="{Binding Kanban.FilterText, Mode=TwoWay}" />
+        <TextBlock Grid.Column="2"
+                   VerticalAlignment="Center"
+                   Opacity="0.7"
+                   Text="{Binding SyncMessage}" />
+      </Grid>
+    </Border>
+
+    <!-- Columns -->
+    <Border Grid.Row="2"
+            Margin="8"
+            Padding="12"
+            CornerRadius="14"
+            BorderThickness="1"
+            BorderBrush="#503A2F6B"
+            Background="#111114">
+      <!-- Use spacer columns instead of ColumnSpacing -->
+      <Grid ColumnDefinitions="*,18,*,18,*">
+
+        <!-- Pending -->
+        <Border Grid.Column="0"
+                BorderThickness="0,0,1,0"
+                BorderBrush="#302E2458"
+                Padding="0 0 12 0">
+          <DockPanel>
+            <TextBlock Classes="column-title" DockPanel.Dock="Top" Text="Pending"/>
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+              <ListBox x:Name="PendingList"
+                       ItemsSource="{Binding Kanban.PendingView}"
+                       Background="Transparent"
+                       BorderThickness="0"
+                       Margin="0"
+                       SelectionMode="Single">
+                <ListBox.ItemTemplate>
+                  <!-- Non-compiled bindings to avoid AVLN:0004 -->
+                  <DataTemplate x:CompileBindings="False">
+                    <Border Classes="task-card">
+                      <StackPanel Spacing="6">
+                        <TextBlock FontWeight="SemiBold"
+                                   Text="{Binding RoomId, StringFormat=Room {0}}" />
+                        <TextBlock Text="{Binding Title}" />
+                        <TextBlock Opacity="0.8" Text="{Binding Notes}" />
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                          <TextBlock VerticalAlignment="Center" Text="Attendant:"/>
+                          <ComboBox Width="160"
+                                    ItemsSource="{Binding DataContext.Kanban.StaffOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    SelectedItem="{Binding AssignedTo, Mode=TwoWay}"/>
+                          <Button Content="Save"
+                                  Command="{Binding DataContext.Kanban.AssignAttendantCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  CommandParameter="{Binding}" />
+                          <Button Content="Delete"
+                                  Command="{Binding DataContext.Kanban.DeleteTaskCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  CommandParameter="{Binding}" />
+                        </StackPanel>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </ScrollViewer>
+          </DockPanel>
+        </Border>
+
+        <!-- In Progress -->
+        <Border Grid.Column="2"
+                BorderThickness="1,0,1,0"
+                BorderBrush="#302E2458"
+                Padding="12 0">
+          <DockPanel>
+            <TextBlock Classes="column-title" DockPanel.Dock="Top" Text="In Progress"/>
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+              <ListBox x:Name="InProgressList"
+                       ItemsSource="{Binding Kanban.InProgressView}"
+                       Background="Transparent"
+                       BorderThickness="0"
+                       SelectionMode="Single">
+                <ListBox.ItemTemplate>
+                  <!-- Non-compiled bindings -->
+                  <DataTemplate x:CompileBindings="False">
+                    <Border Classes="task-card">
+                      <StackPanel Spacing="6">
+                        <TextBlock FontWeight="SemiBold"
+                                   Text="{Binding RoomId, StringFormat=Room {0}}" />
+                        <TextBlock Text="{Binding Title}" />
+                        <TextBlock Opacity="0.8" Text="{Binding Notes}" />
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                          <TextBlock VerticalAlignment="Center" Text="Attendant:"/>
+                          <ComboBox Width="160"
+                                    ItemsSource="{Binding DataContext.Kanban.StaffOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    SelectedItem="{Binding AssignedTo, Mode=TwoWay}"/>
+                          <Button Content="Save"
+                                  Command="{Binding DataContext.Kanban.AssignAttendantCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  CommandParameter="{Binding}" />
+                          <Button Content="Delete"
+                                  Command="{Binding DataContext.Kanban.DeleteTaskCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  CommandParameter="{Binding}" />
+                        </StackPanel>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </ScrollViewer>
+          </DockPanel>
+        </Border>
+
+        <!-- Completed -->
+        <Border Grid.Column="4"
+                BorderThickness="1,0,0,0"
+                BorderBrush="#302E2458"
+                Padding="12 0 0 0">
+          <DockPanel>
+            <TextBlock Classes="column-title" DockPanel.Dock="Top" Text="Completed"/>
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+              <ListBox x:Name="CompletedList"
+                       ItemsSource="{Binding Kanban.CompletedView}"
+                       Background="Transparent"
+                       BorderThickness="0"
+                       SelectionMode="Single">
+                <ListBox.ItemTemplate>
+                  <!-- Non-compiled bindings -->
+                  <DataTemplate x:CompileBindings="False">
+                    <Border Classes="task-card">
+                      <StackPanel Spacing="6">
+                        <TextBlock FontWeight="SemiBold"
+                                   Text="{Binding RoomId, StringFormat=Room {0}}" />
+                        <TextBlock Text="{Binding Title}" />
+                        <TextBlock Opacity="0.8" Text="{Binding Notes}" />
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                          <TextBlock VerticalAlignment="Center" Text="Attendant:"/>
+                          <ComboBox Width="160"
+                                    ItemsSource="{Binding DataContext.Kanban.StaffOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    SelectedItem="{Binding AssignedTo, Mode=TwoWay}"/>
+                          <Button Content="Save"
+                                  Command="{Binding DataContext.Kanban.AssignAttendantCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  CommandParameter="{Binding}" />
+                          <Button Content="Delete"
+                                  Command="{Binding DataContext.Kanban.DeleteTaskCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  CommandParameter="{Binding}" />
+                        </StackPanel>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </ScrollViewer>
+          </DockPanel>
+        </Border>
+
+      </Grid>
+    </Border>
+
+    <!-- status bar -->
+    <TextBlock Grid.Row="3"
+               Margin="12 0 12 8"
+               Text="{Binding StatusMessage}"
+               Opacity="0.8"/>
+  </Grid>
+</UserControl>

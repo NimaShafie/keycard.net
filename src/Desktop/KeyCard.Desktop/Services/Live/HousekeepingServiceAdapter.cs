@@ -6,7 +6,6 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Reflection;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using KeyCard.Desktop.Models;
@@ -28,11 +27,20 @@ namespace KeyCard.Desktop.Services.Live
             PropertyNameCaseInsensitive = true
         };
 
+        private static readonly string[] RoomsNameContains = { "Room" };
+        private static readonly string[] TasksNameContains = { "Housekeeping", "Task" };
+        private static readonly string[] StatusNameContains = { "Status" };
+        private static readonly string[] VerbsGetOrList = { "Get", "List" };
+        private static readonly string[] VerbsPostUpdateOrSet = { "Post", "Update", "Set" };
+
         public HousekeepingServiceAdapter(
             IHttpClientFactory httpClientFactory,
             ILogger<HousekeepingServiceAdapter> logger,
-            KeyCardApiClient? typedClient = null) // DI will pass this if registered
+            KeyCardApiClient? typedClient = null)
         {
+            ArgumentNullException.ThrowIfNull(httpClientFactory);
+            ArgumentNullException.ThrowIfNull(logger);
+
             _httpClientFactory = httpClientFactory;
             _logger = logger;
             _typed = typedClient;
@@ -42,11 +50,9 @@ namespace KeyCard.Desktop.Services.Live
 
         public async Task<IReadOnlyList<Room>> GetRoomsAsync()
         {
-            // ===== 1) Try typed client =====
             if (_typed is not null)
             {
-                // look for something like GetRoomsAsync / ApiAdminRooms / Rooms*
-                var m = FindMethod(_typed, contains: new[] { "Room" }, verbs: new[] { "Get", "List" });
+                var m = FindMethod(_typed, contains: RoomsNameContains, verbs: VerbsGetOrList);
                 if (m is not null)
                 {
                     try
@@ -63,11 +69,9 @@ namespace KeyCard.Desktop.Services.Live
                 }
             }
 
-            // ===== 2) Fallback to your existing HTTP path (kept intact) =====
             try
             {
-                // TODO: replace with your real rooms endpoint when ready
-                var list = await Client.GetFromJsonAsync<List<Room>>("api/admin/rooms");
+                var list = await Client.GetFromJsonAsync<List<Room>>("api/admin/rooms").ConfigureAwait(false);
                 return (IReadOnlyList<Room>)(list ?? new List<Room>());
             }
             catch (Exception ex)
@@ -81,7 +85,7 @@ namespace KeyCard.Desktop.Services.Live
         {
             if (_typed is not null)
             {
-                var m = FindMethod(_typed, contains: new[] { "Housekeeping", "Task" }, verbs: new[] { "Get", "List" });
+                var m = FindMethod(_typed, contains: TasksNameContains, verbs: VerbsGetOrList);
                 if (m is not null)
                 {
                     try
@@ -100,7 +104,7 @@ namespace KeyCard.Desktop.Services.Live
 
             try
             {
-                var list = await Client.GetFromJsonAsync<List<HousekeepingTask>>("api/admin/housekeeping");
+                var list = await Client.GetFromJsonAsync<List<HousekeepingTask>>("api/admin/housekeeping").ConfigureAwait(false);
                 return (IReadOnlyList<HousekeepingTask>)(list ?? new List<HousekeepingTask>());
             }
             catch (Exception ex)
@@ -114,17 +118,18 @@ namespace KeyCard.Desktop.Services.Live
         {
             if (_typed is not null)
             {
-                var m = FindMethod(_typed,
-                    contains: new[] { "Room", "Status" },
-                    verbs: new[] { "Post", "Update", "Set" },
+                var m = FindMethod(
+                    _typed,
+                    contains: RoomsNameContains.Concat(StatusNameContains).ToArray(),
+                    verbs: VerbsPostUpdateOrSet,
                     parameterCount: 2);
+
                 if (m is not null)
                 {
                     try
                     {
-                        // try (int roomNumber, string status)
                         var result = await InvokeAsync(m, _typed, roomNumber, status.ToString()).ConfigureAwait(false);
-                        return result is bool b ? b : true; // assume 2xx as success
+                        return result is bool b ? b : true;
                     }
                     catch (Exception ex)
                     {
@@ -137,7 +142,8 @@ namespace KeyCard.Desktop.Services.Live
             {
                 using var resp = await Client.PostAsJsonAsync(
                     $"api/admin/rooms/{roomNumber}/status",
-                    new { status = status.ToString() });
+                    new { status = status.ToString() }).ConfigureAwait(false);
+
                 return resp.IsSuccessStatusCode;
             }
             catch (Exception ex)
@@ -151,10 +157,12 @@ namespace KeyCard.Desktop.Services.Live
         {
             if (_typed is not null)
             {
-                var m = FindMethod(_typed,
-                    contains: new[] { "Housekeeping", "Task", "Status" },
-                    verbs: new[] { "Post", "Update", "Set" },
+                var m = FindMethod(
+                    _typed,
+                    contains: TasksNameContains.Concat(StatusNameContains).ToArray(),
+                    verbs: VerbsPostUpdateOrSet,
                     parameterCount: 2);
+
                 if (m is not null)
                 {
                     try
@@ -173,7 +181,8 @@ namespace KeyCard.Desktop.Services.Live
             {
                 using var resp = await Client.PostAsJsonAsync(
                     $"api/admin/housekeeping/{Uri.EscapeDataString(taskId)}/status",
-                    new { status = status.ToString() });
+                    new { status = status.ToString() }).ConfigureAwait(false);
+
                 return resp.IsSuccessStatusCode;
             }
             catch (Exception ex)
@@ -191,9 +200,13 @@ namespace KeyCard.Desktop.Services.Live
             string[] verbs,
             int? parameterCount = null)
         {
+            ArgumentNullException.ThrowIfNull(instance);
+            contains ??= Array.Empty<string>();
+            verbs ??= Array.Empty<string>();
+
             var methods = instance.GetType()
                 .GetMethods(BindingFlags.Public | BindingFlags.Instance)
-                .Where(m => m.ReturnType.Name.StartsWith("Task"))
+                .Where(m => m.ReturnType.Name.StartsWith("Task", StringComparison.Ordinal))
                 .ToList();
 
             foreach (var m in methods)
@@ -209,11 +222,14 @@ namespace KeyCard.Desktop.Services.Live
 
         private static async Task<object?> InvokeAsync(MethodInfo m, object instance, params object?[] args)
         {
+            ArgumentNullException.ThrowIfNull(m);
+            ArgumentNullException.ThrowIfNull(instance);
+
             var taskObj = m.Invoke(instance, args);
             if (taskObj is Task t)
             {
                 await t.ConfigureAwait(false);
-                var resultProp = t.GetType().GetProperty("Result");
+                var resultProp = t.GetType().GetProperty("Result", BindingFlags.Public | BindingFlags.Instance);
                 return resultProp?.GetValue(t);
             }
             return null;

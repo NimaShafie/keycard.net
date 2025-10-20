@@ -1,5 +1,6 @@
 // ViewModels/MainViewModel.cs
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
@@ -184,11 +185,28 @@ public partial class MainViewModel : ObservableObject
 
             // Regardless of auth outcome, try to hit bookings to surface errors early
             var items = await _bookings.ListAsync(ct);
-            Debug.WriteLine($"[TestLiveRoundtrip] Bookings fetched: {items.Count()}");
+
+            // Avoid LINQ Count() on indexables (CA1829/CA1826)
+            var count = FastCount(items);
+            Debug.WriteLine($"[TestLiveRoundtrip] Bookings fetched: {count}");
         }
         catch (Exception ex)
         {
             Debug.WriteLine("[TestLiveRoundtrip] FAILED: " + ex);
+        }
+    }
+
+    /// <summary>
+    /// Uses Count property when available; otherwise falls back to LINQ Count().
+    /// This avoids CA1829/CA1826 on indexable collections while remaining correct for any IEnumerable.
+    /// </summary>
+    private static int FastCount<T>(IEnumerable<T> source)
+    {
+        switch (source)
+        {
+            case ICollection<T> c: return c.Count;
+            case IReadOnlyCollection<T> rc: return rc.Count;
+            default: return source.Count(); // acceptable when not indexable
         }
     }
 }
