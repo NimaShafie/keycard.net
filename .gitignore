@@ -110,3 +110,4 @@ ops/scripts/*.secret.*
 
 # per project local settings ignores
 src/Desktop/KeyCard.Desktop/appsettings.Local.json
+/src/Backend/KeyCard.API/Data

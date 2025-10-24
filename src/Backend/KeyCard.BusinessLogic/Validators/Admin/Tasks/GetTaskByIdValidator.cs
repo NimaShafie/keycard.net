@@ -2,7 +2,7 @@ using FluentValidation;
 
 using KeyCard.BusinessLogic.Commands.Admin.Tasks;
 
-namespace KeyCard.BusinessLogic.Validators.Tasks
+namespace KeyCard.BusinessLogic.Validators.Admin.Tasks
 {
     public class GetTaskByIdValidator : AbstractValidator<GetTaskByIdCommand>
     {

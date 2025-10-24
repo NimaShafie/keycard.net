@@ -4,7 +4,7 @@ using KeyCard.BusinessLogic.Commands.Admin.Tasks;
 using KeyCard.Core.Common;
 
 
-namespace KeyCard.BusinessLogic.Validators.Tasks
+namespace KeyCard.BusinessLogic.Validators.Admin.Tasks
 {
     public class UpdateTaskCommandValidator : AbstractValidator<UpdateTaskCommand>
     {
@@ -27,7 +27,7 @@ namespace KeyCard.BusinessLogic.Validators.Tasks
                 .MaximumLength(500)
                 .WithMessage("Notes cannot exceed 500 characters.");
 
-            // AssignedToId is optional, but must be a valid GUID if provided
+            // AssignedToId is optional, but must be a valid id if provided
             RuleFor(x => x.AssignedToId)
                 .GreaterThan(0)
                 .When(x => x.AssignedToId.HasValue)

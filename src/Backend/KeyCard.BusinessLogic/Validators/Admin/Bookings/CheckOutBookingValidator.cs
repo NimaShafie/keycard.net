@@ -2,7 +2,7 @@ using FluentValidation;
 
 using KeyCard.BusinessLogic.Commands.Admin.Bookings;
 
-namespace KeyCard.BusinessLogic.Validators.Bookings
+namespace KeyCard.BusinessLogic.Validators.Admin.Bookings
 {
     public class CheckOutBookingValidator : AbstractValidator<CheckOutBookingCommand>
     {

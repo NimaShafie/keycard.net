@@ -3,7 +3,7 @@ using FluentValidation;
 using KeyCard.BusinessLogic.Commands.Admin.Bookings;
 using KeyCard.Core.Common;
 
-namespace KeyCard.BusinessLogic.Validators.Bookings
+namespace KeyCard.BusinessLogic.Validators.Admin.Bookings
 {
     public class GetAllBookingsValidator : AbstractValidator<GetAllBookingsCommand>
     {

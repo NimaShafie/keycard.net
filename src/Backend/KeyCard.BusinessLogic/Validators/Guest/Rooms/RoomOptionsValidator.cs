@@ -8,7 +8,7 @@ using FluentValidation;
 
 using KeyCard.BusinessLogic.Commands.Guest.Rooms;
 
-namespace KeyCard.BusinessLogic.Validators.Rooms
+namespace KeyCard.BusinessLogic.Validators.Guest.Rooms
 {
     public class RoomOptionsValidator: AbstractValidator<GetRoomOptionsCommand>
     {

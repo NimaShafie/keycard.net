@@ -47,7 +47,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
             }
 
             return new TaskViewModel(task.Id, task.TaskName, task.Notes, task.Status.ToString(),
-                task.Room.RoomNumber, task.AssignedTo?.FullName);
+                task!.Room.RoomNumber, task.AssignedTo?.FullName);
         }
 
         public async Task<TaskViewModel> CreateTaskAsync(CreateTaskCommand command, CancellationToken cancellationToken)
