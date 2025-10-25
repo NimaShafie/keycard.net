@@ -52,7 +52,7 @@
   <!-- Compile ALL .axaml (recursively) -->
   <ItemGroup>
     <AvaloniaXaml Include="App.axaml" />
-    <AvaloniaXaml Include="modules\folio\views\FolioView.axaml">
+    <AvaloniaXaml Include="Modules\Folio\Views\FolioView.axaml">
       <SubType>Designer</SubType>
     </AvaloniaXaml>
     <AvaloniaXaml Include="Views\**\*.axaml" />
