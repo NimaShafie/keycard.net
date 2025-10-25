@@ -6,10 +6,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
-using Avalonia.Threading; // for DispatcherTimer
-
 using KeyCard.Desktop.Infrastructure;
 using KeyCard.Desktop.Models;
+using KeyCard.Desktop.Modules.Folio.ViewModels;
 using KeyCard.Desktop.Services;
 
 namespace KeyCard.Desktop.ViewModels
@@ -26,6 +25,7 @@ namespace KeyCard.Desktop.ViewModels
             get => _currentUserDisplay;
             set => SetProperty(ref _currentUserDisplay, value);
         }
+
         private string? _searchText;
         public string? SearchText
         {
@@ -52,7 +52,7 @@ namespace KeyCard.Desktop.ViewModels
         public string? SyncMessage
         {
             get => _syncMessage;
-            private set => SetProperty(ref _syncMessage, value);
+            set => SetProperty(ref _syncMessage, value);
         }
 
         public ObservableCollection<Booking> Arrivals { get; } = new();
@@ -60,6 +60,7 @@ namespace KeyCard.Desktop.ViewModels
 
         public ICommand GoFrontDeskCommand { get; }
         public ICommand GoHousekeepingCommand { get; }
+        public ICommand GoFolioCommand { get; }
         public ICommand RefreshCommand { get; }
         public ICommand SearchCommand { get; }
 
@@ -76,6 +77,10 @@ namespace KeyCard.Desktop.ViewModels
 
             GoFrontDeskCommand = new UnifiedRelayCommand(() => _nav.NavigateTo<FrontDeskViewModel>());
             GoHousekeepingCommand = new UnifiedRelayCommand(() => _nav.NavigateTo<HousekeepingViewModel>());
+
+            // FolioViewModel now inherits from ViewModelBase, so this works
+            GoFolioCommand = new UnifiedRelayCommand(() => _nav.NavigateTo<FolioViewModel>());
+
             RefreshCommand = new UnifiedRelayCommand(RefreshAsync, () => !IsRefreshing);
             SearchCommand = new UnifiedRelayCommand(() => ApplyFilter());
 
@@ -89,26 +94,28 @@ namespace KeyCard.Desktop.ViewModels
             try
             {
                 IsRefreshing = true;
+                SyncMessage = "Syncing...";
 
                 var arrivals = await _bookings.GetTodayArrivalsAsync();
 
                 Arrivals.Clear();
                 foreach (var booking in arrivals)
+                {
                     Arrivals.Add(booking);
+                }
 
                 ApplyFilter();
 
-                // show a short-lived "Synced" blip
-                SyncMessage = "Synced";
-                _ = DispatcherTimer.RunOnce(() => SyncMessage = null, TimeSpan.FromSeconds(1.25));
-                _ = Avalonia.Threading.DispatcherTimer.RunOnce(() => SyncMessage = null, TimeSpan.FromSeconds(1.25));
+                SyncMessage = "✓ Synced";
+                await Task.Delay(2000);
+                SyncMessage = null;
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Failed to refresh arrivals: {ex.Message}");
                 Arrivals.Clear();
                 FilteredArrivals.Clear();
-                SyncMessage = null;
+                SyncMessage = "✗ Sync failed";
             }
             finally
             {
@@ -127,7 +134,9 @@ namespace KeyCard.Desktop.ViewModels
                 : Arrivals.Where(b => MatchesFilter(b, term));
 
             foreach (var booking in filtered)
+            {
                 FilteredArrivals.Add(booking);
+            }
         }
 
         private static bool MatchesFilter(Booking booking, string term)

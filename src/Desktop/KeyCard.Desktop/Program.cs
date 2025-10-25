@@ -1,8 +1,8 @@
-// Program.cs (Desktop)
 using System;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Reflection.PortableExecutable;
 using System.Threading.Tasks;
 
 using Avalonia;
@@ -12,6 +12,7 @@ using Avalonia.ReactiveUI;
 
 using KeyCard.Desktop.Configuration;
 using KeyCard.Desktop.Infrastructure.Api;
+using KeyCard.Desktop.Modules.Folio;
 using KeyCard.Desktop.Services;
 using KeyCard.Desktop.Services.Api;
 using KeyCard.Desktop.Services.Live;
@@ -25,6 +26,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+
+using IAppEnvironment = KeyCard.Desktop.Services.IAppEnvironment;
 
 namespace KeyCard.Desktop
 {
@@ -123,6 +126,9 @@ namespace KeyCard.Desktop
                 {
                     services.AddLogging(b => b.AddConsole());
 
+                    // >>> Removed broken call here:
+                    // services.AddFolioModule(appEnvironment);
+
                     services.Configure<KeyCardOptions>(ctx.Configuration.GetSection("KeyCard"));
                     services.Configure<ApiOptions>(ctx.Configuration.GetSection("Api"));
                     services.Configure<SignalROptions>(ctx.Configuration.GetSection("SignalR"));
@@ -145,6 +151,10 @@ namespace KeyCard.Desktop
                     using (var temp = services.BuildServiceProvider())
                     {
                         var appEnv = temp.GetRequiredService<IAppEnvironment>();
+
+                        // >>> Register Folio after IAppEnvironment is resolvable
+                        services.AddFolioModule(appEnv);
+
                         WriteBreadcrumb($"IsMock={appEnv.IsMock}, ApiBaseUrl={appEnv.ApiBaseUrl}");
 
                         if (appEnv.IsMock)

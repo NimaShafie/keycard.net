@@ -53,11 +53,16 @@
       </Border.Background>
 
       <Grid ColumnDefinitions="*,Auto,*">
-        <!-- LEFT: Dashboard -->
+        <!-- LEFT: Dashboard + NEW Folio -->
         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
           <Button Content="Dashboard"
                   Classes="topbarBtn"
                   Command="{Binding NavigateDashboardCommand}"
+                  IsVisible="{Binding IsAuthenticated}"/>
+          <!-- NEW top bar quick access to Folio -->
+          <Button Content="Folio"
+                  Classes="topbarBtn"
+                  Command="{Binding NavigateFolioCommand}"
                   IsVisible="{Binding IsAuthenticated}"/>
         </StackPanel>
 
@@ -66,21 +71,21 @@
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
                 Padding="14,10"
-          CornerRadius="16"
-          Background="#1B1530"
-          BorderBrush="#A78BFA"
-          BorderThickness="1"
-          ClipToBounds="True">
+                CornerRadius="16"
+                Background="#1B1530"
+                BorderBrush="#A78BFA"
+                BorderThickness="1"
+                ClipToBounds="True">
 
           <Grid>
             <Image Source="avares://KeyCard.Desktop/Assets/keycard-logo-transparent-small.png"
                    HorizontalAlignment="Center"
                    VerticalAlignment="Center"
                    Width="{Binding $parent[Border].Bounds.Height, RelativeSource=Self}"
-              Opacity="0.22"
-              Margin="52,0,0,0"
-              RenderTransformOrigin="0.5,0.5"
-              IsHitTestVisible="False">
+                   Opacity="0.22"
+                   Margin="52,0,0,0"
+                   RenderTransformOrigin="0.5,0.5"
+                   IsHitTestVisible="False">
               <Image.RenderTransform>
                 <RotateTransform Angle="90"/>
               </Image.RenderTransform>

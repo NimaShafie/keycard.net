@@ -33,7 +33,7 @@
       <!-- Make the left section stretch, keep filter and refresh on right -->
       <Grid ColumnDefinitions="*,12,Auto,12,Auto">
         <!-- Stretching primary buttons (fill available space) -->
-        <Grid Grid.Column="0" ColumnDefinitions="*,8,*" VerticalAlignment="Center">
+        <Grid Grid.Column="0" ColumnDefinitions="*,8,*,8,*" VerticalAlignment="Center">
           <Button Grid.Column="0"
                   Content="📋 Front Desk"
                   Command="{Binding GoFrontDeskCommand}"
@@ -42,6 +42,12 @@
           <Button Grid.Column="2"
                   Content="🧹 Housekeeping"
                   Command="{Binding GoHousekeepingCommand}"
+                  MinHeight="36"
+                  HorizontalAlignment="Stretch"/>
+          <!-- NEW: Folio Manager entry point -->
+          <Button Grid.Column="4"
+                  Content="💳 Folio Manager"
+                  Command="{Binding GoFolioCommand}"
                   MinHeight="36"
                   HorizontalAlignment="Stretch"/>
         </Grid>

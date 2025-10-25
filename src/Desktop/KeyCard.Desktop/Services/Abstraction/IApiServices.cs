@@ -1,4 +1,5 @@
 // Services/Abstraction/IApiServices.cs
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -6,7 +7,11 @@ using System.Threading.Tasks;
 
 using KeyCard.Desktop.Infrastructure.Api;
 
-namespace KeyCard.Desktop.Services.Abstractions
+// NOTE:
+// These are low-level, backend API–shaped contracts (DTO in/DTO out).
+// Keep them under an *infrastructure* namespace so they don't collide with
+// app-level service interfaces like KeyCard.Desktop.Services.IAuthService, etc.
+namespace KeyCard.Desktop.Infrastructure.Api.Abstractions
 {
     public interface IAuthService
     {

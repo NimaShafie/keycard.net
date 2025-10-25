@@ -1,0 +1,93 @@
+<!-- Modules/Folio/Views/FolioView.axaml -->
+<UserControl
+    x:Class="KeyCard.Desktop.Modules.Folio.Views.FolioView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewmodels="clr-namespace:KeyCard.Desktop.Modules.Folio.ViewModels"
+    mc:Ignorable="d"
+    x:CompileBindings="False">
+
+  <Grid RowDefinitions="Auto,*,Auto" ColumnDefinitions="*">
+    <!-- Header -->
+    <Border Padding="12" Classes="Card" Margin="0 0 0 8">
+      <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+        <TextBlock Text="Folio Manager" FontSize="20" FontWeight="SemiBold"/>
+        <TextBlock Text="{Binding IsReadOnly, StringFormat='(Read-only: {0})'}" Opacity="0.7"/>
+        <TextBlock Text="{Binding RunningBalance, StringFormat='Balance: {0:C2}'}" FontWeight="SemiBold" Margin="12,0,0,0"/>
+      </StackPanel>
+    </Border>
+
+    <!-- Content -->
+    <Grid Grid.Row="1" ColumnDefinitions="3*,2*">
+      <!-- Ledger grid -->
+      <Border Classes="Card" Margin="0 0 8 0">
+        <DataGrid ItemsSource="{Binding Ledger}"
+                  IsReadOnly="True"
+                  CanUserReorderColumns="True"
+                  CanUserResizeColumns="True"
+                  CanUserSortColumns="True"
+                  GridLinesVisibility="Horizontal"
+                  HeadersVisibility="All">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Time" Binding="{Binding Timestamp}" Width="160"/>
+            <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="90"/>
+            <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*"/>
+            <DataGridTextColumn Header="Amount" Binding="{Binding Amount, StringFormat={}{0:C2}}" Width="100"/>
+            <DataGridTextColumn Header="Tax" Binding="{Binding TaxAmount, StringFormat={}{0:C2}}" Width="90"/>
+            <DataGridTextColumn Header="Net" Binding="{Binding NetAmount, StringFormat={}{0:C2}}" Width="100"/>
+            <DataGridTextColumn Header="Method" Binding="{Binding PaymentMethod}" Width="110"/>
+            <DataGridTextColumn Header="Ref" Binding="{Binding PaymentRef}" Width="150"/>
+          </DataGrid.Columns>
+        </DataGrid>
+      </Border>
+
+      <!-- Right panel: Payments / Charges / Invoice -->
+      <StackPanel Grid.Column="1" Spacing="12">
+        <Border Classes="Card" Padding="12">
+          <StackPanel Spacing="8">
+            <TextBlock Text="Add Charge" FontWeight="SemiBold"/>
+            <TextBox Watermark="Description" Text="{Binding NewChargeDescription}"/>
+            <NumericUpDown Minimum="0" Maximum="100000" Increment="1" Value="{Binding NewChargeAmount}"/>
+            <Button Content="Add Charge"
+                    IsEnabled="{Binding CanAddOrEdit}"
+                    Command="{Binding AddChargeCommand}"/>
+            <TextBlock Text="(Restricted by RBAC / Read-only in LIVE)" FontSize="12" Opacity="0.6"/>
+          </StackPanel>
+        </Border>
+
+        <Border Classes="Card" Padding="12">
+          <StackPanel Spacing="8">
+            <TextBlock Text="Add Payment" FontWeight="SemiBold"/>
+            <NumericUpDown Minimum="0" Maximum="100000" Increment="1" Value="{Binding NewPaymentAmount}"/>
+            <ComboBox SelectedItem="{Binding NewPaymentMethod}">
+              <ComboBoxItem>Cash</ComboBoxItem>
+              <ComboBoxItem>Card</ComboBoxItem>
+              <ComboBoxItem>External</ComboBoxItem>
+            </ComboBox>
+            <TextBox Watermark="Reference (optional)" Text="{Binding NewPaymentReference}"/>
+            <Button Content="Add Payment"
+                    IsEnabled="{Binding CanAddOrEdit}"
+                    Command="{Binding AddPaymentCommand}"/>
+            <TextBlock Text="(Restricted by RBAC / Read-only in LIVE)" FontSize="12" Opacity="0.6"/>
+          </StackPanel>
+        </Border>
+
+        <Border Classes="Card" Padding="12">
+          <StackPanel Spacing="8">
+            <TextBlock Text="Invoice" FontWeight="SemiBold"/>
+            <Button Content="Generate &amp; Open PDF"
+                    IsEnabled="{Binding CanGenerateInvoice}"
+                    Command="{Binding GenerateInvoiceCommand}"/>
+            <TextBlock Text="{Binding LastInvoicePath}" TextWrapping="Wrap" Opacity="0.7"/>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </Grid>
+
+    <!-- Footer note -->
+    <TextBlock Grid.Row="2" Text="MOCK allows edits; LIVE is read-only until Folio endpoints exist."
+               Margin="4,8,4,0" Opacity="0.6" />
+  </Grid>
+</UserControl>
