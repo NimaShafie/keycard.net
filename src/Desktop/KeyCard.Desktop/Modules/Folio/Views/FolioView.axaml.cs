@@ -3,8 +3,10 @@ using System;
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 
 using KeyCard.Desktop.Modules.Folio.ViewModels;
+using KeyCard.Desktop.ViewModels; // for MainViewModel
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -27,6 +29,16 @@ namespace KeyCard.Desktop.Modules.Folio.Views
             else if (DataContext is FolioViewModel vm)
             {
                 _ = vm.InitializeAsync(null);
+            }
+        }
+
+        // Click handler for the Back button to avoid cross-VM compiled-binding issues.
+        private void OnBackClick(object? sender, RoutedEventArgs e)
+        {
+            if (VisualRoot is Window w && w.DataContext is MainViewModel main &&
+                main.NavigateDashboardCommand?.CanExecute(null) == true)
+            {
+                main.NavigateDashboardCommand.Execute(null);
             }
         }
     }

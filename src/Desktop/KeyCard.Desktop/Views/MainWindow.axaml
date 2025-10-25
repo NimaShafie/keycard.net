@@ -53,20 +53,15 @@
       </Border.Background>
 
       <Grid ColumnDefinitions="*,Auto,*">
-        <!-- LEFT: Dashboard + NEW Folio -->
+        <!-- LEFT: Dashboard (Folio removed) -->
         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
           <Button Content="Dashboard"
                   Classes="topbarBtn"
                   Command="{Binding NavigateDashboardCommand}"
                   IsVisible="{Binding IsAuthenticated}"/>
-          <!-- NEW top bar quick access to Folio -->
-          <Button Content="Folio"
-                  Classes="topbarBtn"
-                  Command="{Binding NavigateFolioCommand}"
-                  IsVisible="{Binding IsAuthenticated}"/>
         </StackPanel>
 
-        <!-- CENTER: tighter pill + more visible logo behind title -->
+        <!-- CENTER: title pill -->
         <Border Grid.Column="1"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
@@ -107,6 +102,7 @@
                     VerticalAlignment="Center"
                     Spacing="10"
                     IsVisible="{Binding IsAuthenticated}">
+
           <TextBlock Text="{Binding DisplayName}"
                      Foreground="White"
                      VerticalAlignment="Center"
@@ -167,7 +163,7 @@
       </Border>
     </Border>
 
-    <!-- *** OVERLAY WATERMARK (on top of content; non-interactive) *** -->
+    <!-- Overlay watermark -->
     <Image Source="avares://KeyCard.Desktop/Assets/keycard-logo-transparent.png"
            Grid.RowSpan="3"
            HorizontalAlignment="Right"

@@ -22,6 +22,8 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
         private readonly IFolioService _folio;
         private readonly ILogger<FolioViewModel> _logger;
 
+        // --- Search / selection ---
+
         private string? _guestSearchText;
         public string? GuestSearchText
         {
@@ -37,40 +39,92 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
             {
                 if (SetProperty(ref _selectedFolio, value))
                 {
+                    (SearchFoliosCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
                     (PostChargeCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
                     (ApplyPaymentCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
                     (PrintStatementCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+
+                    // keep aliases in sync for views that use them
+                    (AddChargeCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    (AddPaymentCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    (GenerateInvoiceCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
                 }
             }
         }
+
+        // --- Charge inputs (original) ---
 
         private decimal _chargeAmount;
         public decimal ChargeAmount
         {
             get => _chargeAmount;
-            set => SetProperty(ref _chargeAmount, value);
+            set
+            {
+                if (SetProperty(ref _chargeAmount, value))
+                {
+                    (PostChargeCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    (AddChargeCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    OnPropertyChanged(nameof(CanAddCharge));
+                }
+            }
         }
 
         private string? _chargeDescription;
         public string? ChargeDescription
         {
             get => _chargeDescription;
-            set => SetProperty(ref _chargeDescription, value);
+            set
+            {
+                if (SetProperty(ref _chargeDescription, value))
+                {
+                    (PostChargeCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    (AddChargeCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    OnPropertyChanged(nameof(CanAddCharge));
+                }
+            }
         }
+
+        // --- Payment inputs (original) ---
 
         private decimal _paymentAmount;
         public decimal PaymentAmount
         {
             get => _paymentAmount;
-            set => SetProperty(ref _paymentAmount, value);
+            set
+            {
+                if (SetProperty(ref _paymentAmount, value))
+                {
+                    (ApplyPaymentCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    (AddPaymentCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    OnPropertyChanged(nameof(CanAddPayment));
+                }
+            }
         }
 
         private string? _paymentMethod;
         public string? PaymentMethod
         {
             get => _paymentMethod;
-            set => SetProperty(ref _paymentMethod, value);
+            set
+            {
+                if (SetProperty(ref _paymentMethod, value))
+                {
+                    (ApplyPaymentCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    (AddPaymentCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    OnPropertyChanged(nameof(CanAddPayment));
+                }
+            }
         }
+
+        // Optional: reference/notes field used by some UIs; safe no-op for backend
+        private string? _paymentReference;
+        public string? PaymentReference
+        {
+            get => _paymentReference;
+            set => SetProperty(ref _paymentReference, value);
+        }
+
+        // --- Busy / status ---
 
         private bool _isBusy;
         public bool IsBusy
@@ -84,6 +138,14 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
                     (PostChargeCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
                     (ApplyPaymentCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
                     (PrintStatementCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+
+                    // aliases
+                    (AddChargeCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    (AddPaymentCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    (GenerateInvoiceCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+
+                    OnPropertyChanged(nameof(CanAddCharge));
+                    OnPropertyChanged(nameof(CanAddPayment));
                 }
             }
         }
@@ -96,6 +158,7 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
         }
 
         public ObservableCollection<GuestFolio> Folios { get; } = new();
+
         public ObservableCollection<string> PaymentMethods { get; } = new()
         {
             "Cash",
@@ -105,11 +168,74 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
             "Check"
         };
 
+        // --- Commands (original) ---
+
         public ICommand SearchFoliosCommand { get; }
         public ICommand PostChargeCommand { get; }
         public ICommand ApplyPaymentCommand { get; }
         public ICommand PrintStatementCommand { get; }
         public ICommand RefreshCommand { get; }
+
+        // --- Aliases expected by alternative XAML bindings (added) ---
+
+        /// <summary>
+        /// Mirrors <see cref="ChargeDescription"/> for views that bind to NewChargeDescription.
+        /// </summary>
+        public string? NewChargeDescription
+        {
+            get => ChargeDescription;
+            set => ChargeDescription = value;
+        }
+
+        /// <summary>
+        /// Mirrors <see cref="ChargeAmount"/> for views that bind to NewChargeAmount.
+        /// </summary>
+        public decimal NewChargeAmount
+        {
+            get => ChargeAmount;
+            set => ChargeAmount = value;
+        }
+
+        /// <summary>
+        /// Mirrors <see cref="PaymentAmount"/> for views that bind to NewPaymentAmount.
+        /// </summary>
+        public decimal NewPaymentAmount
+        {
+            get => PaymentAmount;
+            set => PaymentAmount = value;
+        }
+
+        /// <summary>
+        /// Mirrors <see cref="PaymentMethod"/> for views that bind to NewPaymentMethod.
+        /// </summary>
+        public string? NewPaymentMethod
+        {
+            get => PaymentMethod;
+            set => PaymentMethod = value;
+        }
+
+        /// <summary>
+        /// Mirrors <see cref="PaymentReference"/> for views that bind to NewPaymentReference.
+        /// (Not all backends store this yet; safe to keep local.)
+        /// </summary>
+        public string? NewPaymentReference
+        {
+            get => PaymentReference;
+            set => PaymentReference = value;
+        }
+
+        /// <summary>
+        /// Convenience booleans for enabling buttons in some views.
+        /// </summary>
+        public bool CanAddCharge => CanPostCharge();
+        public bool CanAddPayment => CanApplyPayment();
+
+        /// <summary>
+        /// Command aliases so both naming schemes work without changing the rest of your app.
+        /// </summary>
+        public ICommand AddChargeCommand { get; }
+        public ICommand AddPaymentCommand { get; }
+        public ICommand GenerateInvoiceCommand { get; }
 
         public FolioViewModel(IFolioService folio, ILogger<FolioViewModel> logger)
         {
@@ -121,6 +247,11 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
             ApplyPaymentCommand = new UnifiedRelayCommand(ApplyPaymentAsync, () => CanApplyPayment());
             PrintStatementCommand = new UnifiedRelayCommand(PrintStatementAsync, () => SelectedFolio != null && !IsBusy);
             RefreshCommand = new UnifiedRelayCommand(RefreshAsync, () => !IsBusy);
+
+            // Alias commands simply reuse the originals to keep behavior identical.
+            AddChargeCommand = PostChargeCommand;
+            AddPaymentCommand = ApplyPaymentCommand;
+            GenerateInvoiceCommand = PrintStatementCommand;
 
             // Load initial data
             _ = RefreshAsync();
