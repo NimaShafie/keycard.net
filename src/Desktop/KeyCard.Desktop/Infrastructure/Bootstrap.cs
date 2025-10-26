@@ -1,11 +1,13 @@
 // Infrastructure/Bootstrap.cs
 using System;
+using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Net.Http; // for HttpResponseMessage
+using System.Net.Http.Json;
 
 using KeyCard.Desktop.Generated;
+using KeyCard.Desktop.Modules.Folio.Services;
+using KeyCard.Desktop.Modules.Folio.ViewModels;
 using KeyCard.Desktop.Services;
-using KeyCard.Desktop.Services.Api;
 using KeyCard.Desktop.ViewModels;
 
 using Microsoft.AspNetCore.SignalR.Client;
@@ -50,7 +52,7 @@ namespace KeyCard.Desktop.Infrastructure
             })
             .AddHttpMessageHandler(() => new RetryDelegatingHandler(RetryPolicy()));
 
-            // API client
+            // Typed API client (stub until NSwag is enabled)
             services.AddSingleton(sp =>
             {
                 var factory = sp.GetRequiredService<IHttpClientFactory>();
@@ -58,54 +60,73 @@ namespace KeyCard.Desktop.Infrastructure
             });
 
             // SignalR
-            services.AddSingleton<ISignalRService>(sp =>
+            services.AddSingleton<KeyCard.Desktop.Services.ISignalRService>(sp =>
             {
-                var env = sp.GetRequiredService<IAppEnvironment>();
+                var env = sp.GetRequiredService<KeyCard.Desktop.Services.IAppEnvironment>();
+                return env.IsMock
+                    ? new NoOpSignalRService()
+                    : new KeyCard.Desktop.Services.SignalRService(env.BookingsHubUrl);
+            });
 
-                if (env.IsMock || string.IsNullOrWhiteSpace(env.BookingsHubUrl))
-                    return new NoOpSignalRService();
-
-                try
+            // Business services - Booking
+            services.AddSingleton<KeyCard.Desktop.Services.IBookingService>(sp =>
+            {
+                var env = sp.GetRequiredService<KeyCard.Desktop.Services.IAppEnvironment>();
+                if (env.IsMock)
                 {
-                    // Use the LIVE SignalR service if available
-                    return ActivatorUtilities.CreateInstance<global::KeyCard.Desktop.Services.Live.SignalRService>(sp, env.BookingsHubUrl);
+                    return new KeyCard.Desktop.Services.Mock.BookingService();
                 }
-                catch
+                else
                 {
-                    // Fall back gracefully so the app can still boot
-                    return new NoOpSignalRService();
+                    // Adapter that uses IHttpClientFactory + RoutesOptions + ILogger
+                    return ActivatorUtilities.CreateInstance<KeyCard.Desktop.Services.BookingService>(sp);
                 }
             });
 
-            // Business services
-            services.AddSingleton<IBookingService>(sp =>
+            // Business services - Housekeeping
+            services.AddSingleton<KeyCard.Desktop.Services.IHousekeepingService>(sp =>
             {
-                var env = sp.GetRequiredService<IAppEnvironment>();
-                return env.IsMock
-                    ? new global::KeyCard.Desktop.Services.Mock.BookingService()
-                    : new global::KeyCard.Desktop.Services.Api.BookingService(
-                        sp.GetRequiredService<global::KeyCard.Desktop.Generated.KeyCardApiClient>());
+                var env = sp.GetRequiredService<KeyCard.Desktop.Services.IAppEnvironment>();
+                if (env.IsMock)
+                {
+                    return new KeyCard.Desktop.Services.Mock.HousekeepingService();
+                }
+                else
+                {
+                    var factory = sp.GetRequiredService<IHttpClientFactory>();
+                    var http = factory.CreateClient("Api");
+                    return new KeyCard.Desktop.Services.Api.HousekeepingService(http);
+                }
             });
 
-            services.AddSingleton<IHousekeepingService>(sp =>
+            // Business services - Auth
+            services.AddSingleton<KeyCard.Desktop.Services.IAuthService>(sp =>
             {
-                var env = sp.GetRequiredService<IAppEnvironment>();
+                var env = sp.GetRequiredService<KeyCard.Desktop.Services.IAppEnvironment>();
                 return env.IsMock
-                    ? new global::KeyCard.Desktop.Services.Mock.HousekeepingService()
-                    : ActivatorUtilities.CreateInstance<global::KeyCard.Desktop.Services.Api.HousekeepingService>(sp);
+                    ? new KeyCard.Desktop.Services.Mock.AuthService()
+                    : new KeyCard.Desktop.Services.Api.AuthService();
             });
 
-            services.AddSingleton<IAuthService>(sp =>
+            // Business services - Folio
+            services.AddSingleton<IFolioService>(sp =>
             {
-                var env = sp.GetRequiredService<IAppEnvironment>();
-                return env.IsMock
-                    ? new global::KeyCard.Desktop.Services.Mock.AuthService()
-                    : new global::KeyCard.Desktop.Services.Api.AuthService();
+                var env = sp.GetRequiredService<KeyCard.Desktop.Services.IAppEnvironment>();
+                if (env.IsMock)
+                {
+                    return new MockFolioService();
+                }
+                else
+                {
+                    var factory = sp.GetRequiredService<IHttpClientFactory>();
+                    var http = factory.CreateClient("Api");
+                    return new LiveFolioService(http);
+                }
             });
 
             // Infrastructure services
-            services.AddSingleton<INavigationService, NavigationService>();
-            services.AddSingleton<IErrorHandlingService, ErrorHandlingService>();
+            services.AddSingleton<KeyCard.Desktop.Services.INavigationService, KeyCard.Desktop.Services.NavigationService>();
+            services.AddSingleton<KeyCard.Desktop.Services.IErrorHandlingService, KeyCard.Desktop.Services.ErrorHandlingService>();
 
             // ViewModels
             services.AddSingleton<MainViewModel>();
@@ -115,13 +136,14 @@ namespace KeyCard.Desktop.Infrastructure
             services.AddTransient<HousekeepingViewModel>();
             services.AddTransient<ProfileViewModel>();
             services.AddTransient<SettingsViewModel>();
+            services.AddTransient<FolioViewModel>();
 
             return services;
         }
     }
 
     // No-op SignalR for mock mode
-    internal sealed class NoOpSignalRService : ISignalRService
+    internal sealed class NoOpSignalRService : KeyCard.Desktop.Services.ISignalRService
     {
         public HubConnection BookingsHub { get; }
 

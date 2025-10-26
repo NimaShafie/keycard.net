@@ -1,0 +1,116 @@
+<!-- Modules/Folio/Views/FolioView.axaml -->
+<!-- Modules/Folio/Views/FolioView.axaml -->
+<UserControl
+    x:Class="KeyCard.Desktop.Modules.Folio.Views.FolioView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="clr-namespace:KeyCard.Desktop.Modules.Folio.ViewModels"
+    mc:Ignorable="d"
+    x:DataType="vm:FolioViewModel">
+
+  <Border Classes="panel-outer" Padding="16" Margin="12">
+    <StackPanel Spacing="12">
+
+      <!-- Header row with bottom rule and Back button -->
+      <Border Classes="panel-header" BorderThickness="0,0,0,1" BorderBrush="#5C46A3" Padding="0,0,0,8">
+        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+          <StackPanel Grid.Column="0" Grid.RowSpan="2" Orientation="Vertical" Spacing="4">
+            <!-- Match Front Desk/Dashboard sizing -->
+            <TextBlock Text="Folio Manager"
+                       FontSize="28"
+                       FontWeight="Bold"
+                       Foreground="#EDECF7" />
+            <TextBlock Text="Manage charges, payments, and statements"
+                       FontSize="14"
+                       Opacity="0.82"
+                       Foreground="#CFCFF1"/>
+          </StackPanel>
+
+          <!-- Back -->
+          <Button Grid.Column="1" Grid.Row="0"
+                  HorizontalAlignment="Right"
+                  VerticalAlignment="Top"
+                  Padding="12,6"
+                  CornerRadius="8"
+                  BorderBrush="#5C46A3"
+                  BorderThickness="1"
+                  Background="#2B2B33"
+                  Foreground="White"
+                  Content="← Back"
+                  Click="OnBackClick"/>
+        </Grid>
+      </Border>
+
+      <Border Classes="panel-body" Padding="12">
+        <Grid ColumnDefinitions="*,380" RowDefinitions="*">
+          <DataGrid
+              Grid.Row="0" Grid.Column="0"
+              ItemsSource="{Binding Folios}"
+              AutoGenerateColumns="False"
+              CanUserReorderColumns="False"
+              CanUserResizeColumns="True"
+              CanUserSortColumns="True"
+              HeadersVisibility="Column"
+              IsReadOnly="True"
+              Margin="0,0,12,0">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="Guest"   Binding="{Binding GuestName}"   Width="180"/>
+              <DataGridTextColumn Header="Folio #" Binding="{Binding FolioId}"     Width="220"/>
+              <DataGridTextColumn Header="Balance" Binding="{Binding Balance, StringFormat=\{0:C\}}" Width="140"/>
+              <DataGridTextColumn Header="Status"  Binding="{Binding Status}"      Width="*"/>
+            </DataGrid.Columns>
+          </DataGrid>
+
+          <StackPanel Grid.Column="1" Spacing="16">
+
+            <Border Classes="panel-subcard" Padding="12">
+              <StackPanel Spacing="8">
+                <TextBlock Text="Add Charge" FontWeight="SemiBold" Opacity="0.92"/>
+                <TextBox Watermark="Description"
+                         Text="{Binding NewChargeDescription, Mode=TwoWay}"/>
+                <NumericUpDown Minimum="0"
+                               Value="{Binding NewChargeAmount, Mode=TwoWay}"/>
+                <Button Content="Add Charge"
+                        Command="{Binding AddChargeCommand}"
+                        IsEnabled="{Binding CanAddCharge}"/>
+                <TextBlock Text="(Restricted by RBAC / Read-only in LIVE)"
+                           Opacity="0.7" FontSize="12"/>
+              </StackPanel>
+            </Border>
+
+            <Border Classes="panel-subcard" Padding="12">
+              <StackPanel Spacing="8">
+                <TextBlock Text="Add Payment" FontWeight="SemiBold" Opacity="0.92"/>
+                <NumericUpDown Minimum="0"
+                               Value="{Binding NewPaymentAmount, Mode=TwoWay}"/>
+                <ComboBox SelectedItem="{Binding NewPaymentMethod, Mode=TwoWay}"
+                          ItemsSource="{Binding PaymentMethods}"/>
+                <TextBox Watermark="Reference (last 4 / txn id)"
+                         Text="{Binding NewPaymentReference, Mode=TwoWay}"/>
+                <Button Content="Add Payment"
+                        Command="{Binding AddPaymentCommand}"
+                        IsEnabled="{Binding CanAddPayment}"/>
+                <TextBlock Text="(Restricted by RBAC / Read-only in LIVE)"
+                           Opacity="0.7" FontSize="12"/>
+              </StackPanel>
+            </Border>
+
+            <Border Classes="panel-subcard" Padding="12">
+              <StackPanel Spacing="8">
+                <TextBlock Text="Invoice" FontWeight="SemiBold" Opacity="0.92"/>
+                <Button Content="Generate &amp; Open PDF"
+                        Command="{Binding GenerateInvoiceCommand}"/>
+              </StackPanel>
+            </Border>
+
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <TextBlock Margin="4,0,0,0" Opacity="0.6" FontSize="12"
+                 Text="MOCK allows edits; LIVE is read-only until Folio endpoints exist." />
+    </StackPanel>
+  </Border>
+</UserControl>

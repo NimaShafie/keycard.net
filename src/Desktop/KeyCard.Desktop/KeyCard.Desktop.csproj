@@ -52,6 +52,9 @@
   <!-- Compile ALL .axaml (recursively) -->
   <ItemGroup>
     <AvaloniaXaml Include="App.axaml" />
+    <AvaloniaXaml Include="Modules\Folio\Views\FolioView.axaml">
+      <SubType>Designer</SubType>
+    </AvaloniaXaml>
     <AvaloniaXaml Include="Views\**\*.axaml" />
   </ItemGroup>
 
@@ -101,21 +104,17 @@
     </AvaloniaXaml>
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Modules\Folio\Views\" />
+  </ItemGroup>
+
   <!-- ====== (OPT-IN) DESIGNER WORKAROUNDS: run ONLY if explicitly enabled ====== -->
-  <Target Name="KillAvaloniaPreviewer"
-          BeforeTargets="CompileAvaloniaXaml"
-          Condition="'$(EnableDesignerWorkarounds)' == 'true'">
-    <Exec Condition="'$(OS)' == 'Windows_NT'"
-          Command="cmd /c for /f &quot;tokens=1&quot; %25%25p in ('tasklist ^| find /i &quot;Avalonia.Designer.HostApp.exe&quot;') do taskkill /im Avalonia.Designer.HostApp.exe /f &gt;nul 2&gt;nul"
-          IgnoreExitCode="true" />
-    <Exec Condition="'$(OS)' == 'Windows_NT'"
-          Command="cmd /c tasklist /v ^| find /i &quot;Avalonia Previewer&quot; &gt;nul 2&gt;nul &amp;&amp; taskkill /fi &quot;WINDOWTITLE eq Avalonia Previewer*&quot; /f &gt;nul 2&gt;nul"
-          IgnoreExitCode="true" />
+  <Target Name="KillAvaloniaPreviewer" BeforeTargets="CompileAvaloniaXaml" Condition="'$(EnableDesignerWorkarounds)' == 'true'">
+    <Exec Condition="'$(OS)' == 'Windows_NT'" Command="cmd /c for /f &quot;tokens=1&quot; %25%25p in ('tasklist ^| find /i &quot;Avalonia.Designer.HostApp.exe&quot;') do taskkill /im Avalonia.Designer.HostApp.exe /f &gt;nul 2&gt;nul" IgnoreExitCode="true" />
+    <Exec Condition="'$(OS)' == 'Windows_NT'" Command="cmd /c tasklist /v ^| find /i &quot;Avalonia Previewer&quot; &gt;nul 2&gt;nul &amp;&amp; taskkill /fi &quot;WINDOWTITLE eq Avalonia Previewer*&quot; /f &gt;nul 2&gt;nul" IgnoreExitCode="true" />
   </Target>
 
-  <Target Name="CleanAvaloniaIntermediates"
-          BeforeTargets="CompileAvaloniaXaml"
-          Condition="'$(EnableDesignerWorkarounds)' == 'true'">
+  <Target Name="CleanAvaloniaIntermediates" BeforeTargets="CompileAvaloniaXaml" Condition="'$(EnableDesignerWorkarounds)' == 'true'">
     <PropertyGroup>
       <_AvaloniaDir>$(IntermediateOutputPath)Avalonia</_AvaloniaDir>
     </PropertyGroup>
@@ -125,23 +124,14 @@
   <!-- ====== /designer workarounds ====== -->
 
   <!-- ===== NSwag: fetch + generate typed client (OPT-IN) ===== -->
-  <Target Name="FetchSwaggerIfAvailable"
-          BeforeTargets="BeforeBuild"
-          Condition="'$(AutoFetchSwagger)' == 'true'">
+  <Target Name="FetchSwaggerIfAvailable" BeforeTargets="BeforeBuild" Condition="'$(AutoFetchSwagger)' == 'true'">
     <!-- Windows/PowerShell -->
-    <Exec Condition="'$(OS)' == 'Windows_NT' AND '$(SwaggerUrl)' != ''"
-          IgnoreExitCode="true"
-          Command="powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;$u='$(SwaggerUrl)'; $d='$(SwaggerJsonPath)'; $dir=[System.IO.Path]::GetDirectoryName($d); if(-not [string]::IsNullOrWhiteSpace($dir) -and -not (Test-Path -LiteralPath $dir)){[void][System.IO.Directory]::CreateDirectory($dir)}; $tmp=$d + '.tmp'; try { Invoke-WebRequest -TimeoutSec 5 -Uri $u -OutFile $tmp } catch { exit 0 }; if (Test-Path -LiteralPath $d) { if ((Get-FileHash -LiteralPath $d).Hash -eq (Get-FileHash -LiteralPath $tmp).Hash) { Remove-Item -LiteralPath $tmp -Force; Write-Host 'Swagger unchanged' } else { Move-Item -LiteralPath $tmp -Force -Destination $d; Write-Host 'Swagger updated' } } else { Move-Item -LiteralPath $tmp -Force -Destination $d; Write-Host 'Swagger cached' }&quot;" />
+    <Exec Condition="'$(OS)' == 'Windows_NT' AND '$(SwaggerUrl)' != ''" IgnoreExitCode="true" Command="powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;$u='$(SwaggerUrl)'; $d='$(SwaggerJsonPath)'; $dir=[System.IO.Path]::GetDirectoryName($d); if(-not [string]::IsNullOrWhiteSpace($dir) -and -not (Test-Path -LiteralPath $dir)){[void][System.IO.Directory]::CreateDirectory($dir)}; $tmp=$d + '.tmp'; try { Invoke-WebRequest -TimeoutSec 5 -Uri $u -OutFile $tmp } catch { exit 0 }; if (Test-Path -LiteralPath $d) { if ((Get-FileHash -LiteralPath $d).Hash -eq (Get-FileHash -LiteralPath $tmp).Hash) { Remove-Item -LiteralPath $tmp -Force; Write-Host 'Swagger unchanged' } else { Move-Item -LiteralPath $tmp -Force -Destination $d; Write-Host 'Swagger updated' } } else { Move-Item -LiteralPath $tmp -Force -Destination $d; Write-Host 'Swagger cached' }&quot;" />
     <!-- *nix/mac curl -->
-    <Exec Condition="'$(OS)' != 'Windows_NT' AND '$(SwaggerUrl)' != ''"
-          IgnoreExitCode="true"
-          Command="bash -c &quot;&#xA;u=&quot;$(SwaggerUrl)&quot;;&#xA;d=&quot;$(SwaggerJsonPath)&quot;;&#xA;mkdir -p &quot;$(ProjectDir)Generated&quot;;&#xA;tmp=&quot;$d.tmp&quot;;&#xA;if curl -fsSL --connect-timeout 5 &quot;$u&quot; -o &quot;$tmp&quot;; then&#xA;  if [ -f &quot;$d&quot; ] &amp;&amp; cmp -s &quot;$d&quot; &quot;$tmp&quot;; then&#xA;    rm &quot;$tmp&quot;; echo Swagger unchanged;&#xA;  else&#xA;    mv -f &quot;$tmp&quot; &quot;$d&quot;; echo Swagger updated;&#xA;  fi&#xA;fi&#xA;&quot; " />
+    <Exec Condition="'$(OS)' != 'Windows_NT' AND '$(SwaggerUrl)' != ''" IgnoreExitCode="true" Command="bash -c &quot;&#xA;u=&quot;$(SwaggerUrl)&quot;;&#xA;d=&quot;$(SwaggerJsonPath)&quot;;&#xA;mkdir -p &quot;$(ProjectDir)Generated&quot;;&#xA;tmp=&quot;$d.tmp&quot;;&#xA;if curl -fsSL --connect-timeout 5 &quot;$u&quot; -o &quot;$tmp&quot;; then&#xA;  if [ -f &quot;$d&quot; ] &amp;&amp; cmp -s &quot;$d&quot; &quot;$tmp&quot;; then&#xA;    rm &quot;$tmp&quot;; echo Swagger unchanged;&#xA;  else&#xA;    mv -f &quot;$tmp&quot; &quot;$d&quot;; echo Swagger updated;&#xA;  fi&#xA;fi&#xA;&quot; " />
   </Target>
 
-  <Target Name="GenerateTypedApiClient"
-          BeforeTargets="BeforeBuild"
-          DependsOnTargets="FetchSwaggerIfAvailable"
-          Condition="'$(RunNSwag)' == 'true' AND Exists('$(ProjectDir)nswag.json')">
+  <Target Name="GenerateTypedApiClient" BeforeTargets="BeforeBuild" DependsOnTargets="FetchSwaggerIfAvailable" Condition="'$(RunNSwag)' == 'true' AND Exists('$(ProjectDir)nswag.json')">
     <Message Text="NSwag: Generating typed API client from $(SwaggerJsonPath)" Importance="High" />
     <Exec Condition="'$(NSwagExe_Net80)' != ''" Command="$(NSwagExe_Net80) run &quot;$(ProjectDir)nswag.json&quot;" />
     <Exec Condition="'$(NSwagExe_Net80)' == '' AND '$(NSwagExe_Net70)' != ''" Command="$(NSwagExe_Net70) run &quot;$(ProjectDir)nswag.json&quot;" />
