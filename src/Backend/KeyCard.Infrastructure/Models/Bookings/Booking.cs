@@ -19,6 +19,7 @@ namespace KeyCard.Infrastructure.Models.Bookings
         public int Adults { get; set; }
         public int Children { get; set; }
         public decimal TotalAmount { get; set; }
+        public decimal ExtraFees { get; set; } = 0m;
         public bool IsPrepaid { get; set; }
 
         public int GuestProfileId { get; set; }

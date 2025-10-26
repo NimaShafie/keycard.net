@@ -19,7 +19,7 @@ namespace KeyCard.BusinessLogic.Validators.Admin.Bookings
                 .WithMessage("Invalid Checkout Date.");
 
             RuleFor(x => x.CheckInDate)
-                .GreaterThanOrEqualTo(x => x.CheckOutDate)
+                .LessThanOrEqualTo(x => x.CheckOutDate)
                 .WithMessage("Checkout date must be greater than or equal to CheckIn Date.");
 
             RuleFor(x => x.Adults)

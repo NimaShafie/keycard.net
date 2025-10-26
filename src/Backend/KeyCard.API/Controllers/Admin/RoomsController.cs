@@ -21,7 +21,7 @@ namespace KeyCard.Api.Controllers.Admin
         {
             _mediator = mediator;
             _contextAccessor = contextAccessor;
-            //_user = _contextAccessor.HttpContext!.User.GetUser();
+            _user = _contextAccessor.HttpContext!.User.GetUser();
         }
     }
 }

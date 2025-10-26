@@ -30,6 +30,7 @@
 
   <ItemGroup>
     <Folder Include="Helper\" />
+    <Folder Include="wwwroot\Invoices\" />
   </ItemGroup>
 
 </Project>

@@ -18,7 +18,7 @@ namespace KeyCard.BusinessLogic.Commands.Guest.Rooms
         int Rooms = 1,
         string Currency = "USD") : IRequest<RoomOptionsViewModel>;
 
-        public class GetRoomOptionsCommandHandler : IRequestHandler<GetRoomOptionsCommand, RoomOptionsViewModel>
+    public class GetRoomOptionsCommandHandler : IRequestHandler<GetRoomOptionsCommand, RoomOptionsViewModel>
     {
         public IRoomsService _roomsService;
         public GetRoomOptionsCommandHandler(IRoomsService roomsService)

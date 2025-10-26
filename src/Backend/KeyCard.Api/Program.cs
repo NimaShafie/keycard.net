@@ -80,6 +80,7 @@ builder.Services.AddTransient<IAuthService, AuthService>();
 builder.Services.AddTransient<ITaskService, TaskService>();
 builder.Services.AddTransient<IDigitalKeyService, DigitalKeyService>();
 builder.Services.AddTransient<IRoomsService, RoomsService>();
+builder.Services.AddTransient<IInvoiceService, InvoiceService>();
 
 // JWT
 var jwtSection = builder.Configuration.GetSection("Jwt");
@@ -179,12 +180,12 @@ using (var scope = app.Services.CreateScope())
     if (useSqlServer)
     {
         await dbContext.Database.MigrateAsync();
-        Console.WriteLine("✅ Using SQL Server (migrated).");
+        Console.WriteLine("Using SQL Server (migrated).");
     }
     else
     {
         await dbContext.Database.EnsureCreatedAsync();
-        Console.WriteLine($"✅ Using SQLite at: {sqliteFullPath}");
+        Console.WriteLine($"Using SQLite at: {sqliteFullPath}");
     }
 
     await DbSeeder.SeedAsync(services);

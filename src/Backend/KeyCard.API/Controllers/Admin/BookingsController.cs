@@ -76,7 +76,7 @@ public class BookingsController : ControllerBase
     [HttpPost("{id:int}/checkin")]
     public async Task<ActionResult> CheckIn(int id)
     {
-        var success = await _mediator.Send(new CheckInBookingCommand(id));
+        var success = await _mediator.Send(new CheckInBookingCommand(id) { User = _user });
 
         if (!success)
             return BadRequest(new { message = "Check-in failed or booking not found." });
@@ -87,7 +87,7 @@ public class BookingsController : ControllerBase
     [HttpPost("{id:int}/checkout")]
     public async Task<ActionResult> CheckOut(int id)
     {
-        var success = await _mediator.Send(new CheckOutBookingCommand(id));
+        var success = await _mediator.Send(new CheckOutBookingCommand(id) { User = _user });
 
         if (!success)
             return BadRequest(new { message = "Check-out failed or booking not found." });

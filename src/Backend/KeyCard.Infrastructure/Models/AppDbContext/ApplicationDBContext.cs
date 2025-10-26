@@ -7,6 +7,7 @@ using KeyCard.Infrastructure.Models.User;
 
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace KeyCard.Infrastructure.Models.AppDbContext
 {
@@ -74,6 +75,11 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                 .WithOne(b => b.Invoice)
                 .HasForeignKey<Invoice>(i => i.BookingId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Invoice>(b =>
+            {
+                b.HasIndex(i => i.InvoiceNumber).IsUnique();
+            });
 
             builder.Entity<DigitalKey>()
                 .HasOne(dk => dk.Booking)

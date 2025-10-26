@@ -1,7 +1,11 @@
 using KeyCard.Api.Helper;
 using KeyCard.BusinessLogic.Commands.Guest.Bookings;
+using KeyCard.BusinessLogic.Commands.Guest.Invoice;
+using KeyCard.Infrastructure.Models;
+using KeyCard.Infrastructure.Models.AppDbContext;
 
 using MediatR;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -63,5 +67,22 @@ namespace KeyCard.Api.Controllers.Guest
             var result = await _mediator.Send(new GetBookingStatusByIdCommand(bookingId) { User = User.GetUser() }, cancellationToken);
             return Ok(result);
         }
+
+        [HttpGet("{bookingId:int}/invoice")]
+        [Authorize(Roles = "Guest,FrontDesk,Admin")]
+
+        public async Task<IActionResult> GetInvoicePdf(int bookingId, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(new GetInvoicePdfCommand(bookingId), cancellationToken);
+
+            var fullPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", result.PdfPath.TrimStart('/'));
+
+            if (!System.IO.File.Exists(fullPath))
+                return NotFound("File not found.");
+
+            var stream = System.IO.File.OpenRead(fullPath);
+            return File(stream, "application/pdf", Path.GetFileName(fullPath));
+        }
+
     }
 }

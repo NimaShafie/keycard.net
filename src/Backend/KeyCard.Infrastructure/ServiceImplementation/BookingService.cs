@@ -1,6 +1,7 @@
 using KeyCard.BusinessLogic.Commands.Admin.Bookings;
 using KeyCard.BusinessLogic.Commands.Admin.DigitalKey;
 using KeyCard.BusinessLogic.Commands.Guest.Bookings;
+using KeyCard.BusinessLogic.Commands.Guest.Invoice;
 using KeyCard.BusinessLogic.ServiceInterfaces;
 using KeyCard.BusinessLogic.ViewModels.Booking;
 using KeyCard.Core.Common;
@@ -17,11 +18,13 @@ namespace KeyCard.Infrastructure.ServiceImplementation
 
         private readonly ApplicationDBContext _context;
         private readonly IDigitalKeyService _digitalKeyService;
+        private readonly IInvoiceService _invoiceServce;
 
-        public BookingService(ApplicationDBContext context, IDigitalKeyService digitalKeyService)
+        public BookingService(ApplicationDBContext context, IDigitalKeyService digitalKeyService, IInvoiceService invoiceServce)
         {
             _context = context;
             _digitalKeyService = digitalKeyService;
+            _invoiceServce = invoiceServce;
         }
 
         #region Admin
@@ -32,11 +35,14 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                 b => b.RoomId == command.RoomId &&
                      b.Status != BookingStatus.Cancelled &&
                      b.CheckInDate < command.CheckOutDate &&
-                     b.CheckOutDate > command.CheckInDate,
+                     b.CheckOutDate > command.CheckInDate &&
+                     !b.IsDeleted,
                 cancellationToken);
 
             if (!isAvailable)
                 throw new InvalidOperationException("Room is not available for the selected dates.");
+
+            var nights = Math.Max(1, (command.CheckOutDate.Date - command.CheckInDate.Date).Days);
 
             var booking = new Booking
             {
@@ -52,7 +58,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                 TotalAmount = await _context.Rooms
                     .Where(r => r.Id == command.RoomId)
                     .Select(r => r.RoomType.BaseRate)
-                    .FirstAsync(cancellationToken),
+                    .FirstAsync(cancellationToken) * nights,
                 CreatedBy = command.User!.UserId,
                 CreatedAt = DateTime.UtcNow,
                 LastUpdatedAt = DateTime.UtcNow,
@@ -110,6 +116,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                 .Include(b => b.Room)
                     .ThenInclude(r => r.RoomType)
                 .Include(b => b.GuestProfile)
+                .Where(b => !b.IsDeleted)
                 .AsQueryable();
 
             if (command.FromDate.HasValue)
@@ -151,7 +158,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
         {
             var booking = await _context.Bookings
                 .Include(b => b.Room)
-                .FirstOrDefaultAsync(b => b.Id == command.BookingId, cancellationToken);
+                .FirstOrDefaultAsync(b => b.Id == command.BookingId && !b.IsDeleted, cancellationToken);
 
             if (booking == null)
                 return false;
@@ -256,7 +263,11 @@ namespace KeyCard.Infrastructure.ServiceImplementation
 
             // (Future: Generate invoice or revoke digital key here)
             await _digitalKeyService.RevokeKeyAsync(new RevokeDigitalKeyCommand(booking.Id) { User = command.User }, cancellationToken);
-                
+            await _invoiceServce.GenerateInvoiceAsync(new GenerateInvoiceCommand (command.BookingId)
+            {
+                User = command.User
+            }, cancellationToken);
+
             await _context.SaveChangesAsync(cancellationToken);
 
             return true;
