@@ -7,6 +7,7 @@ using System.Windows.Input;
 using KeyCard.Desktop.Infrastructure;
 using KeyCard.Desktop.Modules.Folio.Models;
 using KeyCard.Desktop.Modules.Folio.Services;
+using KeyCard.Desktop.Services;
 using KeyCard.Desktop.ViewModels;
 
 using Microsoft.Extensions.Logging;
@@ -21,6 +22,7 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
     {
         private readonly IFolioService _folio;
         private readonly ILogger<FolioViewModel> _logger;
+        private readonly IToolbarService _toolbar;
 
         // --- Search / selection ---
 
@@ -237,16 +239,25 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
         public ICommand AddPaymentCommand { get; }
         public ICommand GenerateInvoiceCommand { get; }
 
-        public FolioViewModel(IFolioService folio, ILogger<FolioViewModel> logger)
+        public FolioViewModel(IFolioService folio, ILogger<FolioViewModel> logger, IToolbarService toolbar)
         {
             _folio = folio ?? throw new ArgumentNullException(nameof(folio));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _toolbar = toolbar;
 
             SearchFoliosCommand = new UnifiedRelayCommand(SearchFoliosAsync, () => !IsBusy);
             PostChargeCommand = new UnifiedRelayCommand(PostChargeAsync, () => CanPostCharge());
             ApplyPaymentCommand = new UnifiedRelayCommand(ApplyPaymentAsync, () => CanApplyPayment());
             PrintStatementCommand = new UnifiedRelayCommand(PrintStatementAsync, () => SelectedFolio != null && !IsBusy);
             RefreshCommand = new UnifiedRelayCommand(RefreshAsync, () => !IsBusy);
+
+            _toolbar.AttachContext(
+                title: "Folio Manager",
+                subtitle: "Manage charges, payments, and statements",
+                onRefreshAsync: RefreshAsync, // or null if none
+                onSearch: q => { /* optional: set your own search/filter */ },
+                initialSearchText: null
+            );
 
             // Alias commands simply reuse the originals to keep behavior identical.
             AddChargeCommand = PostChargeCommand;

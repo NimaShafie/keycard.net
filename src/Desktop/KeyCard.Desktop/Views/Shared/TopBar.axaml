@@ -1,0 +1,64 @@
+<!-- Views/Shared/TopBar.axaml -->
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:svc="clr-namespace:KeyCard.Desktop.Services"
+    x:Class="KeyCard.Desktop.Views.Shared.TopBar"
+    x:DataType="svc:IToolbarService">
+
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <Border Padding="12" CornerRadius="12" Classes="frame" IsVisible="{Binding IsVisible}">
+      <DockPanel LastChildFill="True" VerticalAlignment="Center">
+
+        <!-- Left: Title/Subtitle -->
+        <StackPanel Orientation="Vertical" DockPanel.Dock="Left" Margin="0,0,16,0">
+          <TextBlock Text="{Binding Title}" FontSize="22" FontWeight="SemiBold"/>
+          <TextBlock Text="{Binding Subtitle}" Opacity="0.8"/>
+        </StackPanel>
+
+        <!-- Center: Nav buttons -->
+        <StackPanel Orientation="Horizontal" Spacing="8" DockPanel.Dock="Left">
+          <Button Content="Dashboard"     Command="{Binding NavigateDashboardCommand}"/>
+          <Button Content="Front Desk"    Command="{Binding NavigateFrontDeskCommand}"/>
+          <Button Content="Housekeeping"  Command="{Binding NavigateHousekeepingCommand}"/>
+          <Button Content="Folio Manager" Command="{Binding NavigateFolioCommand}"/>
+        </StackPanel>
+
+        <!-- Right: Search + Refresh -->
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="Filter:" VerticalAlignment="Center" />
+            <TextBox Width="320"
+                     Watermark="Search by name, booking, or room"
+                     Text="{Binding SearchText, Mode=TwoWay}"/>
+            <Button Content="Search" Command="{Binding ExecuteSearchCommand}" />
+          </StackPanel>
+
+          <Grid>
+            <Button x:Name="RefreshButton"
+                    Content="⟳ Refresh"
+                    Command="{Binding ExecuteRefreshCommand}"/>
+
+            <Popup IsOpen="{Binding IsSyncPopupOpen}"
+                   PlacementTarget="{Binding #RefreshButton}"
+                   PlacementMode="Top"
+                   VerticalOffset="-6">
+              <Border Padding="10" CornerRadius="10" Classes="toolbar-status-popup" Opacity="0.98">
+                <StackPanel Spacing="6">
+                  <TextBlock Text="{Binding SyncMessage}" FontWeight="Medium"/>
+                  <ProgressBar IsIndeterminate="True"
+                               IsVisible="{Binding IsRefreshing}"
+                               MinWidth="220" Height="6"/>
+                </StackPanel>
+              </Border>
+            </Popup>
+          </Grid>
+        </StackPanel>
+      </DockPanel>
+    </Border>
+  </Grid>
+</UserControl>

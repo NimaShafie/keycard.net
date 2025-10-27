@@ -126,8 +126,8 @@ namespace KeyCard.Desktop
                 {
                     services.AddLogging(b => b.AddConsole());
 
-                    // >>> Removed broken call here:
-                    // services.AddFolioModule(appEnvironment);
+                    // during Host building / DI registration
+                    services.AddSingleton<IToolbarService, ToolbarService>();
 
                     services.Configure<KeyCardOptions>(ctx.Configuration.GetSection("KeyCard"));
                     services.Configure<ApiOptions>(ctx.Configuration.GetSection("Api"));

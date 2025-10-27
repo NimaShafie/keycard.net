@@ -3,14 +3,12 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vms="clr-namespace:KeyCard.Desktop.ViewModels"
-    xmlns:st="clr-namespace:Avalonia.Styling;assembly=Avalonia.Styling"
     xmlns:svc="clr-namespace:KeyCard.Desktop.Services"
-    x:Class="KeyCard.Desktop.Views.MainWindow"
     xmlns:conv="clr-namespace:KeyCard.Desktop.Converters"
+    x:Class="KeyCard.Desktop.Views.MainWindow"
     x:DataType="vms:MainViewModel"
     Width="1500" Height="1000"
     MinWidth="1200" MinHeight="800"
-    SizeToContent="Manual"
     WindowStartupLocation="CenterScreen"
     Title="KeyCard.NET — Staff Console"
     Background="#0F0F12"
@@ -22,10 +20,21 @@
     <conv:ModeIsMockConverter x:Key="ModeIsMockConverter"/>
   </Window.Resources>
 
-  <!-- Root layout -->
-  <Grid RowDefinitions="Auto,Auto,*">
+  <!-- Root layout: Mock banner, TopBar (2 rows), Content -->
+  <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
 
-    <!-- MODE BANNER (visible only in MOCK) -->
+    <!-- ====== ANIMATED GRADIENT BACKGROUND ====== -->
+    <Border x:Name="AnimatedBackground" Grid.RowSpan="5">
+      <Border.Background>
+        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+          <GradientStop Color="#1a0033" Offset="0"/>
+          <GradientStop Color="#330066" Offset="0.5"/>
+          <GradientStop Color="#0f0f12" Offset="1"/>
+        </LinearGradientBrush>
+      </Border.Background>
+    </Border>
+
+    <!-- ====== MOCK MODE BANNER ====== -->
     <Border Grid.Row="0"
             HorizontalAlignment="Stretch"
             CornerRadius="8"
@@ -34,109 +43,146 @@
             Background="#2B2B33"
             BorderBrush="{Binding ModeLabel, Converter={StaticResource ModeToBrushConverter}}"
             BorderThickness="1"
-            IsVisible="{Binding ModeLabel, Converter={StaticResource ModeIsMockConverter}}">
-      <TextBlock Text="{Binding ModeLabel}"
+            IsVisible="{Binding Source={x:Static svc:AppGlobals.Env}, Path=IsMock}">
+      <TextBlock Text="{Binding ModeLabel, FallbackValue=MOCK MODE}"
                  HorizontalAlignment="Center"
                  FontWeight="SemiBold"
                  VerticalAlignment="Center"
                  Foreground="{Binding ModeLabel, Converter={StaticResource ModeToBrushConverter}}"/>
     </Border>
 
-    <!-- Top Bar -->
-    <Border Grid.Row="1" Height="80" Padding="16,0">
-      <Border.Background>
-        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-          <GradientStop Color="#6F3BF5" Offset="0"/>
-          <GradientStop Color="#3A2E5E" Offset="0.55"/>
-          <GradientStop Color="#1B1B22" Offset="1"/>
-        </LinearGradientBrush>
-      </Border.Background>
+    <!-- ====== TOP BAR ROW 1: Logo (centered) ====== -->
+    <Border Grid.Row="1"
+            Height="70"
+            Padding="16,12"
+            Margin="8,0,8,0"
+            IsVisible="{Binding IsAuthenticated}"
+            Background="Transparent">
+      <!-- Centered logo -->
+      <Border HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              Height="50"
+              Padding="12,6"
+              CornerRadius="12"
+              Background="#1B1530"
+              BorderBrush="#A78BFA"
+              BorderThickness="1">
+        <Grid>
+          <Image Source="avares://KeyCard.Desktop/Assets/keycard-logo-transparent-small.png"
+                 HorizontalAlignment="Center"
+                 VerticalAlignment="Center"
+                 Width="50"
+                 Opacity="0.22"
+                 Margin="4,0,0,0"
+                 RenderTransformOrigin="0.5,0.5">
+            <Image.RenderTransform>
+              <RotateTransform Angle="90"/>
+            </Image.RenderTransform>
+          </Image>
+          <TextBlock Text="KeyCard.NET"
+                     FontSize="20"
+                     FontWeight="ExtraBold"
+                     Foreground="White"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center"/>
+        </Grid>
+      </Border>
+    </Border>
+
+    <!-- ====== TOP BAR ROW 2: Navigation Buttons ====== -->
+    <Border Grid.Row="2"
+            Height="56"
+            Padding="16,8"
+            Margin="8,0,8,0"
+            IsVisible="{Binding IsAuthenticated}"
+            Background="#1E1E24"
+            BorderBrush="#2A2A33"
+            BorderThickness="0,1,0,0">
 
       <Grid ColumnDefinitions="*,Auto,*">
-        <!-- LEFT: Dashboard (Folio removed) -->
-        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+        <!-- LEFT: Navigation buttons (centered via right edge of center column) -->
+        <StackPanel Grid.Column="1"
+                    Orientation="Horizontal"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Center"
+                    Spacing="6">
           <Button Content="Dashboard"
-                  Classes="topbarBtn"
+                  Classes="topbarBtn compact"
+                  Classes.active="{Binding IsOnDashboard}"
                   Command="{Binding NavigateDashboardCommand}"
-                  IsVisible="{Binding IsAuthenticated}"/>
+                  MinWidth="100"/>
+          <Button Content="Front Desk"
+                  Classes="topbarBtn compact"
+                  Classes.active="{Binding IsOnFrontDesk}"
+                  Command="{Binding NavigateFrontDeskCommand}"
+                  MinWidth="100"/>
+          <Button Content="Housekeeping"
+                  Classes="topbarBtn compact"
+                  Classes.active="{Binding IsOnHousekeeping}"
+                  Command="{Binding NavigateHousekeepingCommand}"
+                  MinWidth="108"/>
+          <Button Content="Folio"
+                  Classes="topbarBtn compact"
+                  Classes.active="{Binding IsOnFolio}"
+                  Command="{Binding NavigateFolioCommand}"
+                  MinWidth="100"/>
         </StackPanel>
 
-        <!-- CENTER: title pill -->
-        <Border Grid.Column="1"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                Padding="14,10"
-                CornerRadius="16"
-                Background="#1B1530"
-                BorderBrush="#A78BFA"
-                BorderThickness="1"
-                ClipToBounds="True">
-
-          <Grid>
-            <Image Source="avares://KeyCard.Desktop/Assets/keycard-logo-transparent-small.png"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center"
-                   Width="{Binding $parent[Border].Bounds.Height, RelativeSource=Self}"
-                   Opacity="0.22"
-                   Margin="52,0,0,0"
-                   RenderTransformOrigin="0.5,0.5"
-                   IsHitTestVisible="False">
-              <Image.RenderTransform>
-                <RotateTransform Angle="90"/>
-              </Image.RenderTransform>
-            </Image>
-
-            <TextBlock Text="KeyCard.NET"
-                       FontSize="26"
-                       FontWeight="ExtraBold"
-                       Foreground="White"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center"/>
-          </Grid>
-        </Border>
-
-        <!-- RIGHT: profile area -->
+        <!-- RIGHT: User info + Profile menu -->
         <StackPanel Grid.Column="2"
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Center"
-                    Spacing="10"
-                    IsVisible="{Binding IsAuthenticated}">
-
+                    Spacing="10">
           <TextBlock Text="{Binding DisplayName}"
                      Foreground="White"
                      VerticalAlignment="Center"
                      Opacity="0.92"/>
 
+          <!-- Mode chip -->
           <Border x:Name="ModeChip"
-                  CornerRadius="8"
-                  Padding="8,4"
-                  Margin="0,0,8,0"
+                  CornerRadius="6"
+                  Padding="8,3"
                   VerticalAlignment="Center">
             <TextBlock x:Name="ModeChipText"
                        Text="{Binding ModeLabel}"
+                       FontSize="11"
                        FontWeight="SemiBold"
                        VerticalAlignment="Center"/>
           </Border>
 
+          <!-- Profile button -->
           <Button Classes="profileButton"
-                  Command="{Binding OpenProfileMenuCommand}">
+                  ToolTip.Tip="Profile Menu">
             <Button.Content>
-              <Grid Width="36" Height="36">
+              <Grid Width="32" Height="32">
                 <Ellipse Fill="#2C2C34" />
                 <TextBlock Text="{Binding AvatarInitials}"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center"
                            FontWeight="SemiBold"
+                           FontSize="12"
                            Foreground="White"/>
               </Grid>
             </Button.Content>
             <Button.Flyout>
-              <MenuFlyout>
-                <MenuItem Header="Profile"  Command="{Binding OpenProfileCommand}"/>
-                <MenuItem Header="Settings" Command="{Binding OpenSettingsCommand}"/>
+              <MenuFlyout Placement="BottomEdgeAlignedRight">
+                <MenuItem Header="Profile" Command="{Binding OpenProfileCommand}">
+                  <MenuItem.Icon>
+                    <TextBlock Text="👤" FontSize="16"/>
+                  </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Settings" Command="{Binding OpenSettingsCommand}">
+                  <MenuItem.Icon>
+                    <TextBlock Text="⚙️" FontSize="16"/>
+                  </MenuItem.Icon>
+                </MenuItem>
                 <Separator/>
-                <MenuItem Header="Logout"   Command="{Binding LogoutCommand}"/>
+                <MenuItem Header="Logout" Command="{Binding LogoutCommand}">
+                  <MenuItem.Icon>
+                    <TextBlock Text="🚪" FontSize="16"/>
+                  </MenuItem.Icon>
+                </MenuItem>
               </MenuFlyout>
             </Button.Flyout>
           </Button>
@@ -144,28 +190,82 @@
       </Grid>
     </Border>
 
-    <!-- Page content -->
-    <Border Grid.Row="2" Margin="20">
-      <Border.Background>
-        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-          <GradientStop Color="#111117" Offset="0"/>
-          <GradientStop Color="#12131A" Offset="1"/>
-        </LinearGradientBrush>
-      </Border.Background>
+    <!-- ====== TOP BAR ROW 3: Search + Refresh (Centered under logo) ====== -->
+    <Border Grid.Row="3"
+            Height="52"
+            Padding="16,8"
+            Margin="8,0,8,0"
+            IsVisible="{Binding IsAuthenticated}"
+            Background="Transparent">
 
-      <!-- Inner container holds your current view -->
+      <Grid>
+        <!-- Center: Search + Refresh with status -->
+        <StackPanel Orientation="Vertical"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Spacing="4">
+
+          <!-- Search bar + Refresh button row -->
+          <StackPanel Orientation="Horizontal"
+                      HorizontalAlignment="Center"
+                      Spacing="8">
+            <TextBlock Text="Filter:"
+                       VerticalAlignment="Center"
+                       Foreground="#CFCFEA"
+                       Opacity="0.8"/>
+            <TextBox x:Name="GlobalSearchBox"
+                     Width="320"
+                     Height="32"
+                     Watermark="Search by name, booking, or room"
+                     Text="{Binding GlobalSearchText}"
+                     CornerRadius="6"
+                     Padding="10,0"
+                     VerticalContentAlignment="Center"/>
+            <Button Content="↻"
+                    Classes="iconBtn"
+                    Command="{Binding RefreshCurrentViewCommand}"
+                    ToolTip.Tip="Refresh (F5)"
+                    Height="32"
+                    Width="32"
+                    FontSize="18"
+                    CornerRadius="6"/>
+          </StackPanel>
+
+          <!-- Refresh status indicator - directly below buttons -->
+          <StackPanel Orientation="Horizontal"
+                      HorizontalAlignment="Center"
+                      Spacing="6"
+                      Height="16">
+            <ProgressBar IsIndeterminate="True"
+                         IsVisible="{Binding IsRefreshing}"
+                         Width="80"
+                         Height="3"
+                         VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding RefreshStatusMessage}"
+                       FontSize="11"
+                       Foreground="#4CAF50"
+                       VerticalAlignment="Center"
+                       IsVisible="{Binding RefreshStatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+          </StackPanel>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- ====== PAGE CONTENT ====== -->
+    <Border Grid.Row="4" Margin="20,8,20,20">
       <Border CornerRadius="12"
               BorderBrush="#5C46A3"
               BorderThickness="1"
               Padding="18"
               Background="#18000000">
-        <ContentControl Content="{Binding Current}"/>
+        <ContentControl x:Name="PageHost"
+                        Content="{Binding Current}"/>
       </Border>
     </Border>
 
     <!-- Overlay watermark -->
     <Image Source="avares://KeyCard.Desktop/Assets/keycard-logo-transparent.png"
-           Grid.RowSpan="3"
+           Grid.RowSpan="5"
            HorizontalAlignment="Right"
            VerticalAlignment="Bottom"
            Margin="18"
@@ -175,13 +275,18 @@
   </Grid>
 
   <Window.Styles>
+    <!-- Profile button -->
     <Style Selector="Button.profileButton">
-      <Setter Property="Background" Value="#00000000"/>
-      <Setter Property="BorderBrush" Value="#00000000"/>
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderBrush" Value="Transparent"/>
       <Setter Property="Padding" Value="0"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.profileButton:pointerover">
+      <Setter Property="Opacity" Value="0.85"/>
     </Style>
 
-    <!-- Border#ModeChip -->
+    <!-- Mode chip -->
     <Style Selector="Border#ModeChip">
       <Setter Property="Background" Value="#2B2B33"/>
       <Setter Property="BorderBrush"
@@ -189,15 +294,6 @@
       <Setter Property="BorderThickness" Value="1"/>
     </Style>
 
-    <!-- DataGridRow:selected -->
-    <Style Selector="DataGridRow:selected">
-      <Setter Property="Opacity"
-              Value="{Binding DataContext,
-                              RelativeSource={RelativeSource AncestorType=DataGridRow},
-                              Converter={StaticResource BoolToOpacityConverter}}"/>
-    </Style>
-
-    <!-- TextBlock#ModeChipText -->
     <Style Selector="TextBlock#ModeChipText">
       <Setter Property="Foreground"
               Value="{Binding ModeLabel,
@@ -206,30 +302,69 @@
                               TargetNullValue=#CFCFF1}"/>
     </Style>
 
-    <!-- Topbar button look -->
-    <Style Selector="Button.topbarBtn">
+    <!-- Compact nav buttons - FIXED: Added MinWidth to prevent shifting -->
+    <Style Selector="Button.topbarBtn.compact">
       <Setter Property="Height" Value="36"/>
-      <Setter Property="MinWidth" Value="110"/>
       <Setter Property="Padding" Value="14,0"/>
-      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="CornerRadius" Value="8"/>
       <Setter Property="VerticalContentAlignment" Value="Center"/>
       <Setter Property="HorizontalContentAlignment" Value="Center"/>
       <Setter Property="Background" Value="#3B3B44"/>
       <Setter Property="Foreground" Value="White"/>
       <Setter Property="BorderBrush" Value="#5C46A3"/>
       <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="Opacity" Value="0.92"/>
+      <Setter Property="Opacity" Value="0.75"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="FontWeight" Value="Normal"/>
+      <Setter Property="Cursor" Value="Hand"/>
       <Setter Property="Transitions">
         <Transitions>
           <DoubleTransition Property="Opacity" Duration="0:0:0.12"/>
         </Transitions>
       </Setter>
     </Style>
-    <Style Selector="Button.topbarBtn:pointerover">
-      <Setter Property="Opacity" Value="1"/>
+
+    <Style Selector="Button.topbarBtn.compact:pointerover">
+      <Setter Property="Opacity" Value="0.95"/>
+      <Setter Property="Background" Value="#45454F"/>
     </Style>
-    <Style Selector="Button.topbarBtn:pressed">
-      <Setter Property="Opacity" Value="0.85"/>
+
+    <Style Selector="Button.topbarBtn.compact:pressed">
+      <Setter Property="Opacity" Value="0.65"/>
+    </Style>
+
+    <!-- Active (current page) - FIXED: BorderThickness matches default -->
+    <Style Selector="Button.topbarBtn.compact.active">
+      <Setter Property="Background" Value="#7B1FA2"/>
+      <Setter Property="BorderBrush" Value="#9C27B0"/>
+      <Setter Property="Opacity" Value="1"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+
+    <Style Selector="Button.topbarBtn.compact.active:pointerover">
+      <Setter Property="Background" Value="#8E24AA"/>
+    </Style>
+
+    <!-- Icon button (refresh) -->
+    <Style Selector="Button.iconBtn">
+      <Setter Property="Background" Value="#3B3B44"/>
+      <Setter Property="Foreground" Value="White"/>
+      <Setter Property="BorderBrush" Value="#5C46A3"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+
+    <Style Selector="Button.iconBtn:pointerover">
+      <Setter Property="Background" Value="#45454F"/>
+    </Style>
+
+    <!-- DataGrid selected row -->
+    <Style Selector="DataGridRow:selected">
+      <Setter Property="Opacity"
+              Value="{Binding DataContext,
+                              RelativeSource={RelativeSource AncestorType=DataGridRow},
+                              Converter={StaticResource BoolToOpacityConverter}}"/>
     </Style>
   </Window.Styles>
 </Window>

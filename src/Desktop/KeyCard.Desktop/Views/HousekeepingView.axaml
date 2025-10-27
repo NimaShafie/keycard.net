@@ -3,190 +3,366 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vms="clr-namespace:KeyCard.Desktop.ViewModels"
-    xmlns:vctrl="clr-namespace:KeyCard.Desktop.Views.Controls"
-    xmlns:views="clr-namespace:KeyCard.Desktop.Views"
+    xmlns:conv="clr-namespace:KeyCard.Desktop.Converters"
     x:Class="KeyCard.Desktop.Views.HousekeepingView"
-    x:DataType="vms:HousekeepingViewModel">
+    x:DataType="vms:HousekeepingViewModel"
+    x:Name="Root">
 
-  <!-- Single root: two rows -> Kanban (optional) + the existing 4-row layout -->
-  <Grid RowDefinitions="Auto,*">
+  <UserControl.Resources>
+    <conv:BoolNotConverter x:Key="BoolNot"/>
+    <conv:StringHasTextConverter x:Key="HasText"/>
+  </UserControl.Resources>
 
-    <!-- Keep the Kanban view exactly as you had it -->
-    <views:HousekeepingKanbanView Grid.Row="0"
-                              DataContext="{Binding Kanban}" />
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="F5" Command="{Binding RefreshCommand}"/>
+  </UserControl.KeyBindings>
 
-    <!-- Your original 4-row layout moved under Row=1 -->
-    <Grid Grid.Row="1" RowDefinitions="Auto,Auto,*,Auto">
+  <Grid RowDefinitions="Auto,*" Margin="8">
 
-      <!-- Header -->
-      <vctrl:ViewHeader Grid.Row="0"
-                        HeaderText="Housekeeping Management"
-                        SubHeaderText="Track room status and task completion"/>
+    <!-- Header -->
+    <Border Grid.Row="0"
+            CornerRadius="10"
+            BorderBrush="#3F2F73"
+            BorderThickness="1"
+            Padding="16,12"
+            Margin="0,0,0,8"
+            Background="#1B1B22">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel>
+          <TextBlock Text="Housekeeping Management"
+                     FontWeight="SemiBold"
+                     FontSize="18"
+                     Foreground="#E8E8F0"/>
+          <TextBlock Text="Track room status, tasks, and Kanban workflow"
+                     FontSize="12"
+                     Opacity="0.7"
+                     Foreground="#CFCFEA"
+                     Margin="0,2,0,0"/>
+        </StackPanel>
 
-      <!-- Toolbar -->
-      <Border Grid.Row="1" Margin="8" CornerRadius="10"
-              BorderBrush="#3F2F73" BorderThickness="1" Padding="12">
-        <Grid ColumnDefinitions="Auto,*,Auto">
-          <StackPanel Orientation="Horizontal" Spacing="8">
-            <Button Content="Refresh"
-                    Command="{Binding RefreshCommand}"
-                    IsEnabled="{Binding !IsBusy}"/>
-          </StackPanel>
+        <TextBlock Grid.Column="1"
+                   VerticalAlignment="Center"
+                   FontSize="12"
+                   Foreground="#9C27B0"
+                   IsVisible="{Binding StatusMessage, Converter={StaticResource HasText}}">
+          <Run Text="{Binding StatusMessage}"/>
+        </TextBlock>
+      </Grid>
+    </Border>
 
-          <ProgressBar Grid.Column="1"
-                       IsIndeterminate="True"
-                       IsVisible="{Binding IsBusy}"
-                       Width="150"
-                       HorizontalAlignment="Center"/>
-
-          <!-- rename only; same command to avoid duplicate Dashboard labels -->
-          <Button Grid.Column="2"
-                  Content="← Back"
-                  Command="{Binding BackToDashboardCommand}"/>
-        </Grid>
-      </Border>
-
-      <!-- Main content -->
-      <Grid Grid.Row="2" Margin="8" ColumnDefinitions="*,*">
-        <!-- Rooms panel -->
-        <Border Background="#141419"
-                BorderBrush="#4B3A86"
-                BorderThickness="1"
-                CornerRadius="8"
-                Padding="8">
-          <Grid RowDefinitions="Auto,*,Auto">
-            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
-              <TextBlock Text="Rooms"
-                         FontSize="16"
-                         FontWeight="SemiBold"/>
-              <TextBlock Text="{Binding Rooms.Count, StringFormat='({0})'}"
-                         Opacity="0.7"
-                         VerticalAlignment="Center"/>
-            </StackPanel>
-
-            <DataGrid Grid.Row="1"
-                      ItemsSource="{Binding Rooms}"
-                      SelectedItem="{Binding SelectedRoom, Mode=TwoWay}"
-                      HeadersVisibility="Column"
-                      GridLinesVisibility="All"
-                      AutoGenerateColumns="False"
-                      CanUserSortColumns="True"
-                      CanUserResizeColumns="True"
-                      IsReadOnly="False"
-                      RowHeight="36"
-                      Background="#141419">
-
-              <DataGrid.Columns>
-                <DataGridTextColumn Header="Room #"
-                                    Width="*"
-                                    Binding="{Binding Number}"
-                                    SortMemberPath="Number"/>
-                <DataGridTextColumn Header="Status"
-                                    Width="2*"
-                                    Binding="{Binding Status}"
-                                    SortMemberPath="Status"/>
-                <DataGridTemplateColumn Header="Clean"
-                                        Width="*"
-                                        SortMemberPath="IsClean">
-                  <DataGridTemplateColumn.CellTemplate>
-                    <DataTemplate>
-                      <CheckBox IsThreeState="True"
-                                IsChecked="{Binding IsClean, Mode=TwoWay}"
-                                HorizontalAlignment="Center"
-                                IsEnabled="False"/>
-                    </DataTemplate>
-                  </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-              </DataGrid.Columns>
-            </DataGrid>
-
-            <Button Grid.Row="2"
-                    Content="Mark Room Clean"
-                    Command="{Binding MarkRoomCleanCommand}"
-                    HorizontalAlignment="Stretch"
-                    HorizontalContentAlignment="Center"
-                    Margin="0,8,0,0"
-                    Background="#2E7D32"
-                    BorderBrush="#4CAF50"/>
-          </Grid>
-        </Border>
-
-        <!-- Tasks panel -->
-        <Border Grid.Column="1"
+    <!-- Tabbed Content -->
+    <TabControl Grid.Row="1"
                 Background="#141419"
                 BorderBrush="#4B3A86"
                 BorderThickness="1"
                 CornerRadius="8"
-                Padding="8">
-          <Grid RowDefinitions="Auto,*,Auto">
-            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
-              <TextBlock Text="Tasks"
-                         FontSize="16"
-                         FontWeight="SemiBold"/>
-              <TextBlock Text="{Binding Tasks.Count, StringFormat='({0})'}"
-                         Opacity="0.7"
-                         VerticalAlignment="Center"/>
-            </StackPanel>
+                Padding="0">
 
-            <DataGrid Grid.Row="1"
-                      ItemsSource="{Binding Tasks}"
-                      SelectedItem="{Binding SelectedTask, Mode=TwoWay}"
-                      HeadersVisibility="Column"
-                      GridLinesVisibility="All"
-                      AutoGenerateColumns="False"
-                      CanUserSortColumns="True"
-                      CanUserResizeColumns="True"
-                      IsReadOnly="False"
-                      RowHeight="36"
-                      Background="#141419">
+      <!-- Tab 1: Rooms & Tasks Overview -->
+      <TabItem Header="Rooms &amp; Tasks">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <Grid RowDefinitions="Auto,Auto" Margin="12"
+                x:DataType="vms:HousekeepingViewModel">
 
-              <DataGrid.Columns>
-                <DataGridTextColumn Header="Description"
-                                    Width="3*"
-                                    Binding="{Binding Description}"
-                                    SortMemberPath="Description"/>
-                <DataGridTextColumn Header="Status"
-                                    Width="*"
-                                    Binding="{Binding Status}"
-                                    SortMemberPath="Status"/>
-                <DataGridTemplateColumn Header="Done"
+            <!-- Rooms Section -->
+            <Border Grid.Row="0"
+                    CornerRadius="8"
+                    BorderBrush="#3F2F73"
+                    BorderThickness="1"
+                    Padding="12"
+                    Margin="0,0,0,12"
+                    Background="#18181E">
+              <Grid RowDefinitions="Auto,*,Auto">
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+                  <TextBlock Text="Rooms"
+                             FontWeight="SemiBold"
+                             FontSize="14"
+                             Foreground="#E8E8F0"/>
+                  <TextBlock FontSize="14" Opacity="0.7" VerticalAlignment="Center">
+                    <Run Text="("/>
+                    <Run Text="{Binding Rooms.Count}"/>
+                    <Run Text=")"/>
+                  </TextBlock>
+                </StackPanel>
+
+                <DataGrid Grid.Row="1"
+                          ItemsSource="{Binding Rooms}"
+                          SelectedItem="{Binding SelectedRoom}"
+                          AutoGenerateColumns="False"
+                          HeadersVisibility="Column"
+                          GridLinesVisibility="All"
+                          CanUserSortColumns="True"
+                          CanUserResizeColumns="True"
+                          IsReadOnly="True"
+                          RowHeight="36"
+                          MaxHeight="300"
+                          Background="#141419">
+                  <DataGrid.Columns>
+                    <DataGridTextColumn Header="Room #"
                                         Width="*"
-                                        SortMemberPath="IsCompleted">
-                  <DataGridTemplateColumn.CellTemplate>
-                    <DataTemplate>
-                      <CheckBox IsThreeState="True"
-                                IsChecked="{Binding IsCompleted, Mode=TwoWay}"
-                                HorizontalAlignment="Center"
-                                IsEnabled="False"/>
-                    </DataTemplate>
-                  </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-              </DataGrid.Columns>
-            </DataGrid>
+                                        Binding="{Binding Number}"/>
+                    <DataGridTextColumn Header="Status"
+                                        Width="2*"
+                                        Binding="{Binding Status}"/>
+                    <DataGridCheckBoxColumn Header="Clean"
+                                            Width="*"
+                                            Binding="{Binding IsClean, Mode=OneWay}"
+                                            IsReadOnly="True"/>
+                  </DataGrid.Columns>
+                </DataGrid>
 
-            <Button Grid.Row="2"
-                    Content="Mark Task Complete"
-                    Command="{Binding MarkTaskDoneCommand}"
-                    HorizontalAlignment="Stretch"
-                    HorizontalContentAlignment="Center"
-                    Margin="0,8,0,0"
-                    Background="#1976D2"
-                    BorderBrush="#2196F3"/>
+                <Button Grid.Row="2"
+                        Content="Mark Room Clean"
+                        Command="{Binding MarkRoomCleanCommand}"
+                        Margin="0,8,0,0"
+                        HorizontalAlignment="Left"
+                        Padding="16,8"
+                        CornerRadius="6"/>
+              </Grid>
+            </Border>
+
+            <!-- Tasks Section -->
+            <Border Grid.Row="1"
+                    CornerRadius="8"
+                    BorderBrush="#3F2F73"
+                    BorderThickness="1"
+                    Padding="12"
+                    Background="#18181E">
+              <Grid RowDefinitions="Auto,*,Auto">
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+                  <TextBlock Text="Tasks"
+                             FontWeight="SemiBold"
+                             FontSize="14"
+                             Foreground="#E8E8F0"/>
+                  <TextBlock FontSize="14" Opacity="0.7" VerticalAlignment="Center">
+                    <Run Text="("/>
+                    <Run Text="{Binding Tasks.Count}"/>
+                    <Run Text=")"/>
+                  </TextBlock>
+                </StackPanel>
+
+                <DataGrid Grid.Row="1"
+                          ItemsSource="{Binding Tasks}"
+                          SelectedItem="{Binding SelectedTask}"
+                          AutoGenerateColumns="False"
+                          HeadersVisibility="Column"
+                          GridLinesVisibility="All"
+                          CanUserSortColumns="True"
+                          CanUserResizeColumns="True"
+                          IsReadOnly="True"
+                          RowHeight="36"
+                          MaxHeight="300"
+                          Background="#141419">
+                  <DataGrid.Columns>
+                    <DataGridTextColumn Header="Description"
+                                        Width="3*"
+                                        Binding="{Binding Description}"/>
+                    <DataGridTextColumn Header="Status"
+                                        Width="*"
+                                        Binding="{Binding Status}"/>
+                    <DataGridCheckBoxColumn Header="Done"
+                                            Width="*"
+                                            Binding="{Binding IsCompleted, Mode=OneWay}"
+                                            IsReadOnly="True"/>
+                  </DataGrid.Columns>
+                </DataGrid>
+
+                <Button Grid.Row="2"
+                        Content="Mark Task Complete"
+                        Command="{Binding MarkTaskDoneCommand}"
+                        Margin="0,8,0,0"
+                        HorizontalAlignment="Left"
+                        Padding="16,8"
+                        CornerRadius="6"/>
+              </Grid>
+            </Border>
           </Grid>
-        </Border>
-      </Grid>
+        </ScrollViewer>
+      </TabItem>
 
-      <!-- Status bar -->
-      <Border Grid.Row="3"
-              Background="#1E1F29"
-              BorderBrush="#3F2F73"
-              BorderThickness="0,1,0,0"
-              Padding="12,8">
-        <TextBlock Text="{Binding StatusMessage}"
-                   Opacity="0.9"
-                   IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-      </Border>
+      <!-- Tab 2: Kanban Board -->
+      <TabItem Header="Kanban Board">
+        <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto">
+          <Grid ColumnDefinitions="*,*,*" Margin="12"
+                x:DataType="vms:HousekeepingViewModel">
 
-    </Grid>
+            <!-- Pending Column -->
+            <Border Grid.Column="0"
+                    CornerRadius="8"
+                    BorderBrush="#3F2F73"
+                    BorderThickness="1"
+                    Padding="12"
+                    Background="#18181E"
+                    Margin="0,0,6,0">
+              <Grid RowDefinitions="Auto,Auto,*">
+                <TextBlock Grid.Row="0"
+                           Text="Pending"
+                           FontWeight="SemiBold"
+                           FontSize="14"
+                           Foreground="#E8E8F0"
+                           Margin="0,0,0,8"/>
+
+                <TextBlock Grid.Row="1" FontSize="12" Opacity="0.7" Margin="0,0,0,8">
+                  <Run Text="{Binding Kanban.Pending.Count}"/>
+                  <Run Text=" tasks"/>
+                </TextBlock>
+
+                <ListBox Grid.Row="2"
+                         ItemsSource="{Binding Kanban.PendingView}"
+                         Background="Transparent"
+                         BorderThickness="0">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <Border CornerRadius="6"
+                              Padding="10"
+                              Margin="0,0,0,8"
+                              Background="#2A2A33"
+                              BorderBrush="#5C46A3"
+                              BorderThickness="1">
+                        <StackPanel Spacing="6">
+                          <TextBlock Text="{Binding Title}"
+                                     FontWeight="SemiBold"
+                                     TextWrapping="Wrap"/>
+                          <TextBlock FontSize="12" Opacity="0.7">
+                            <Run Text="Room "/>
+                            <Run Text="{Binding RoomId}"/>
+                          </TextBlock>
+                          <TextBlock Text="{Binding Notes}"
+                                     FontSize="11"
+                                     Opacity="0.6"
+                                     TextWrapping="Wrap"
+                                     IsVisible="{Binding Notes, Converter={StaticResource HasText}}"/>
+                          <ComboBox
+                              ItemsSource="{Binding $parent[ListBox].((vms:HousekeepingViewModel)DataContext).Kanban.StaffOptions}"
+                              SelectedItem="{Binding AssignedTo}"
+                              FontSize="11"
+                              Width="150"
+                              HorizontalAlignment="Left"/>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </Grid>
+            </Border>
+
+            <!-- In Progress Column -->
+            <Border Grid.Column="1"
+                    CornerRadius="8"
+                    BorderBrush="#3F2F73"
+                    BorderThickness="1"
+                    Padding="12"
+                    Background="#18181E"
+                    Margin="6,0,6,0">
+              <Grid RowDefinitions="Auto,Auto,*">
+                <TextBlock Grid.Row="0"
+                           Text="In Progress"
+                           FontWeight="SemiBold"
+                           FontSize="14"
+                           Foreground="#E8E8F0"
+                           Margin="0,0,0,8"/>
+
+                <TextBlock Grid.Row="1" FontSize="12" Opacity="0.7" Margin="0,0,0,8">
+                  <Run Text="{Binding Kanban.InProgress.Count}"/>
+                  <Run Text=" tasks"/>
+                </TextBlock>
+
+                <ListBox Grid.Row="2"
+                         ItemsSource="{Binding Kanban.InProgressView}"
+                         Background="Transparent"
+                         BorderThickness="0">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <Border CornerRadius="6"
+                              Padding="10"
+                              Margin="0,0,0,8"
+                              Background="#2A2A33"
+                              BorderBrush="#7B1FA2"
+                              BorderThickness="1">
+                        <StackPanel Spacing="6">
+                          <TextBlock Text="{Binding Title}"
+                                     FontWeight="SemiBold"
+                                     TextWrapping="Wrap"/>
+                          <TextBlock FontSize="12" Opacity="0.7">
+                            <Run Text="Room "/>
+                            <Run Text="{Binding RoomId}"/>
+                          </TextBlock>
+                          <TextBlock Text="{Binding Notes}"
+                                     FontSize="11"
+                                     Opacity="0.6"
+                                     TextWrapping="Wrap"
+                                     IsVisible="{Binding Notes, Converter={StaticResource HasText}}"/>
+                          <TextBlock FontSize="11" Opacity="0.8">
+                            <Run Text="Assigned: "/>
+                            <Run Text="{Binding AssignedTo}"/>
+                          </TextBlock>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </Grid>
+            </Border>
+
+            <!-- Completed Column -->
+            <Border Grid.Column="2"
+                    CornerRadius="8"
+                    BorderBrush="#3F2F73"
+                    BorderThickness="1"
+                    Padding="12"
+                    Background="#18181E"
+                    Margin="6,0,0,0">
+              <Grid RowDefinitions="Auto,Auto,*">
+                <TextBlock Grid.Row="0"
+                           Text="Completed"
+                           FontWeight="SemiBold"
+                           FontSize="14"
+                           Foreground="#E8E8F0"
+                           Margin="0,0,0,8"/>
+
+                <TextBlock Grid.Row="1" FontSize="12" Opacity="0.7" Margin="0,0,0,8">
+                  <Run Text="{Binding Kanban.Completed.Count}"/>
+                  <Run Text=" tasks"/>
+                </TextBlock>
+
+                <ListBox Grid.Row="2"
+                         ItemsSource="{Binding Kanban.CompletedView}"
+                         Background="Transparent"
+                         BorderThickness="0">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <Border CornerRadius="6"
+                              Padding="10"
+                              Margin="0,0,0,8"
+                              Background="#2A2A33"
+                              BorderBrush="#4CAF50"
+                              BorderThickness="1"
+                              Opacity="0.7">
+                        <StackPanel Spacing="6">
+                          <TextBlock Text="{Binding Title}"
+                                     FontWeight="SemiBold"
+                                     TextWrapping="Wrap"
+                                     TextDecorations="Strikethrough"/>
+                          <TextBlock FontSize="12" Opacity="0.7">
+                            <Run Text="Room "/>
+                            <Run Text="{Binding RoomId}"/>
+                          </TextBlock>
+                          <TextBlock FontSize="11" Opacity="0.8">
+                            <Run Text="By: "/>
+                            <Run Text="{Binding AssignedTo}"/>
+                          </TextBlock>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </Grid>
+            </Border>
+
+          </Grid>
+        </ScrollViewer>
+      </TabItem>
+    </TabControl>
   </Grid>
 </UserControl>

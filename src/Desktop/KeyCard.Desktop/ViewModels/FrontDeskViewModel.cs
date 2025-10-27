@@ -18,6 +18,7 @@ namespace KeyCard.Desktop.ViewModels
         private readonly INavigationService _nav;
         private readonly IBookingService _bookings;
         private readonly IRoomsService _rooms;
+        private readonly IToolbarService _toolbar;
 
         private Booking? _selected;
         public Booking? Selected
@@ -117,11 +118,12 @@ namespace KeyCard.Desktop.ViewModels
         public ICommand CheckOutCommand { get; }
         public ICommand AssignRoomCommand { get; }
 
-        public FrontDeskViewModel(INavigationService nav, IBookingService bookings, IRoomsService rooms)
+        public FrontDeskViewModel(INavigationService nav, IBookingService bookings, IRoomsService rooms, IToolbarService toolbar)
         {
             _nav = nav ?? throw new ArgumentNullException(nameof(nav));
             _bookings = bookings ?? throw new ArgumentNullException(nameof(bookings));
             _rooms = rooms ?? throw new ArgumentNullException(nameof(rooms));
+            _toolbar = toolbar;
 
             BackToDashboardCommand = new UnifiedRelayCommand(() => _nav.NavigateTo<DashboardViewModel>());
             RefreshCommand = new UnifiedRelayCommand(RefreshAsync, () => !IsBusy);
@@ -129,6 +131,14 @@ namespace KeyCard.Desktop.ViewModels
             CheckInCommand = new UnifiedRelayCommand(CheckInAsync, () => CanCheckIn());
             CheckOutCommand = new UnifiedRelayCommand(CheckOutAsync, () => CanCheckOut());
             AssignRoomCommand = new UnifiedRelayCommand(AssignRoomAsync, () => CanAssignRoom());
+
+            _toolbar.AttachContext(
+                title: "Front Desk Operations",
+                subtitle: "Manage arrivals, departures, and check-ins",
+                onRefreshAsync: RefreshAsync,
+                onSearch: q => { SearchText = q ?? string.Empty; ApplyFilter(); },
+                initialSearchText: SearchText
+            );
 
             _ = RefreshAsync();
         }

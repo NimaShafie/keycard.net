@@ -23,17 +23,40 @@ public partial class MainViewModel : ObservableObject
     private readonly ISignalRService _signalR;
     private readonly IAuthService _auth;
     private readonly INavigationService _nav;
-    private readonly IServiceProvider _serviceProvider;  // ADDED for Folio
+    private readonly IServiceProvider _serviceProvider;
 
     public ObservableCollection<Booking> BookingItems { get; } = new();
 
     [ObservableProperty] private ViewModelBase? current;
     [ObservableProperty] private bool isBusy;
-
     [ObservableProperty] private bool isAuthenticated;
     [ObservableProperty] private string displayName = string.Empty;
+    [ObservableProperty] private string modeLabel = string.Empty;
 
-    [ObservableProperty] private string modeLabel = string.Empty;  // ADDED for mode display
+    // Page tracking properties for button highlighting
+    [ObservableProperty] private bool isOnDashboard;
+    [ObservableProperty] private bool isOnFrontDesk;
+    [ObservableProperty] private bool isOnHousekeeping;
+    [ObservableProperty] private bool isOnFolio;
+
+    // Global search text with real-time filtering
+    private string? _globalSearchText;
+    public string? GlobalSearchText
+    {
+        get => _globalSearchText;
+        set
+        {
+            if (SetProperty(ref _globalSearchText, value))
+            {
+                // Trigger real-time search on child ViewModels
+                TriggerChildSearch(value);
+            }
+        }
+    }
+
+    // Refresh indicator properties
+    [ObservableProperty] private bool isRefreshing;
+    [ObservableProperty] private string? refreshStatusMessage;
 
     public string AvatarInitials => string.Join("",
         (DisplayName ?? string.Empty)
@@ -42,19 +65,19 @@ public partial class MainViewModel : ObservableObject
             .Select(s => char.ToUpperInvariant(s[0])));
 
     public MainViewModel(
-        IBookingService bookings, 
-        ISignalRService signalR, 
-        IAuthService auth, 
+        IBookingService bookings,
+        ISignalRService signalR,
+        IAuthService auth,
         INavigationService nav,
-        IServiceProvider serviceProvider)  // ADDED parameter
+        IServiceProvider serviceProvider)
     {
         _bookings = bookings;
         _signalR = signalR;
         _auth = auth;
         _nav = nav;
-        _serviceProvider = serviceProvider;  // ADDED
+        _serviceProvider = serviceProvider;
 
-        // ADDED: Determine mode label
+        // Determine mode label
         var env = serviceProvider.GetService<IAppEnvironment>();
         ModeLabel = env?.IsMock == true ? "MOCK MODE" : "LIVE";
 
@@ -62,7 +85,7 @@ public partial class MainViewModel : ObservableObject
         ApplyAuth();
         _auth.StateChanged += (_, __) => ApplyAuth();
 
-        // Schedule initial navigation so we don't block the UI thread
+        // Schedule initial navigation
         Dispatcher.UIThread.Post(() =>
         {
             if (!_auth.IsAuthenticated)
@@ -72,13 +95,49 @@ public partial class MainViewModel : ObservableObject
         }, DispatcherPriority.Background);
     }
 
+    partial void OnCurrentChanged(ViewModelBase? value)
+    {
+        // Update page tracking when navigation occurs
+        UpdatePageTracking();
+
+        // Apply current search filter to new view
+        if (!string.IsNullOrWhiteSpace(GlobalSearchText))
+        {
+            TriggerChildSearch(GlobalSearchText);
+        }
+    }
+
+    private void UpdatePageTracking()
+    {
+        IsOnDashboard = Current is DashboardViewModel;
+        IsOnFrontDesk = Current is FrontDeskViewModel;
+        IsOnHousekeeping = Current is HousekeepingViewModel;
+        IsOnFolio = Current?.GetType().Name == "FolioViewModel"; // Handle Folio module
+    }
+
     private void ApplyAuth()
     {
         IsAuthenticated = _auth.IsAuthenticated;
         DisplayName = _auth.DisplayName ?? string.Empty;
-
-        // refresh computed initials
         OnPropertyChanged(nameof(AvatarInitials));
+    }
+
+    private void TriggerChildSearch(string? searchText)
+    {
+        // Pass search filter to the current view model
+        if (Current is DashboardViewModel dashboard)
+        {
+            dashboard.SearchText = searchText;
+        }
+        else if (Current is FrontDeskViewModel frontDesk)
+        {
+            frontDesk.SearchText = searchText;
+        }
+        else if (Current is HousekeepingViewModel housekeeping)
+        {
+            housekeeping.SearchText = searchText;
+        }
+        // Add other view models as needed
     }
 
     [RelayCommand]
@@ -96,13 +155,60 @@ public partial class MainViewModel : ObservableObject
         finally { IsBusy = false; }
     }
 
-    // Profile menu
+    [RelayCommand]
+    private async Task RefreshCurrentView()
+    {
+        if (IsRefreshing) return;
+
+        try
+        {
+            IsRefreshing = true;
+            RefreshStatusMessage = null;
+
+            // Call refresh on the current view model
+            if (Current is DashboardViewModel dashboard)
+            {
+                await Task.Run(() => dashboard.RefreshCommand.Execute(null));
+                await Task.Delay(300); // Brief delay to show spinner
+            }
+            else if (Current is FrontDeskViewModel frontDesk)
+            {
+                await Task.Run(() => frontDesk.RefreshCommand.Execute(null));
+                await Task.Delay(300);
+            }
+            else if (Current is HousekeepingViewModel housekeeping)
+            {
+                await Task.Run(() => housekeeping.RefreshCommand.Execute(null));
+                await Task.Delay(300);
+            }
+
+            // Show success message
+            RefreshStatusMessage = "✓ Synced";
+
+            // Clear success message after 2 seconds
+            await Task.Delay(2000);
+            RefreshStatusMessage = null;
+        }
+        catch (Exception ex)
+        {
+            RefreshStatusMessage = "✗ Failed";
+            System.Diagnostics.Debug.WriteLine($"Refresh failed: {ex.Message}");
+
+            // Clear error message after 3 seconds
+            await Task.Delay(3000);
+            RefreshStatusMessage = null;
+        }
+        finally
+        {
+            IsRefreshing = false;
+        }
+    }
+
     [RelayCommand]
     private void OpenProfileMenu()
     {
-        // Touch instance state so CA1822 doesn't suggest 'static'
         _ = IsAuthenticated;
-        // Flyout opening is handled by XAML; no further action needed here.
+        // Flyout opens automatically from XAML
     }
 
     [RelayCommand]
@@ -118,11 +224,15 @@ public partial class MainViewModel : ObservableObject
         _nav.NavigateTo<LoginViewModel>();
     }
 
-    // Top-left Dashboard button
     [RelayCommand]
     private void NavigateDashboard() => _nav.NavigateTo<DashboardViewModel>();
 
-    // ADDED: Navigate to Folio (implementation in partial class)
+    [RelayCommand]
+    private void NavigateFrontDesk() => _nav.NavigateTo<FrontDeskViewModel>();
+
+    [RelayCommand]
+    private void NavigateHousekeeping() => _nav.NavigateTo<HousekeepingViewModel>();
+
     [RelayCommand]
     private void NavigateFolio() => NavigateFolioImpl();
 

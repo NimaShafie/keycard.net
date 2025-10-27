@@ -54,8 +54,9 @@ namespace KeyCard.Desktop.Infrastructure
 
         public bool CanExecute(object? parameter)
         {
-            if (_disposed || _isExecuting) return false;
-            return _canExecute?.Invoke(parameter) ?? true;
+            if (_disposed) return false;
+            if (_isExecuting) return false; // block reentrancy while running
+            return _canExecute?.Invoke(parameter) ?? true; // default true when no predicate
         }
 
         public async void Execute(object? parameter)
@@ -86,7 +87,7 @@ namespace KeyCard.Desktop.Infrastructure
             }
             catch (Exception)
             {
-                // Log or handle as needed
+                // Let caller handle/log as needed
                 throw;
             }
             finally
@@ -112,10 +113,10 @@ namespace KeyCard.Desktop.Infrastructure
         public void Dispose()
         {
             if (_disposed) return;
-
             _cts?.Dispose();
             _cts = null;
             _disposed = true;
+            RaiseCanExecuteChanged();
         }
     }
 }

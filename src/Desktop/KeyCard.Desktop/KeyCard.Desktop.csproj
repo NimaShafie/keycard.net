@@ -102,10 +102,14 @@
     <AvaloniaXaml Update="Views\HousekeepingKanbanView.axaml">
       <SubType>Designer</SubType>
     </AvaloniaXaml>
+    <AvaloniaXaml Update="Views\Shared\TopBar.axaml">
+      <SubType>Designer</SubType>
+    </AvaloniaXaml>
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Modules\Folio\Views\" />
+    <Folder Include="Views\Shared\" />
   </ItemGroup>
 
   <!-- ====== (OPT-IN) DESIGNER WORKAROUNDS: run ONLY if explicitly enabled ====== -->

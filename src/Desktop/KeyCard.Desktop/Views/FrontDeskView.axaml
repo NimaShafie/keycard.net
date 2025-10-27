@@ -31,8 +31,9 @@
     <Border Grid.Row="1" Margin="8" CornerRadius="10"
             BorderBrush="#3F2F73" BorderThickness="1" Padding="12">
       <Grid ColumnDefinitions="*,12,Auto">
-        <!-- Search -->
-        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+        <!-- Search (duplicate of shared TopBar) -->
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" IsVisible="False">
+          <!-- HIDDEN: shared TopBar handles search/refresh -->
           <TextBox x:Name="SearchBox"
                    Width="300"
                    Watermark="Search by booking ID, name, or confirmation code"
@@ -47,7 +48,7 @@
 
         <!-- 12px spacer is Column 1 -->
 
-        <!-- Status indicator -->
+        <!-- Status indicator + Back (kept) -->
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
           <ProgressBar IsIndeterminate="True"
                        IsVisible="{Binding IsBusy}"
@@ -59,7 +60,6 @@
     </Border>
 
     <!-- Main content -->
-    <!-- ONLY CHANGE HERE: widen list / shrink actions (~73% / 27%) -->
     <Grid Grid.Row="2" Margin="8" ColumnDefinitions="11*,12,4*">
       <!-- Bookings list -->
       <Border Grid.Column="0"

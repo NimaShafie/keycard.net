@@ -16,6 +16,20 @@
     <FluentTheme/>
     <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
 
+    <Styles>
+      <Style Selector="Border.frame">
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="#6F58FF"/>
+        <Setter Property="Background" Value="#26262B"/>
+      </Style>
+
+      <Style Selector="Border.toolbar-status-popup">
+        <Setter Property="Background" Value="#2A2A2F"/>
+        <Setter Property="BorderBrush" Value="#6F58FF"/>
+        <Setter Property="BorderThickness" Value="1"/>
+      </Style>
+    </Styles>
+
     <!-- Your shared spacing (kept) -->
     <Style Selector="TextBox, Button">
       <Setter Property="Margin" Value="0,4,0,0"/>

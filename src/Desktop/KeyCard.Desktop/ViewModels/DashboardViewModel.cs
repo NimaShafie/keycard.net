@@ -18,6 +18,7 @@ namespace KeyCard.Desktop.ViewModels
         private readonly INavigationService _nav;
         private readonly IBookingService _bookings;
         private readonly IAuthService _auth;
+        private readonly IToolbarService? _toolbar;
 
         private string? _currentUserDisplay;
         public string? CurrentUserDisplay
@@ -67,22 +68,38 @@ namespace KeyCard.Desktop.ViewModels
         public DashboardViewModel(
             INavigationService nav,
             IBookingService bookings,
-            IAuthService auth)
+            IAuthService auth,
+            IToolbarService? toolbar = null)
         {
             _nav = nav ?? throw new ArgumentNullException(nameof(nav));
             _bookings = bookings ?? throw new ArgumentNullException(nameof(bookings));
             _auth = auth ?? throw new ArgumentNullException(nameof(auth));
+            _toolbar = toolbar;
 
             CurrentUserDisplay = _auth.DisplayName ?? "Staff Console";
 
             GoFrontDeskCommand = new UnifiedRelayCommand(() => _nav.NavigateTo<FrontDeskViewModel>());
             GoHousekeepingCommand = new UnifiedRelayCommand(() => _nav.NavigateTo<HousekeepingViewModel>());
-
-            // FolioViewModel now inherits from ViewModelBase, so this works
             GoFolioCommand = new UnifiedRelayCommand(() => _nav.NavigateTo<FolioViewModel>());
 
             RefreshCommand = new UnifiedRelayCommand(RefreshAsync, () => !IsRefreshing);
             SearchCommand = new UnifiedRelayCommand(() => ApplyFilter());
+
+            // Configure the shared toolbar if available
+            if (_toolbar != null)
+            {
+                _toolbar.AttachContext(
+                    title: "Dashboard Overview",
+                    subtitle: "Mock Staff",
+                    onRefreshAsync: RefreshAsync,
+                    onSearch: q =>
+                    {
+                        SearchText = q ?? string.Empty;
+                        ApplyFilter();
+                    },
+                    initialSearchText: SearchText
+                );
+            }
 
             _ = RefreshAsync();
         }
@@ -94,7 +111,6 @@ namespace KeyCard.Desktop.ViewModels
             try
             {
                 IsRefreshing = true;
-                SyncMessage = "Syncing...";
 
                 var arrivals = await _bookings.GetTodayArrivalsAsync();
 
@@ -105,17 +121,12 @@ namespace KeyCard.Desktop.ViewModels
                 }
 
                 ApplyFilter();
-
-                SyncMessage = "✓ Synced";
-                await Task.Delay(2000);
-                SyncMessage = null;
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Failed to refresh arrivals: {ex.Message}");
                 Arrivals.Clear();
                 FilteredArrivals.Clear();
-                SyncMessage = "✗ Sync failed";
             }
             finally
             {

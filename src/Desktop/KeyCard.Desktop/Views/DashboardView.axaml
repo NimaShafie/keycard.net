@@ -21,15 +21,17 @@
     <KeyBinding Gesture="F5" Command="{Binding RefreshCommand}"/>
   </UserControl.KeyBindings>
 
-  <Grid RowDefinitions="Auto,Auto,*" Margin="8">
+  <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="8">
     <!-- Header -->
     <vctrl:ViewHeader Grid.Row="0"
                       HeaderText="Dashboard Overview"
                       SubHeaderText="{Binding CurrentUserDisplay}" />
 
-    <!-- Toolbar -->
+    <!-- Toolbar (duplicate of shared TopBar) -->
     <Border Grid.Row="1" Margin="8,8,8,0" CornerRadius="10"
-            BorderBrush="#3F2F73" BorderThickness="1" Padding="12">
+            BorderBrush="#3F2F73" BorderThickness="1" Padding="12"
+            IsVisible="False">
+      <!-- HIDDEN: shared TopBar provides this -->
       <!-- Make the left section stretch, keep filter and refresh on right -->
       <Grid ColumnDefinitions="*,12,Auto,12,Auto">
         <!-- Stretching primary buttons (fill available space) -->

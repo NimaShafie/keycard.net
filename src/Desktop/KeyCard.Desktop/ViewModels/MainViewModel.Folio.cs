@@ -3,6 +3,7 @@ using System;
 
 using KeyCard.Desktop.Modules.Folio.Services;
 using KeyCard.Desktop.Modules.Folio.ViewModels;
+using KeyCard.Desktop.Services;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -27,6 +28,7 @@ namespace KeyCard.Desktop.ViewModels
                     // If not registered, create manually with required dependencies
                     var folioService = _serviceProvider.GetService<IFolioService>();
                     var logger = _serviceProvider.GetService<ILogger<FolioViewModel>>();
+                    var toolbar = _serviceProvider.GetService<IToolbarService>();   // required now
 
                     if (folioService == null)
                     {
@@ -42,7 +44,23 @@ namespace KeyCard.Desktop.ViewModels
                             ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<FolioViewModel>.Instance;
                     }
 
-                    folioVm = new FolioViewModel(folioService, logger);
+                    if (toolbar == null)
+                    {
+                        // Be defensive: construct a ToolbarService if DI is missing it
+                        var nav = _serviceProvider.GetService<INavigationService>();
+                        if (nav != null)
+                        {
+                            toolbar = new ToolbarService(nav);
+                        }
+                        else
+                        {
+                            // Absolute fallback: preserve previous behavior clearly
+                            throw new InvalidOperationException("IToolbarService is not available and cannot be constructed.");
+                        }
+                    }
+
+                    // Pass toolbar to the FolioViewModel (new required parameter)
+                    folioVm = new FolioViewModel(folioService, logger!, toolbar);
                 }
 
                 // FolioViewModel now inherits from ViewModelBase, so this works

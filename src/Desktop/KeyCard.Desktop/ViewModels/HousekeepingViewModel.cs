@@ -17,6 +17,7 @@ namespace KeyCard.Desktop.ViewModels
     {
         private readonly IHousekeepingService _service;
         private readonly INavigationService _nav;
+        private readonly IToolbarService _toolbar;
 
         public HousekeepingKanbanAdapter Kanban { get; }
 
@@ -71,6 +72,13 @@ namespace KeyCard.Desktop.ViewModels
             set => SetProperty(ref _statusMessage, value);
         }
 
+        // SearchText property for MainViewModel compatibility
+        public string? SearchText
+        {
+            get => Kanban.FilterText;
+            set => Kanban.FilterText = value;
+        }
+
         public ObservableCollection<RoomRow> Rooms { get; } = new();
         public ObservableCollection<TaskRow> Tasks { get; } = new();
 
@@ -79,10 +87,11 @@ namespace KeyCard.Desktop.ViewModels
         public ICommand MarkRoomCleanCommand { get; }
         public ICommand MarkTaskDoneCommand { get; }
 
-        public HousekeepingViewModel(IHousekeepingService service, INavigationService nav)
+        public HousekeepingViewModel(IHousekeepingService service, INavigationService nav, IToolbarService toolbar)
         {
             _service = service ?? throw new ArgumentNullException(nameof(service));
             _nav = nav ?? throw new ArgumentNullException(nameof(nav));
+            _toolbar = toolbar;
 
             // Initialize adapter and connect base actions
             Kanban = new HousekeepingKanbanAdapter(this);
@@ -91,6 +100,14 @@ namespace KeyCard.Desktop.ViewModels
             RefreshCommand = new UnifiedRelayCommand(RefreshAsync, () => !IsBusy);
             MarkRoomCleanCommand = new UnifiedRelayCommand(MarkRoomCleanAsync, () => CanMarkRoomClean());
             MarkTaskDoneCommand = new UnifiedRelayCommand(MarkTaskDoneAsync, () => CanMarkTaskDone());
+
+            _toolbar.AttachContext(
+                title: "Housekeeping",
+                subtitle: "Rooms & tasks",
+                onRefreshAsync: RefreshAsync,
+                onSearch: q => { Kanban.FilterText = q ?? string.Empty; }, // or your own filter field
+                initialSearchText: Kanban?.FilterText
+            );
 
             _ = RefreshAsync();
         }
