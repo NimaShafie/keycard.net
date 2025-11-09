@@ -44,8 +44,8 @@ namespace KeyCard.Desktop.ViewModels
                 _useMocks = value;
                 OnPropertyChanged(nameof(UseMocks));
                 StatusMessage = value
-                    ? "⚠️ Mock mode selected (requires app restart)"
-                    : "⚠️ Live mode selected (requires app restart)";
+                    ? "Mock mode selected (requires app restart)"
+                    : "Live mode selected (requires app restart)";
             }
         }
 

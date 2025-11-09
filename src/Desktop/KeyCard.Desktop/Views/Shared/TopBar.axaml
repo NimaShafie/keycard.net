@@ -20,44 +20,56 @@
           <TextBlock Text="{Binding Subtitle}" Opacity="0.8"/>
         </StackPanel>
 
-        <!-- Center: Nav buttons -->
-        <StackPanel Orientation="Horizontal" Spacing="8" DockPanel.Dock="Left">
-          <Button Content="Dashboard"     Command="{Binding NavigateDashboardCommand}"/>
-          <Button Content="Front Desk"    Command="{Binding NavigateFrontDeskCommand}"/>
-          <Button Content="Housekeeping"  Command="{Binding NavigateHousekeepingCommand}"/>
+        <!-- Right: Refresh button -->
+        <Grid DockPanel.Dock="Right" Margin="10,0,0,0">
+          <Button x:Name="RefreshButton"
+                  Command="{Binding ExecuteRefreshCommand}"
+                  ToolTip.Tip="Refresh data"
+                  Width="40"
+                  Height="40"
+                  Padding="0">
+            <!-- Refresh Icon using PathIcon for better rendering -->
+            <Path Data="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"
+                  Fill="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                  Stretch="Uniform"
+                  Width="20"
+                  Height="20"/>
+          </Button>
+
+          <Popup IsOpen="{Binding IsSyncPopupOpen}"
+                 PlacementTarget="{Binding #RefreshButton}"
+                 PlacementMode="Top"
+                 VerticalOffset="-6">
+            <Border Padding="10" CornerRadius="10" Classes="toolbar-status-popup" Opacity="0.98">
+              <StackPanel Spacing="6">
+                <TextBlock Text="{Binding SyncMessage}" FontWeight="Medium"/>
+                <ProgressBar IsIndeterminate="True"
+                             IsVisible="{Binding IsRefreshing}"
+                             MinWidth="220" Height="6"/>
+              </StackPanel>
+            </Border>
+          </Popup>
+        </Grid>
+
+        <!-- Center: Nav buttons + Filter on SAME ROW -->
+        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <!-- Navigation Buttons -->
+          <Button Content="Dashboard" Command="{Binding NavigateDashboardCommand}"/>
+          <Button Content="Front Desk" Command="{Binding NavigateFrontDeskCommand}"/>
+          <Button Content="Housekeeping" Command="{Binding NavigateHousekeepingCommand}"/>
           <Button Content="Folio Manager" Command="{Binding NavigateFolioCommand}"/>
+
+          <!-- Separator -->
+          <Border Width="1" Height="30" Background="#3F3F3F" Margin="8,0"/>
+
+          <!-- Filter on same row -->
+          <TextBlock Text="Filter:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+          <TextBox Width="250"
+                   Watermark="Search by name, booking, or room"
+                   Text="{Binding SearchText, Mode=TwoWay}"
+                   VerticalAlignment="Center"/>
         </StackPanel>
 
-        <!-- Right: Search + Refresh -->
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
-          <StackPanel Orientation="Horizontal" Spacing="8">
-            <TextBlock Text="Filter:" VerticalAlignment="Center" />
-            <TextBox Width="320"
-                     Watermark="Search by name, booking, or room"
-                     Text="{Binding SearchText, Mode=TwoWay}"/>
-            <Button Content="Search" Command="{Binding ExecuteSearchCommand}" />
-          </StackPanel>
-
-          <Grid>
-            <Button x:Name="RefreshButton"
-                    Content="⟳ Refresh"
-                    Command="{Binding ExecuteRefreshCommand}"/>
-
-            <Popup IsOpen="{Binding IsSyncPopupOpen}"
-                   PlacementTarget="{Binding #RefreshButton}"
-                   PlacementMode="Top"
-                   VerticalOffset="-6">
-              <Border Padding="10" CornerRadius="10" Classes="toolbar-status-popup" Opacity="0.98">
-                <StackPanel Spacing="6">
-                  <TextBlock Text="{Binding SyncMessage}" FontWeight="Medium"/>
-                  <ProgressBar IsIndeterminate="True"
-                               IsVisible="{Binding IsRefreshing}"
-                               MinWidth="220" Height="6"/>
-                </StackPanel>
-              </Border>
-            </Popup>
-          </Grid>
-        </StackPanel>
       </DockPanel>
     </Border>
   </Grid>

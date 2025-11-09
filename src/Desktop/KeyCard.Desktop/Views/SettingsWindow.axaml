@@ -1,0 +1,69 @@
+<!-- Views/SettingsWindow.axaml -->
+<Window
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:views="clr-namespace:KeyCard.Desktop.Views"
+    x:Class="KeyCard.Desktop.Views.SettingsWindow"
+    Width="900"
+    Height="650"
+    CanResize="True"
+    ShowInTaskbar="False"
+    SystemDecorations="None"
+    WindowStartupLocation="CenterOwner"
+    Background="Transparent">
+
+  <Grid>
+    <!-- Non-focusable backdrop (no focus visual) -->
+    <Border x:Name="BackdropCloser"
+            Background="#80000000"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
+            IsHitTestVisible="True" />
+
+    <!-- Opaque modal card -->
+    <Border
+        Width="860"
+        Height="600"
+        Background="#1E1E24"
+        BorderBrush="#5C46A3"
+        BorderThickness="1"
+        CornerRadius="14"
+        HorizontalAlignment="Center"
+        VerticalAlignment="Center"
+        Padding="8"
+        ClipToBounds="True"
+        BoxShadow="0 18 48 0 #40000000">
+
+      <Grid RowDefinitions="Auto,*">
+
+        <!-- Title bar -->
+        <Border CornerRadius="10,10,0,0" Background="#25252C" Height="44">
+          <Grid x:Name="TitleBar" ColumnDefinitions="*,Auto">
+            <TextBlock
+                Text="Settings"
+                Margin="14,0,0,0"
+                VerticalAlignment="Center"
+                FontWeight="SemiBold"
+                FontSize="14"/>
+            <Button
+                x:Name="CloseButton"
+                Grid.Column="1"
+                Content="✕"
+                MinWidth="36" MinHeight="32"
+                Margin="0,6,6,6"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Center"
+                Background="#2A2A33"
+                BorderBrush="#3F2F73"/>
+          </Grid>
+        </Border>
+
+        <!-- Content -->
+        <Border Grid.Row="1" Background="#1E1E24" CornerRadius="8" Padding="8">
+          <views:SettingsView/>
+        </Border>
+
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

@@ -5,6 +5,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -12,6 +15,7 @@ using CommunityToolkit.Mvvm.Input;
 
 using KeyCard.Desktop.Models;
 using KeyCard.Desktop.Services;
+using KeyCard.Desktop.Views;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -165,25 +169,43 @@ public partial class MainViewModel : ObservableObject
             IsRefreshing = true;
             RefreshStatusMessage = null;
 
-            // Call refresh on the current view model
+            // Call refresh on the current view model using proper async invocation
             if (Current is DashboardViewModel dashboard)
             {
-                await Task.Run(() => dashboard.RefreshCommand.Execute(null));
-                await Task.Delay(300); // Brief delay to show spinner
+                await Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    if (dashboard.RefreshCommand is Infrastructure.UnifiedRelayCommand cmd)
+                    {
+                        cmd.Execute(null);
+                        await Task.Delay(500);
+                    }
+                });
             }
             else if (Current is FrontDeskViewModel frontDesk)
             {
-                await Task.Run(() => frontDesk.RefreshCommand.Execute(null));
-                await Task.Delay(300);
+                await Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    if (frontDesk.RefreshCommand is Infrastructure.UnifiedRelayCommand cmd)
+                    {
+                        cmd.Execute(null);
+                        await Task.Delay(500);
+                    }
+                });
             }
             else if (Current is HousekeepingViewModel housekeeping)
             {
-                await Task.Run(() => housekeeping.RefreshCommand.Execute(null));
-                await Task.Delay(300);
+                await Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    if (housekeeping.RefreshCommand is Infrastructure.UnifiedRelayCommand cmd)
+                    {
+                        cmd.Execute(null);
+                        await Task.Delay(500);
+                    }
+                });
             }
 
-            // Show success message
-            RefreshStatusMessage = "✓ Synced";
+            // Show success message (NO EMOJI)
+            RefreshStatusMessage = "Synced";
 
             // Clear success message after 2 seconds
             await Task.Delay(2000);
@@ -191,7 +213,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            RefreshStatusMessage = "✗ Failed";
+            RefreshStatusMessage = "Failed";
             System.Diagnostics.Debug.WriteLine($"Refresh failed: {ex.Message}");
 
             // Clear error message after 3 seconds
@@ -214,8 +236,24 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void OpenProfile() => _nav.NavigateTo<ProfileViewModel>();
 
+    // Open Settings as an overlay window (modal), instead of navigating away.
     [RelayCommand]
-    private void OpenSettings() => _nav.NavigateTo<SettingsViewModel>();
+    private async Task OpenSettings()
+    {
+        // Resolve the environment for SettingsViewModel
+        var env = _serviceProvider.GetRequiredService<IAppEnvironment>();
+
+        // Create the modal window, pass VM as DataContext
+        var settingsWindow = new SettingsWindow(new SettingsViewModel(env));
+
+        // Find owner (main window) for proper modal behavior
+        var owner = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+
+        if (owner is not null)
+            await settingsWindow.ShowDialog(owner);
+        else
+            settingsWindow.Show(); // Fallback (shouldn't happen in desktop lifetime)
+    }
 
     [RelayCommand]
     private void Logout()

@@ -4,6 +4,8 @@ using System.ComponentModel;
 using System.Reflection;
 
 using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform;
 
@@ -68,6 +70,13 @@ namespace KeyCard.Desktop.Views
             // Also set the service flag if available (logical state)
             if (toolbar is not null)
                 toolbar.IsVisible = !isLogin;
+        }
+
+        // Prevent clicks on modal content from closing the modal
+        private void OnModalContentPressed(object? sender, PointerPressedEventArgs e)
+        {
+            // Stop event from bubbling up to the overlay button
+            e.Handled = true;
         }
 
         private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
