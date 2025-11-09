@@ -99,7 +99,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <AvaloniaXaml Update="Views\ForgotPasswordView.axaml">
+      <SubType>Designer</SubType>
+    </AvaloniaXaml>
     <AvaloniaXaml Update="Views\HousekeepingKanbanView.axaml">
+      <SubType>Designer</SubType>
+    </AvaloniaXaml>
+    <AvaloniaXaml Update="Views\RegistrationView.axaml">
       <SubType>Designer</SubType>
     </AvaloniaXaml>
     <AvaloniaXaml Update="Views\SettingsWindow.axaml">

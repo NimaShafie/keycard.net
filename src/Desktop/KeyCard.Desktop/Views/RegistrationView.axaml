@@ -1,0 +1,266 @@
+<!-- Views/RegistrationView.axaml -->
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vms="clr-namespace:KeyCard.Desktop.ViewModels"
+    xmlns:chrome="clr-namespace:KeyCard.Desktop.Infrastructure.UI"
+    x:Class="KeyCard.Desktop.Views.RegistrationView"
+    x:DataType="vms:RegistrationViewModel"
+    chrome:ViewChrome.TopBarVisible="False">
+
+  <UserControl.Styles>
+    <!-- Animated gradient background (same as login) -->
+    <Style Selector="Border#AnimatedBackground">
+      <Style.Animations>
+        <Animation Duration="0:0:8" IterationCount="Infinite">
+          <KeyFrame Cue="0%">
+            <Setter Property="Background">
+              <Setter.Value>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                  <GradientStop Color="#1a0033" Offset="0"/>
+                  <GradientStop Color="#330066" Offset="0.5"/>
+                  <GradientStop Color="#0f0f12" Offset="1"/>
+                </LinearGradientBrush>
+              </Setter.Value>
+            </Setter>
+          </KeyFrame>
+          <KeyFrame Cue="33%">
+            <Setter Property="Background">
+              <Setter.Value>
+                <LinearGradientBrush StartPoint="0.3,0.3" EndPoint="0.7,1">
+                  <GradientStop Color="#0f0f12" Offset="0"/>
+                  <GradientStop Color="#1a0033" Offset="0.5"/>
+                  <GradientStop Color="#330066" Offset="1"/>
+                </LinearGradientBrush>
+              </Setter.Value>
+            </Setter>
+          </KeyFrame>
+          <KeyFrame Cue="66%">
+            <Setter Property="Background">
+              <Setter.Value>
+                <LinearGradientBrush StartPoint="1,0" EndPoint="0,1">
+                  <GradientStop Color="#330066" Offset="0"/>
+                  <GradientStop Color="#0f0f12" Offset="0.5"/>
+                  <GradientStop Color="#1a0033" Offset="1"/>
+                </LinearGradientBrush>
+              </Setter.Value>
+            </Setter>
+          </KeyFrame>
+          <KeyFrame Cue="100%">
+            <Setter Property="Background">
+              <Setter.Value>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                  <GradientStop Color="#1a0033" Offset="0"/>
+                  <GradientStop Color="#330066" Offset="0.5"/>
+                  <GradientStop Color="#0f0f12" Offset="1"/>
+                </LinearGradientBrush>
+              </Setter.Value>
+            </Setter>
+          </KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+
+    <!-- Link button style -->
+    <Style Selector="Button.link-button">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Foreground" Value="#B388FF"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Padding" Value="4,2"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Height" Value="NaN"/>
+    </Style>
+    <Style Selector="Button.link-button:pointerover">
+      <Setter Property="Foreground" Value="#D1B3FF"/>
+    </Style>
+  </UserControl.Styles>
+
+  <Grid>
+    <!-- Animated gradient background -->
+    <Border x:Name="AnimatedBackground"/>
+
+    <!-- Registration card -->
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                  VerticalScrollBarVisibility="Auto">
+      <Border Classes="login-card"
+              Width="520"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              Margin="0,40,0,40">
+
+        <StackPanel Spacing="20">
+          <!-- Back button -->
+          <Button Content="← Back to Login"
+                  Classes="link-button"
+                  Command="{Binding BackToLoginCommand}"
+                  HorizontalAlignment="Left"/>
+
+          <!-- Title -->
+          <StackPanel Spacing="8">
+            <TextBlock Text="Staff Registration"
+                       FontSize="28"
+                       FontWeight="Bold"
+                       HorizontalAlignment="Center"
+                       Foreground="White"/>
+            <TextBlock Text="Create a new staff account"
+                       FontSize="14"
+                       HorizontalAlignment="Center"
+                       Opacity="0.8"
+                       Foreground="White"/>
+
+            <!-- Environment badge -->
+            <Border CornerRadius="12"
+                    Padding="12,4"
+                    Background="{Binding IsMockMode, Converter={StaticResource MockModeBadgeBackgroundConverter}}"
+                    HorizontalAlignment="Center"
+                    Margin="0,8,0,0">
+              <TextBlock Text="{Binding IsMockMode, Converter={StaticResource EnvironmentLabelConverter}}"
+                         FontWeight="SemiBold"
+                         FontSize="11"
+                         Foreground="{Binding IsMockMode, Converter={StaticResource MockModeBadgeForegroundConverter}}"
+                         VerticalAlignment="Center"
+                         LetterSpacing="0.5"/>
+            </Border>
+          </StackPanel>
+
+          <!-- Form -->
+          <StackPanel Spacing="14" Margin="0,12,0,0">
+            <!-- Personal Information -->
+            <TextBlock Text="Personal Information"
+                       FontSize="15"
+                       FontWeight="SemiBold"
+                       Foreground="White"
+                       Opacity="0.9"
+                       Margin="0,8,0,4"/>
+
+            <Grid ColumnDefinitions="*,12,*">
+              <TextBox Grid.Column="0"
+                       Watermark="First Name"
+                       Text="{Binding FirstName}"
+                       Height="42"
+                       Padding="14,0"
+                       CornerRadius="8"/>
+
+              <TextBox Grid.Column="2"
+                       Watermark="Last Name"
+                       Text="{Binding LastName}"
+                       Height="42"
+                       Padding="14,0"
+                       CornerRadius="8"/>
+            </Grid>
+
+            <TextBox Watermark="Employee ID (optional)"
+                     Text="{Binding EmployeeId}"
+                     Height="42"
+                     Padding="14,0"
+                     CornerRadius="8"/>
+
+            <!-- Account Information -->
+            <TextBlock Text="Account Information"
+                       FontSize="15"
+                       FontWeight="SemiBold"
+                       Foreground="White"
+                       Opacity="0.9"
+                       Margin="0,12,0,4"/>
+
+            <TextBox Watermark="Username"
+                     Text="{Binding Username}"
+                     Height="42"
+                     Padding="14,0"
+                     CornerRadius="8"/>
+
+            <TextBox Watermark="Email Address"
+                     Text="{Binding Email}"
+                     Height="42"
+                     Padding="14,0"
+                     CornerRadius="8"/>
+
+            <TextBox Watermark="Password (minimum 8 characters)"
+                     PasswordChar="•"
+                     Text="{Binding Password}"
+                     Height="42"
+                     Padding="14,0"
+                     CornerRadius="8"/>
+
+            <TextBox Watermark="Confirm Password"
+                     PasswordChar="•"
+                     Text="{Binding ConfirmPassword}"
+                     Height="42"
+                     Padding="14,0"
+                     CornerRadius="8"/>
+
+            <!-- Error message -->
+            <Border Background="#3D1F1F"
+                    BorderBrush="#FF6B6B"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Padding="12,8"
+                    IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="⚠"
+                           Foreground="#FF6B6B"
+                           FontSize="16"
+                           VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding Error}"
+                           Foreground="#FFB3B3"
+                           FontSize="12"
+                           TextWrapping="Wrap"
+                           VerticalAlignment="Center"/>
+              </StackPanel>
+            </Border>
+
+            <!-- Register button -->
+            <Button Content="Create Account"
+                    Command="{Binding RegisterCommand}"
+                    IsDefault="True"
+                    Height="42"
+                    FontWeight="SemiBold"
+                    CornerRadius="8"
+                    Background="#7B1FA2"
+                    BorderBrush="#9C27B0"
+                    Foreground="White"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Margin="0,8,0,0">
+              <Button.Styles>
+                <Style Selector="Button:pointerover">
+                  <Setter Property="Background" Value="#8E24AA"/>
+                </Style>
+                <Style Selector="Button:pressed">
+                  <Setter Property="Background" Value="#6A1B9A"/>
+                </Style>
+              </Button.Styles>
+            </Button>
+
+            <!-- Loading indicator -->
+            <ProgressBar IsIndeterminate="True"
+                         IsVisible="{Binding IsBusy}"
+                         Height="4"
+                         Margin="0,8,0,0"
+                         Foreground="#B388FF"/>
+
+            <!-- Info text -->
+            <TextBlock Text="Note: New staff accounts require administrator approval before access is granted."
+                       FontSize="11"
+                       TextWrapping="Wrap"
+                       HorizontalAlignment="Center"
+                       TextAlignment="Center"
+                       Opacity="0.6"
+                       Foreground="White"
+                       Margin="0,8,0,0"
+                       IsVisible="{Binding !IsMockMode}"/>
+          </StackPanel>
+
+          <!-- Footer -->
+          <TextBlock Text="© 2025 KeyCard.NET"
+                     FontSize="11"
+                     HorizontalAlignment="Center"
+                     Opacity="0.5"
+                     Foreground="White"
+                     Margin="0,16,0,0"/>
+        </StackPanel>
+      </Border>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

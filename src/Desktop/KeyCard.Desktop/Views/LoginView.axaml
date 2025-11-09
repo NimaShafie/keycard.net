@@ -9,15 +9,89 @@
     x:DataType="vms:LoginViewModel"
     chrome:ViewChrome.TopBarVisible="False">
 
-  <!-- Toggle the top bar here: set to True or False -->
   <UserControl.Resources>
     <x:Boolean x:Key="ShowTopBar">False</x:Boolean>
   </UserControl.Resources>
 
-  <!-- Use DockPanel so we can optionally show a top bar above the page -->
-  <DockPanel>
+  <UserControl.Styles>
+    <!-- Faster animated gradient background -->
+    <Style Selector="Border#AnimatedBackground">
+      <Style.Animations>
+        <Animation Duration="0:0:8" IterationCount="Infinite">
+          <KeyFrame Cue="0%">
+            <Setter Property="Background">
+              <Setter.Value>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                  <GradientStop Color="#1a0033" Offset="0"/>
+                  <GradientStop Color="#330066" Offset="0.5"/>
+                  <GradientStop Color="#0f0f12" Offset="1"/>
+                </LinearGradientBrush>
+              </Setter.Value>
+            </Setter>
+          </KeyFrame>
+          <KeyFrame Cue="33%">
+            <Setter Property="Background">
+              <Setter.Value>
+                <LinearGradientBrush StartPoint="0.3,0.3" EndPoint="0.7,1">
+                  <GradientStop Color="#0f0f12" Offset="0"/>
+                  <GradientStop Color="#1a0033" Offset="0.5"/>
+                  <GradientStop Color="#330066" Offset="1"/>
+                </LinearGradientBrush>
+              </Setter.Value>
+            </Setter>
+          </KeyFrame>
+          <KeyFrame Cue="66%">
+            <Setter Property="Background">
+              <Setter.Value>
+                <LinearGradientBrush StartPoint="1,0" EndPoint="0,1">
+                  <GradientStop Color="#330066" Offset="0"/>
+                  <GradientStop Color="#0f0f12" Offset="0.5"/>
+                  <GradientStop Color="#1a0033" Offset="1"/>
+                </LinearGradientBrush>
+              </Setter.Value>
+            </Setter>
+          </KeyFrame>
+          <KeyFrame Cue="100%">
+            <Setter Property="Background">
+              <Setter.Value>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                  <GradientStop Color="#1a0033" Offset="0"/>
+                  <GradientStop Color="#330066" Offset="0.5"/>
+                  <GradientStop Color="#0f0f12" Offset="1"/>
+                </LinearGradientBrush>
+              </Setter.Value>
+            </Setter>
+          </KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
 
-    <!-- Optional Top Bar (enable/disable per-view) -->
+    <!-- Link button style for Register and Forgot Password -->
+    <Style Selector="Button.link-button">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Foreground" Value="#B388FF"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Padding" Value="4,2"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Height" Value="NaN"/>
+    </Style>
+    <Style Selector="Button.link-button:pointerover">
+      <Setter Property="Foreground" Value="#D1B3FF"/>
+    </Style>
+    <Style Selector="Button.link-button:pressed">
+      <Setter Property="Foreground" Value="#9C6FFF"/>
+    </Style>
+
+    <!-- Input validation styles -->
+    <Style Selector="TextBox.has-error">
+      <Setter Property="BorderBrush" Value="#FF6B6B"/>
+      <Setter Property="BorderThickness" Value="2"/>
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel>
+    <!-- Optional Top Bar -->
     <Border
         DockPanel.Dock="Top"
         Height="44"
@@ -27,7 +101,6 @@
         BorderBrush="#2A2A33"
         BorderThickness="0 0 0 1">
       <Grid ColumnDefinitions="Auto,*,Auto">
-        <!-- Left: simple nav placeholder -->
         <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,8,0">
           <TextBlock Text="Dashboard" Foreground="#CFCFE6" Opacity="0.86"/>
           <TextBlock Text="·" Margin="4,0" Foreground="#8A8AA8"/>
@@ -38,10 +111,8 @@
           <TextBlock Text="Folio Manager" Foreground="#CFCFE6" Opacity="0.86"/>
         </StackPanel>
 
-        <!-- Middle: spacer -->
         <Border Grid.Column="1"/>
 
-        <!-- Right: mock mode badge mirrors global flag -->
         <Border Grid.Column="2"
                 CornerRadius="6"
                 Padding="8,2"
@@ -56,28 +127,20 @@
       </Grid>
     </Border>
 
-    <!-- Main content (unchanged) -->
+    <!-- Main content -->
     <Grid>
-      <!-- Animated gradient background -->
-      <Border x:Name="AnimatedBackground">
-        <Border.Background>
-          <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-            <GradientStop Color="#1a0033" Offset="0"/>
-            <GradientStop Color="#330066" Offset="0.5"/>
-            <GradientStop Color="#0f0f12" Offset="1"/>
-          </LinearGradientBrush>
-        </Border.Background>
-      </Border>
+      <!-- Animated gradient background (8 seconds, looping) -->
+      <Border x:Name="AnimatedBackground"/>
 
       <!-- Login card -->
       <Border x:Name="LoginCard"
               Classes="login-card"
-              Width="440"
+              Width="460"
               HorizontalAlignment="Center"
               VerticalAlignment="Center">
 
         <StackPanel Spacing="20">
-          <!-- Logo (optional) -->
+          <!-- Logo -->
           <Image x:Name="BrandLogo"
                  Width="80" Height="90"
                  HorizontalAlignment="Center"
@@ -95,6 +158,20 @@
                        HorizontalAlignment="Center"
                        Opacity="0.8"
                        Foreground="White"/>
+
+            <!-- Environment badge -->
+            <Border CornerRadius="12"
+                    Padding="12,4"
+                    Background="{Binding IsMockMode, Converter={StaticResource MockModeBadgeBackgroundConverter}}"
+                    HorizontalAlignment="Center"
+                    Margin="0,8,0,0">
+              <TextBlock Text="{Binding EnvironmentLabel}"
+                         FontWeight="SemiBold"
+                         FontSize="11"
+                         Foreground="{Binding IsMockMode, Converter={StaticResource MockModeBadgeForegroundConverter}}"
+                         VerticalAlignment="Center"
+                         LetterSpacing="0.5"/>
+            </Border>
           </StackPanel>
 
           <!-- Form -->
@@ -103,21 +180,50 @@
                      Text="{Binding Username}"
                      Height="42"
                      Padding="14,0"
-                     CornerRadius="8"/>
+                     CornerRadius="8"
+                     Classes.has-error="{Binding ShowUsernameError}"/>
 
             <TextBox Watermark="Password"
                      PasswordChar="•"
                      Text="{Binding Password}"
                      Height="42"
                      Padding="14,0"
-                     CornerRadius="8"/>
+                     CornerRadius="8"
+                     Classes.has-error="{Binding ShowPasswordError}"/>
+
+            <!-- Remember Me (only in Live mode) -->
+            <CheckBox Content="Remember me"
+                      IsChecked="{Binding RememberMe}"
+                      Foreground="White"
+                      Opacity="0.8"
+                      IsVisible="{Binding !IsMockMode}"/>
 
             <!-- Error message -->
-            <TextBlock Text="{Binding Error}"
-                       Foreground="#FF6B6B"
-                       FontSize="12"
-                       IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                       TextWrapping="Wrap"/>
+            <Border Background="#3D1F1F"
+                    BorderBrush="#FF6B6B"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Padding="12,8"
+                    IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="⚠"
+                           Foreground="#FF6B6B"
+                           FontSize="16"
+                           VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding Error}"
+                           Foreground="#FFB3B3"
+                           FontSize="12"
+                           TextWrapping="Wrap"
+                           VerticalAlignment="Center"/>
+              </StackPanel>
+            </Border>
+
+            <!-- Forgot Password link (only in Live mode) -->
+            <Button Content="Forgot password?"
+                    Classes="link-button"
+                    Command="{Binding ForgotPasswordCommand}"
+                    HorizontalAlignment="Right"
+                    IsVisible="{Binding !IsMockMode}"/>
 
             <!-- Buttons -->
             <StackPanel Spacing="10" Margin="0,8,0,0">
@@ -131,9 +237,18 @@
                       BorderBrush="#9C27B0"
                       Foreground="White"
                       HorizontalAlignment="Stretch"
-                      HorizontalContentAlignment="Center"/>
+                      HorizontalContentAlignment="Center">
+                <Button.Styles>
+                  <Style Selector="Button:pointerover">
+                    <Setter Property="Background" Value="#8E24AA"/>
+                  </Style>
+                  <Style Selector="Button:pressed">
+                    <Setter Property="Background" Value="#6A1B9A"/>
+                  </Style>
+                </Button.Styles>
+              </Button>
 
-              <!-- Gate by BOTH: global Env.IsMock AND VM's IsMockMode -->
+              <!-- Mock Mode button (gated by BOTH global Env.IsMock AND VM's IsMockMode) -->
               <StackPanel IsVisible="{Binding Source={x:Static svc:AppGlobals.Env}, Path=IsMock}">
                 <Button Content="Continue in Mock Mode"
                         Command="{Binding ContinueMockCommand}"
@@ -145,24 +260,57 @@
                         Foreground="White"
                         HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Center"
-                        Opacity="0.9"/>
+                        Opacity="0.9">
+                  <Button.Styles>
+                    <Style Selector="Button:pointerover">
+                      <Setter Property="Background" Value="#363640"/>
+                    </Style>
+                  </Button.Styles>
+                </Button>
               </StackPanel>
+
+              <!-- Register button -->
+              <Border Background="#1A1A1F"
+                      CornerRadius="8"
+                      Padding="12,10"
+                      Margin="0,4,0,0">
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Center"
+                            Spacing="6">
+                  <TextBlock Text="New staff member?"
+                             Foreground="White"
+                             Opacity="0.7"
+                             FontSize="13"
+                             VerticalAlignment="Center"/>
+                  <Button Content="Register"
+                          Classes="link-button"
+                          Command="{Binding RegisterCommand}"
+                          FontWeight="SemiBold"/>
+                </StackPanel>
+              </Border>
             </StackPanel>
 
             <!-- Loading indicator -->
             <ProgressBar IsIndeterminate="True"
                          IsVisible="{Binding IsBusy}"
                          Height="4"
-                         Margin="0,8,0,0"/>
+                         Margin="0,8,0,0"
+                         Foreground="#B388FF"/>
           </StackPanel>
 
           <!-- Footer -->
-          <TextBlock Text="© 2025 KeyCard.NET"
-                     FontSize="11"
-                     HorizontalAlignment="Center"
-                     Opacity="0.5"
-                     Foreground="White"
-                     Margin="0,16,0,0"/>
+          <StackPanel Spacing="6" Margin="0,16,0,0">
+            <TextBlock Text="© 2025 KeyCard.NET"
+                       FontSize="11"
+                       HorizontalAlignment="Center"
+                       Opacity="0.5"
+                       Foreground="White"/>
+            <TextBlock Text="Hotel Management System for Staff"
+                       FontSize="10"
+                       HorizontalAlignment="Center"
+                       Opacity="0.4"
+                       Foreground="White"/>
+          </StackPanel>
         </StackPanel>
       </Border>
     </Grid>

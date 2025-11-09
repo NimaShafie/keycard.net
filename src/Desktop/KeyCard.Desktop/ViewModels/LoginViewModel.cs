@@ -4,6 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
+using CommunityToolkit.Mvvm.Input;
+
 using KeyCard.Desktop.Services;
 using KeyCard.Desktop.Services.Mock;
 
@@ -19,6 +21,9 @@ namespace KeyCard.Desktop.ViewModels
         private string _password = string.Empty;
         private string _error = string.Empty;
         private bool _isBusy;
+        private bool _rememberMe;
+        private bool _showUsernameError;
+        private bool _showPasswordError;
 
         public LoginViewModel(IAuthService auth, INavigationService nav, IAppEnvironment env)
         {
@@ -26,20 +31,36 @@ namespace KeyCard.Desktop.ViewModels
             _nav = nav ?? throw new ArgumentNullException(nameof(nav));
             _env = env ?? throw new ArgumentNullException(nameof(env));
 
-            LoginCommand = new AsyncActionCommand(LoginAsync, () => CanLogin);
-            ContinueMockCommand = new ActionCommand(ContinueMock, () => IsMockMode);
+            LoginCommand = new AsyncRelayCommand(LoginAsync, () => CanLogin);
+            ContinueMockCommand = new RelayCommand(ContinueMock, () => IsMockMode);
+            RegisterCommand = new RelayCommand(Register);
+            ForgotPasswordCommand = new RelayCommand(ForgotPassword);
         }
 
         public string Username
         {
             get => _username;
-            set { if (SetProperty(ref _username, value)) Reevaluate(); }
+            set
+            {
+                if (SetProperty(ref _username, value))
+                {
+                    ShowUsernameError = false;
+                    Reevaluate();
+                }
+            }
         }
 
         public string Password
         {
             get => _password;
-            set { if (SetProperty(ref _password, value)) Reevaluate(); }
+            set
+            {
+                if (SetProperty(ref _password, value))
+                {
+                    ShowPasswordError = false;
+                    Reevaluate();
+                }
+            }
         }
 
         public string Error
@@ -54,8 +75,29 @@ namespace KeyCard.Desktop.ViewModels
             private set { if (SetProperty(ref _isBusy, value)) Reevaluate(); }
         }
 
+        public bool RememberMe
+        {
+            get => _rememberMe;
+            set => SetProperty(ref _rememberMe, value);
+        }
+
+        public bool ShowUsernameError
+        {
+            get => _showUsernameError;
+            private set => SetProperty(ref _showUsernameError, value);
+        }
+
+        public bool ShowPasswordError
+        {
+            get => _showPasswordError;
+            private set => SetProperty(ref _showPasswordError, value);
+        }
+
         // Single source of truth for mock flag
         public bool IsMockMode => _env.IsMock || _auth is AuthService;
+
+        // Environment label for badge
+        public string EnvironmentLabel => IsMockMode ? "MOCK ENVIRONMENT" : "LIVE PRODUCTION";
 
         // In Mock, allow Sign in / Enter with empty fields
         public bool CanLogin =>
@@ -63,17 +105,53 @@ namespace KeyCard.Desktop.ViewModels
 
         public ICommand LoginCommand { get; }
         public ICommand ContinueMockCommand { get; }
+        public ICommand RegisterCommand { get; }
+        public ICommand ForgotPasswordCommand { get; }
 
         private void Reevaluate()
         {
-            (LoginCommand as AsyncActionCommand)?.RaiseCanExecuteChanged();
-            (ContinueMockCommand as ActionCommand)?.RaiseCanExecuteChanged();
+            // Try to raise CanExecuteChanged on commands
+            TryRaiseCanExecuteChanged(LoginCommand);
+            TryRaiseCanExecuteChanged(ContinueMockCommand);
             OnPropertyChanged(nameof(CanLogin));
+        }
+
+        private static void TryRaiseCanExecuteChanged(ICommand? command)
+        {
+            if (command is null) return;
+
+            // Use reflection to call RaiseCanExecuteChanged if it exists
+            var method = command.GetType().GetMethod("RaiseCanExecuteChanged");
+            method?.Invoke(command, null);
         }
 
         public async Task LoginAsync(CancellationToken ct = default)
         {
             if (!CanLogin) return;
+
+            // Validate inputs (except in mock mode)
+            if (!IsMockMode)
+            {
+                var hasErrors = false;
+
+                if (string.IsNullOrWhiteSpace(Username))
+                {
+                    ShowUsernameError = true;
+                    hasErrors = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(Password))
+                {
+                    ShowPasswordError = true;
+                    hasErrors = true;
+                }
+
+                if (hasErrors)
+                {
+                    Error = "Please fill in all required fields.";
+                    return;
+                }
+            }
 
             Error = string.Empty;
             IsBusy = true;
@@ -82,15 +160,24 @@ namespace KeyCard.Desktop.ViewModels
             {
                 if (IsMockMode)
                 {
-                    // ✅ Set authenticated state in the auth service before navigating
+                    // Set authenticated state in the auth service before navigating
                     await _auth.LoginMockAsync(ct);
                     _nav.NavigateTo<DashboardViewModel>();
                     return;
                 }
 
                 var ok = await _auth.LoginAsync(Username.Trim(), Password, ct);
-                if (ok) _nav.NavigateTo<DashboardViewModel>();
-                else Error = "Invalid username or password.";
+                if (ok)
+                {
+                    // TODO: If RememberMe is true, persist credentials securely
+                    _nav.NavigateTo<DashboardViewModel>();
+                }
+                else
+                {
+                    Error = "Invalid username or password. Please try again.";
+                    ShowUsernameError = true;
+                    ShowPasswordError = true;
+                }
             }
             catch (Exception ex)
             {
@@ -109,47 +196,17 @@ namespace KeyCard.Desktop.ViewModels
             _ = _auth.LoginMockAsync(CancellationToken.None);
             _nav.NavigateTo<DashboardViewModel>();
         }
-    }
 
-    // ------- local commands (nullability-correct) -------
-    internal sealed class ActionCommand : ICommand
-    {
-        private readonly Action _exec;
-        private readonly Func<bool>? _can;
-        public event EventHandler? CanExecuteChanged;
-
-        public ActionCommand(Action exec, Func<bool>? can = null) { _exec = exec; _can = can; }
-        public bool CanExecute(object? parameter) => _can?.Invoke() ?? true;
-        public void Execute(object? parameter) => _exec();
-        public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
-    }
-
-    internal sealed class AsyncActionCommand : ICommand
-    {
-        private readonly Func<CancellationToken, Task> _execAsync;
-        private readonly Func<bool>? _can;
-        private bool _running;
-        public event EventHandler? CanExecuteChanged;
-
-        public AsyncActionCommand(Func<CancellationToken, Task> execAsync, Func<bool>? can = null)
-        { _execAsync = execAsync; _can = can; }
-
-        public bool CanExecute(object? parameter) => !_running && (_can?.Invoke() ?? true);
-
-        public async void Execute(object? parameter)
+        private void Register()
         {
-            if (!CanExecute(null)) return;
-            try
-            {
-                _running = true; RaiseCanExecuteChanged();
-                await _execAsync(CancellationToken.None);
-            }
-            finally
-            {
-                _running = false; RaiseCanExecuteChanged();
-            }
+            // Navigate to registration view
+            _nav.NavigateTo<RegistrationViewModel>();
         }
 
-        public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+        private void ForgotPassword()
+        {
+            // Navigate to password recovery view
+            _nav.NavigateTo<ForgotPasswordViewModel>();
+        }
     }
 }
