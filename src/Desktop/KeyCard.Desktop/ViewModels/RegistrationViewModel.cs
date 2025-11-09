@@ -1,12 +1,11 @@
 // ViewModels/RegistrationViewModel.cs
 using System;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using System.Text.RegularExpressions;
 
-using CommunityToolkit.Mvvm.Input;
-
+using KeyCard.Desktop.Infrastructure;
 using KeyCard.Desktop.Services;
 
 namespace KeyCard.Desktop.ViewModels
@@ -33,8 +32,8 @@ namespace KeyCard.Desktop.ViewModels
             _nav = nav ?? throw new ArgumentNullException(nameof(nav));
             _env = env ?? throw new ArgumentNullException(nameof(env));
 
-            RegisterCommand = new AsyncRelayCommand(RegisterAsync, () => CanRegister);
-            BackToLoginCommand = new RelayCommand(BackToLogin);
+            RegisterCommand = new DelegateCommand(async () => await RegisterAsync(), () => CanRegister);
+            BackToLoginCommand = new DelegateCommand(() => BackToLogin());
         }
 
         public string Username
@@ -95,7 +94,7 @@ namespace KeyCard.Desktop.ViewModels
 
         public bool CanRegister => !IsBusy &&
             !string.IsNullOrWhiteSpace(Username) &&
-            !string.IsNullOrWhiteSpace(Email) &&
+            (IsMockMode || !string.IsNullOrWhiteSpace(Email)) && // Email optional in Mock mode
             !string.IsNullOrWhiteSpace(Password) &&
             !string.IsNullOrWhiteSpace(ConfirmPassword) &&
             !string.IsNullOrWhiteSpace(FirstName) &&
@@ -106,17 +105,8 @@ namespace KeyCard.Desktop.ViewModels
 
         private void Reevaluate()
         {
-            TryRaiseCanExecuteChanged(RegisterCommand);
             OnPropertyChanged(nameof(CanRegister));
-        }
-
-        private static void TryRaiseCanExecuteChanged(ICommand? command)
-        {
-            if (command is null) return;
-
-            // Use reflection to call RaiseCanExecuteChanged if it exists
-            var method = command.GetType().GetMethod("RaiseCanExecuteChanged");
-            method?.Invoke(command, null);
+            (RegisterCommand as DelegateCommand)?.RaiseCanExecuteChanged();
         }
 
         private async Task RegisterAsync(CancellationToken ct = default)
@@ -125,11 +115,15 @@ namespace KeyCard.Desktop.ViewModels
 
             Error = string.Empty;
 
-            // Validate email format
-            if (!IsValidEmail(Email))
+            // In Mock mode, skip email validation
+            if (!IsMockMode)
             {
-                Error = "Please enter a valid email address.";
-                return;
+                // Validate email format for Live mode
+                if (!IsValidEmail(Email))
+                {
+                    Error = "Please enter a valid email address.";
+                    return;
+                }
             }
 
             // Validate password match
@@ -150,29 +144,70 @@ namespace KeyCard.Desktop.ViewModels
 
             try
             {
-                // TODO: Call registration API endpoint
-                // For now, simulate registration
-                await Task.Delay(1000, ct);
-
                 if (IsMockMode)
                 {
-                    // In mock mode, registration always succeeds
+                    // Mock mode: Simple local registration (no email required)
+                    await Task.Delay(500, ct); // Simulate network delay
+
+                    // TODO: Store in mock data store if needed
+                    // For now, just navigate back to login
                     Error = string.Empty;
+
+                    // Show success before navigating
+                    await Task.Delay(300, ct);
                     _nav.NavigateTo<LoginViewModel>();
                 }
                 else
                 {
-                    // In live mode, you would call your API here
-                    // var result = await _api.RegisterStaffAsync(new RegistrationRequest { ... });
+                    // Live mode: Call backend API
+                    // TODO: Replace with actual API call
+                    // Example:
+                    // var request = new StaffRegistrationRequest
+                    // {
+                    //     Username = Username.Trim(),
+                    //     Email = Email.Trim(),
+                    //     Password = Password,
+                    //     FirstName = FirstName.Trim(),
+                    //     LastName = LastName.Trim(),
+                    //     EmployeeId = string.IsNullOrWhiteSpace(EmployeeId) ? null : EmployeeId.Trim()
+                    // };
+                    // 
+                    // var result = await _apiService.RegisterStaffAsync(request, ct);
 
-                    // For now, simulate success
-                    Error = string.Empty;
-                    _nav.NavigateTo<LoginViewModel>();
+                    // TEMPORARY: Simulate API call until you provide the actual service
+                    await Task.Delay(1500, ct);
+
+                    // Simulate successful registration
+                    var success = true; // Replace with: result.IsSuccess
+
+                    if (success)
+                    {
+                        Error = string.Empty;
+                        // Show success message before navigating
+                        await Task.Delay(500, ct);
+                        _nav.NavigateTo<LoginViewModel>();
+                    }
+                    else
+                    {
+                        // Handle API error
+                        Error = "Registration failed. Please try again or contact support.";
+                        // Replace with actual error: result.ErrorMessage
+                    }
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                Error = "Registration cancelled.";
             }
             catch (Exception ex)
             {
-                Error = $"Registration failed: {ex.Message}";
+                // Network or API error
+                Error = IsMockMode
+                    ? $"Registration failed: {ex.Message}"
+                    : "Unable to connect to the server. Please check your connection and try again.";
+
+                // Log the error for debugging
+                System.Diagnostics.Debug.WriteLine($"Registration error: {ex}");
             }
             finally
             {

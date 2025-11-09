@@ -70,4 +70,24 @@ namespace KeyCard.Desktop.Converters
             throw new NotImplementedException();
         }
     }
+
+    /// <summary>
+    /// Converts IsMockMode to opacity for disabled fields (0.5 when mock, 1.0 when live)
+    /// </summary>
+    public class MockModeOpacityConverter : IValueConverter
+    {
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            if (value is bool isMock)
+            {
+                return isMock ? 0.5 : 1.0;
+            }
+            return 1.0;
+        }
+
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
 }

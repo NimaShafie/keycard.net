@@ -9,51 +9,66 @@
     chrome:ViewChrome.TopBarVisible="False">
 
   <UserControl.Styles>
-    <!-- Animated gradient background (same as login) -->
+    <!-- Improved natural gradient background animation - same as login -->
     <Style Selector="Border#AnimatedBackground">
       <Style.Animations>
-        <Animation Duration="0:0:8" IterationCount="Infinite">
+        <Animation Duration="0:0:10" IterationCount="Infinite" Easing="SineEaseInOut">
           <KeyFrame Cue="0%">
             <Setter Property="Background">
               <Setter.Value>
-                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                  <GradientStop Color="#1a0033" Offset="0"/>
-                  <GradientStop Color="#330066" Offset="0.5"/>
+                <RadialGradientBrush Center="0.3,0.3" GradientOrigin="0.3,0.3" Radius="1.2">
+                  <GradientStop Color="#2D1B4E" Offset="0"/>
+                  <GradientStop Color="#1a0033" Offset="0.4"/>
                   <GradientStop Color="#0f0f12" Offset="1"/>
-                </LinearGradientBrush>
+                </RadialGradientBrush>
               </Setter.Value>
             </Setter>
           </KeyFrame>
-          <KeyFrame Cue="33%">
+
+          <KeyFrame Cue="25%">
             <Setter Property="Background">
               <Setter.Value>
-                <LinearGradientBrush StartPoint="0.3,0.3" EndPoint="0.7,1">
-                  <GradientStop Color="#0f0f12" Offset="0"/>
-                  <GradientStop Color="#1a0033" Offset="0.5"/>
-                  <GradientStop Color="#330066" Offset="1"/>
-                </LinearGradientBrush>
-              </Setter.Value>
-            </Setter>
-          </KeyFrame>
-          <KeyFrame Cue="66%">
-            <Setter Property="Background">
-              <Setter.Value>
-                <LinearGradientBrush StartPoint="1,0" EndPoint="0,1">
-                  <GradientStop Color="#330066" Offset="0"/>
-                  <GradientStop Color="#0f0f12" Offset="0.5"/>
+                <RadialGradientBrush Center="0.5,0.4" GradientOrigin="0.5,0.4" Radius="1.3">
+                  <GradientStop Color="#4A2B7A" Offset="0"/>
+                  <GradientStop Color="#2D1B4E" Offset="0.4"/>
                   <GradientStop Color="#1a0033" Offset="1"/>
-                </LinearGradientBrush>
+                </RadialGradientBrush>
               </Setter.Value>
             </Setter>
           </KeyFrame>
+
+          <KeyFrame Cue="50%">
+            <Setter Property="Background">
+              <Setter.Value>
+                <RadialGradientBrush Center="0.7,0.7" GradientOrigin="0.7,0.7" Radius="1.2">
+                  <GradientStop Color="#3D2463" Offset="0"/>
+                  <GradientStop Color="#1a0033" Offset="0.4"/>
+                  <GradientStop Color="#0f0f12" Offset="1"/>
+                </RadialGradientBrush>
+              </Setter.Value>
+            </Setter>
+          </KeyFrame>
+
+          <KeyFrame Cue="75%">
+            <Setter Property="Background">
+              <Setter.Value>
+                <RadialGradientBrush Center="0.2,0.6" GradientOrigin="0.2,0.6" Radius="1.3">
+                  <GradientStop Color="#2D1B4E" Offset="0"/>
+                  <GradientStop Color="#1a0033" Offset="0.4"/>
+                  <GradientStop Color="#0f0f12" Offset="1"/>
+                </RadialGradientBrush>
+              </Setter.Value>
+            </Setter>
+          </KeyFrame>
+
           <KeyFrame Cue="100%">
             <Setter Property="Background">
               <Setter.Value>
-                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                  <GradientStop Color="#1a0033" Offset="0"/>
-                  <GradientStop Color="#330066" Offset="0.5"/>
+                <RadialGradientBrush Center="0.3,0.3" GradientOrigin="0.3,0.3" Radius="1.2">
+                  <GradientStop Color="#2D1B4E" Offset="0"/>
+                  <GradientStop Color="#1a0033" Offset="0.4"/>
                   <GradientStop Color="#0f0f12" Offset="1"/>
-                </LinearGradientBrush>
+                </RadialGradientBrush>
               </Setter.Value>
             </Setter>
           </KeyFrame>
@@ -174,7 +189,9 @@
                      Text="{Binding Email}"
                      Height="42"
                      Padding="14,0"
-                     CornerRadius="8"/>
+                     CornerRadius="8"
+                     IsEnabled="{Binding !IsMockMode}"
+                     Opacity="{Binding IsMockMode, Converter={StaticResource MockModeOpacityConverter}}"/>
 
             <TextBox Watermark="Password (minimum 8 characters)"
                      PasswordChar="•"
@@ -210,9 +227,10 @@
               </StackPanel>
             </Border>
 
-            <!-- Register button -->
+            <!-- Register button - FIXED: Added IsEnabled binding -->
             <Button Content="Create Account"
                     Command="{Binding RegisterCommand}"
+                    IsEnabled="{Binding CanRegister}"
                     IsDefault="True"
                     Height="42"
                     FontWeight="SemiBold"
@@ -230,6 +248,9 @@
                 <Style Selector="Button:pressed">
                   <Setter Property="Background" Value="#6A1B9A"/>
                 </Style>
+                <Style Selector="Button:disabled">
+                  <Setter Property="Opacity" Value="0.5"/>
+                </Style>
               </Button.Styles>
             </Button>
 
@@ -241,6 +262,16 @@
                          Foreground="#B388FF"/>
 
             <!-- Info text -->
+            <TextBlock Text="Note: Email address is not required in Mock mode."
+                       FontSize="11"
+                       TextWrapping="Wrap"
+                       HorizontalAlignment="Center"
+                       TextAlignment="Center"
+                       Opacity="0.6"
+                       Foreground="White"
+                       Margin="0,8,0,0"
+                       IsVisible="{Binding IsMockMode}"/>
+
             <TextBlock Text="Note: New staff accounts require administrator approval before access is granted."
                        FontSize="11"
                        TextWrapping="Wrap"

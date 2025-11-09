@@ -1,12 +1,11 @@
 // ViewModels/ForgotPasswordViewModel.cs
 using System;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using System.Text.RegularExpressions;
 
-using CommunityToolkit.Mvvm.Input;
-
+using KeyCard.Desktop.Infrastructure;
 using KeyCard.Desktop.Services;
 
 namespace KeyCard.Desktop.ViewModels
@@ -26,8 +25,8 @@ namespace KeyCard.Desktop.ViewModels
             _nav = nav ?? throw new ArgumentNullException(nameof(nav));
             _env = env ?? throw new ArgumentNullException(nameof(env));
 
-            SendResetLinkCommand = new AsyncRelayCommand(SendResetLinkAsync, () => CanSendResetLink);
-            BackToLoginCommand = new RelayCommand(BackToLogin);
+            SendResetLinkCommand = new DelegateCommand(async () => await SendResetLinkAsync(), () => CanSendResetLink);
+            BackToLoginCommand = new DelegateCommand(() => BackToLogin());
         }
 
         public string Email
@@ -71,17 +70,8 @@ namespace KeyCard.Desktop.ViewModels
 
         private void Reevaluate()
         {
-            TryRaiseCanExecuteChanged(SendResetLinkCommand);
             OnPropertyChanged(nameof(CanSendResetLink));
-        }
-
-        private static void TryRaiseCanExecuteChanged(ICommand? command)
-        {
-            if (command is null) return;
-
-            // Use reflection to call RaiseCanExecuteChanged if it exists
-            var method = command.GetType().GetMethod("RaiseCanExecuteChanged");
-            method?.Invoke(command, null);
+            (SendResetLinkCommand as DelegateCommand)?.RaiseCanExecuteChanged();
         }
 
         private async Task SendResetLinkAsync(CancellationToken ct = default)

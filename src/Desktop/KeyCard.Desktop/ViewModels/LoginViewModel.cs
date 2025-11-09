@@ -4,8 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
-using CommunityToolkit.Mvvm.Input;
-
+using KeyCard.Desktop.Infrastructure;
 using KeyCard.Desktop.Services;
 using KeyCard.Desktop.Services.Mock;
 
@@ -31,10 +30,10 @@ namespace KeyCard.Desktop.ViewModels
             _nav = nav ?? throw new ArgumentNullException(nameof(nav));
             _env = env ?? throw new ArgumentNullException(nameof(env));
 
-            LoginCommand = new AsyncRelayCommand(LoginAsync, () => CanLogin);
-            ContinueMockCommand = new RelayCommand(ContinueMock, () => IsMockMode);
-            RegisterCommand = new RelayCommand(Register);
-            ForgotPasswordCommand = new RelayCommand(ForgotPassword);
+            LoginCommand = new DelegateCommand(async () => await LoginAsync(), () => CanLogin);
+            ContinueMockCommand = new DelegateCommand(() => ContinueMock(), () => IsMockMode);
+            RegisterCommand = new DelegateCommand(() => Register());
+            ForgotPasswordCommand = new DelegateCommand(() => ForgotPassword());
         }
 
         public string Username
@@ -110,19 +109,9 @@ namespace KeyCard.Desktop.ViewModels
 
         private void Reevaluate()
         {
-            // Try to raise CanExecuteChanged on commands
-            TryRaiseCanExecuteChanged(LoginCommand);
-            TryRaiseCanExecuteChanged(ContinueMockCommand);
             OnPropertyChanged(nameof(CanLogin));
-        }
-
-        private static void TryRaiseCanExecuteChanged(ICommand? command)
-        {
-            if (command is null) return;
-
-            // Use reflection to call RaiseCanExecuteChanged if it exists
-            var method = command.GetType().GetMethod("RaiseCanExecuteChanged");
-            method?.Invoke(command, null);
+            (LoginCommand as DelegateCommand)?.RaiseCanExecuteChanged();
+            (ContinueMockCommand as DelegateCommand)?.RaiseCanExecuteChanged();
         }
 
         public async Task LoginAsync(CancellationToken ct = default)
