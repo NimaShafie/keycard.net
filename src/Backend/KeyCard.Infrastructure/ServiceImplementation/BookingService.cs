@@ -81,7 +81,8 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                 booking.Status,
                 guest.FullName,
                 room.RoomNumber,
-                booking.TotalAmount
+                booking.TotalAmount,
+                null
             );
         }
 
@@ -100,7 +101,8 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                     b.Status,
                     b.GuestProfile.FullName,
                     b.Room.RoomNumber,
-                    b.TotalAmount
+                    b.TotalAmount,
+                    null
                 ))
                 .FirstOrDefaultAsync(cancellationToken);
 
@@ -147,7 +149,8 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                     b.Status,
                     b.GuestProfile.FullName,
                     b.Room.RoomNumber,
-                    b.TotalAmount
+                    b.TotalAmount,
+                    null
                 ))
                 .ToListAsync(cancellationToken);
 
@@ -290,7 +293,8 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                     b.Status,
                     b.GuestProfile.FullName,
                     b.Room.RoomNumber,
-                    b.TotalAmount))
+                    b.TotalAmount,
+                    null))
                 .ToListAsync(cancellationToken);
         }
 
@@ -307,7 +311,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
             return status;
         }
 
-        public async Task<bool> GuestCheckInAsync(GuestCheckInCommand command, CancellationToken cancellationToken)
+        public async Task<BookingViewModel> GuestCheckInAsync(GuestCheckInCommand command, CancellationToken cancellationToken)
         {
             var booking = await _context.Bookings
                 .Include(b => b.Room)
@@ -320,7 +324,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                 throw new UnauthorizedAccessException("You are not authorized to check in this booking.");
 
             if (booking.Status == BookingStatus.CheckedIn)
-                return true;
+                throw new Exception("You have already checked in for this booking.");
 
             if (booking.Status != BookingStatus.Reserved)
                 throw new InvalidOperationException($"Cannot check in a booking with status '{booking.Status}'.");
@@ -341,9 +345,18 @@ namespace KeyCard.Infrastructure.ServiceImplementation
 
             await _context.SaveChangesAsync(cancellationToken);
 
-            await _digitalKeyService.IssueKeyAsync(new IssueDigitalKeyCommand(BookingId: booking.Id) { User = command.User }, cancellationToken);
+            var key = await _digitalKeyService.IssueKeyAsync(new IssueDigitalKeyCommand(BookingId: booking.Id) { User = command.User }, cancellationToken);
 
-            return true;
+            return new BookingViewModel(
+                    booking.Id,
+                    booking.ConfirmationCode,
+                    booking.CheckInDate,
+                    booking.CheckOutDate,
+                    booking.Status,
+                    booking.GuestProfile.FullName,
+                    booking.Room.RoomNumber,
+                    booking.TotalAmount,
+                    key);
            
         }
 
@@ -361,7 +374,8 @@ namespace KeyCard.Infrastructure.ServiceImplementation
                     b.Status,
                     b.GuestProfile.FullName,
                     b.Room.RoomNumber,
-                    b.TotalAmount
+                    b.TotalAmount,
+                    null
                 ))
                 .FirstOrDefaultAsync(cancellationToken);
 

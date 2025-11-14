@@ -21,6 +21,25 @@ namespace KeyCard.Infrastructure.ServiceImplementation
             _context = context;
         }
 
+        public async Task<DigitalKeyViewModel> GetDigitalKeyByBookingIdAsync(GetDigitalKeyByBookingIdCommand command, CancellationToken cancellationToken)
+        {
+            var key = await _context.DigitalKeys
+                .FirstOrDefaultAsync(k => k.BookingId == command.BookingId && !k.IsDeleted, cancellationToken);
+
+            if (key == null)
+            {
+                throw new KeyNotFoundException("Digital key not found for the specified booking.");
+            }
+
+            return new DigitalKeyViewModel()
+            {
+                Token = key.Token,
+                IssuedAt = key.IssuedAt,
+                ExpiresAt = key.ExpiresAt,
+                BookingId = key.BookingId
+            };
+        }
+
         public async Task<DigitalKeyViewModel> IssueKeyAsync(IssueDigitalKeyCommand command, CancellationToken cancellationToken)
         {
             var booking = await _context.Bookings
