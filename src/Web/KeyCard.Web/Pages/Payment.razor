@@ -1,0 +1,170 @@
+@page "/payment"
+@using Microsoft.AspNetCore.WebUtilities
+@inject NavigationManager Nav
+
+<div class="min-h-screen bg-slate-50 flex justify-center px-4 py-10">
+    <div class="w-full max-w-xl mx-auto">
+        <!-- Header -->
+        <div class="flex flex-col items-center mb-8">
+            <div class="flex items-center justify-center h-12 w-12 rounded-full bg-slate-900 text-white mb-4">
+                💳
+            </div>
+            <h1 class="text-2xl font-bold mb-1">Book Your Stay</h1>
+            <p class="text-sm text-slate-500">Complete your payment</p>
+        </div>
+
+        <!-- Card -->
+        <div class="bg-white rounded-3xl shadow-lg border border-slate-100 p-8">
+            <h2 class="text-lg font-semibold mb-1">Payment</h2>
+            <p class="text-sm text-slate-500 mb-6">
+                Secure payment for your booking
+            </p>
+
+            <!-- Summary -->
+            <div class="mb-6 text-sm bg-slate-50 rounded-2xl p-4">
+                <div class="flex justify-between mb-1">
+                    <span class="text-slate-500">Room Type</span>
+                    <span class="font-medium">@RoomTypeDisplay</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500">Total Amount</span>
+                    <span class="font-semibold">$@Price</span>
+                </div>
+            </div>
+
+            <!-- Form -->
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">
+                        Card Number
+                    </label>
+                    <input
+                        @bind="CardNumber"
+                        class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                        placeholder="1234 5678 9012 3456" />
+                </div>
+
+                <div class="flex gap-3">
+                    <div class="flex-1">
+                        <label class="block text-xs font-medium text-slate-600 mb-1">
+                            Expiry Date
+                        </label>
+                        <input
+                            @bind="Expiry"
+                            class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                            placeholder="MM/YY" />
+                    </div>
+
+                    <div class="w-24">
+                        <label class="block text-xs font-medium text-slate-600 mb-1">
+                            CVV
+                        </label>
+                        <input
+                            @bind="Cvv"
+                            class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                            placeholder="123" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">
+                        Cardholder Name
+                    </label>
+                    <input
+                        @bind="CardholderName"
+                        class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                        placeholder="John Smith" />
+                </div>
+
+                <p class="text-xs text-slate-500 flex items-center gap-1">
+                    🔒 Your payment information is encrypted and secure
+                </p>
+
+                @if (!string.IsNullOrEmpty(ErrorMessage))
+                {
+                    <p class="text-xs text-red-500">@ErrorMessage</p>
+                }
+            </div>
+
+            <!-- Buttons -->
+            <div class="mt-8 flex justify-between items-center">
+                <button
+                    type="button"
+                    class="px-6 py-2 text-sm rounded-full border border-slate-200 text-slate-700 hover:bg-slate-50"
+                    @onclick="GoBack">
+                    Back
+                </button>
+
+            <button
+                type="button"
+                class="px-8 py-2 text-sm rounded-full font-medium bg-slate-900 text-white hover:bg-black"
+                @onclick="CompleteBooking">
+                Complete Booking
+            </button>
+            </div>
+        </div>
+
+        <p class="mt-6 text-center text-xs text-slate-400">
+            © 2025 Keycard Management. All rights reserved.
+        </p>
+    </div>
+</div>
+
+@code {
+    private string? RoomType;
+    private int Price;
+    private string CardNumber = "";
+    private string Expiry = "";
+    private string Cvv = "";
+    private string CardholderName = "";
+    private string ErrorMessage = "";
+
+    private string RoomTypeDisplay => string.IsNullOrEmpty(RoomType) ? "Not selected" : RoomType;
+
+    protected override void OnInitialized()
+    {
+        // read ?room=King%20Room&price=189 from URL
+        var uri = Nav.ToAbsoluteUri(Nav.Uri);
+        var query = QueryHelpers.ParseQuery(uri.Query);
+
+        if (query.TryGetValue("room", out var room))
+        {
+            RoomType = room!;
+        }
+
+        if (query.TryGetValue("price", out var priceStr) && int.TryParse(priceStr, out var p))
+        {
+            Price = p;
+        }
+    }
+
+    private void GoBack()
+    {
+        Nav.NavigateTo("/rooms");
+    }
+
+    private void CompleteBooking()
+    {
+        // super simple validation for now
+        if (string.IsNullOrWhiteSpace(CardNumber) ||
+            string.IsNullOrWhiteSpace(Expiry) ||
+            string.IsNullOrWhiteSpace(Cvv) ||
+            string.IsNullOrWhiteSpace(CardholderName))
+        {
+            ErrorMessage = "Please fill in all payment details.";
+            return;
+        }
+
+        ErrorMessage = "";
+
+        // fake confirmation code for now
+        var code = $"RY{Random.Shared.Next(10000, 99999)}";
+
+        var url =
+            $"/confirmation?code={Uri.EscapeDataString(code)}" +
+            $"&room={Uri.EscapeDataString(RoomType ?? string.Empty)}" +
+            $"&price={Price}";
+
+        Nav.NavigateTo(url);
+    }
+}
