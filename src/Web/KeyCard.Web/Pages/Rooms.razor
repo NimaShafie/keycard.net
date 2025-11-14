@@ -1,0 +1,225 @@
+@page "/rooms"
+@inject NavigationManager Nav
+
+<div class="min-h-screen bg-slate-50 flex justify-center px-4 py-10">
+    <div class="w-full max-w-4xl mx-auto">
+        <!-- Top header -->
+        <div class="flex flex-col items-center mb-8">
+            <div class="flex items-center justify-center h-12 w-12 rounded-full bg-slate-900 text-white mb-4">
+                🏨
+            </div>
+            <h1 class="text-2xl font-bold mb-1">Book Your Stay</h1>
+            <p class="text-sm text-slate-500">Choose your perfect room</p>
+        </div>
+
+        <!-- Main card -->
+        <div class="bg-white rounded-3xl shadow-lg border border-slate-100 p-6 sm:p-8">
+            <div class="mb-6">
+                <h2 class="text-lg font-semibold mb-1">Choose Your Room</h2>
+                <p class="text-sm text-slate-500">
+                    Select from our available room types
+                </p>
+            </div>
+
+            <div class="space-y-4">
+                <!-- Regular Room -->
+                <button type="button"
+                        class="@GetCardClasses("Regular Room")"
+                        @onclick="SelectRegular">
+
+                  <div class="flex gap-4 items-stretch">
+                    <img src="images/regular.png"
+                         alt="Regular Room"
+                         class="w-40 h-28 rounded-xl object-cover"/>
+
+                    <div class="flex-1 flex justify-between gap-4">
+                      <div class="flex flex-col justify-between">
+                        <div>
+                          <h3 class="text-base font-semibold text-slate-900">Regular Room</h3>
+                          <p class="text-sm text-slate-500">
+                            Comfortable room with modern amenities
+                          </p>
+                        </div>
+
+                        <div class="flex flex-wrap gap-3 text-xs text-slate-600">
+                          <span class="flex items-center gap-1">📶 Free WiFi</span>
+                          <span class="flex items-center gap-1">☕ Coffee Maker</span>
+                          <span class="flex items-center gap-1">📺 32" TV</span>
+                          <span class="flex items-center gap-1">👥 Up to 2 Guests</span>
+                        </div>
+                      </div>
+
+                      <div class="flex flex-col items-end justify-between text-right text-sm">
+                        <div>
+                          <p class="text-lg font-semibold text-slate-900">$130</p>
+                          <p class="text-xs text-slate-500">per night</p>
+                        </div>
+                        <p class="text-xs text-slate-500">
+                          1 night<br/>
+                          <span class="font-medium text-slate-900">Total: $130</span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+
+                <!-- King Room -->
+                <button type="button"
+                        class="@GetCardClasses("King Room")"
+                        @onclick="SelectKing">
+                  <div class="flex gap-4 items-stretch">
+
+                    <img src="images/king.png"
+                         alt="King Room"
+                         class="w-40 h-28 rounded-xl object-cover"/>
+
+                    <div class="flex-1 flex justify-between gap-4">
+                      <div class="flex flex-col justify-between">
+                        <div>
+                          <p class="inline-block text-[10px] px-2 py-1 rounded-full bg-slate-900 text-white mb-1">
+                            Most Popular
+                          </p>
+                          <h3 class="text-base font-semibold text-slate-900">King Room</h3>
+                          <p class="text-sm text-slate-500">
+                            Spacious room with king-size bed and premium amenities
+                          </p>
+                        </div>
+
+                        <div class="flex flex-wrap gap-3 text-xs text-slate-600">
+                          <span class="flex items-center gap-1">📶 Free WiFi</span>
+                          <span class="flex items-center gap-1">☕ Espresso Machine</span>
+                          <span class="flex items-center gap-1">📺 43" Smart TV</span>
+                          <span class="flex items-center gap-1">👥 Up to 2 Guests</span>
+                        </div>
+                      </div>
+
+                      <div class="flex flex-col items-end justify-between text-right text-sm">
+                        <div>
+                          <p class="text-lg font-semibold text-slate-900">$200</p>
+                          <p class="text-xs text-slate-500">per night</p>
+                        </div>
+                        <p class="text-xs text-slate-500">
+                          1 night<br/>
+                          <span class="font-medium text-slate-900">Total: $200</span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+
+                <!-- Luxury Suite -->
+                <button type="button"
+                        class="@GetCardClasses("Luxury Suite")"
+                        @onclick="SelectSuite">
+                    <div class="flex gap-4 items-stretch">
+                      <img src="images/suite.png"
+                           alt="Luxury Suite"
+                           class="w-40 h-28 rounded-xl object-cover"/>
+
+                        <div class="flex-1 flex justify-between gap-4">
+                            <div class="flex flex-col justify-between">
+                                <div>
+                                    <h3 class="text-base font-semibold text-slate-900">Luxury Suite</h3>
+                                    <p class="text-sm text-slate-500">
+                                        Luxurious suite with separate living area and premium finishes
+                                    </p>
+                                </div>
+
+                                <div class="flex flex-wrap gap-3 text-xs text-slate-600">
+                                    <span class="flex items-center gap-1">📶 Free WiFi</span>
+                                    <span class="flex items-center gap-1">🏡 3BR Family Suite</span>
+                                    <span class="flex items-center gap-1">📺 55" Smart TV</span>
+                                    <span class="flex items-center gap-1">👥 Up to 4 Guests</span>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-col items-end justify-between text-right text-sm">
+                                <div>
+                                    <p class="text-lg font-semibold text-slate-900">$350</p>
+                                    <p class="text-xs text-slate-500">per night</p>
+                                </div>
+                                <p class="text-xs text-slate-500">
+                                    1 night<br />
+                                    <span class="font-medium text-slate-900">Total: $350</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Bottom actions -->
+            <div class="mt-8 flex justify-between items-center">
+                <button type="button"
+                        class="px-6 py-2 text-sm rounded-full border border-slate-200 text-slate-700 hover:bg-slate-50"
+                        @onclick="GoBack">
+                    Back
+                </button>
+
+                <button type="button"
+                        class="@ContinueButtonClasses"
+                        @onclick="Continue">
+                    Continue
+                </button>
+            </div>
+        </div>
+
+        <p class="mt-6 text-center text-xs text-slate-400">
+            © 2025 Keycard Management. All rights reserved.
+        </p>
+    </div>
+</div>
+
+@code {
+    private string? _selectedRoom;
+    private int _selectedPrice;
+
+    private bool HasSelection => !string.IsNullOrEmpty(_selectedRoom);
+
+    private void SelectRoom(string roomName, int price)
+    {
+        _selectedRoom = roomName;
+        _selectedPrice = price;
+    }
+
+    private void SelectRegular() => SelectRoom("Regular Room", 129);
+    private void SelectKing()    => SelectRoom("King Room", 189);
+    private void SelectSuite()   => SelectRoom("Luxury Suite", 299);
+
+    private string GetCardClasses(string roomName)
+    {
+        var baseClasses =
+            "w-full text-left bg-white border rounded-2xl px-4 py-4 sm:px-5 sm:py-5 transition " +
+            "hover:border-slate-400";
+
+        if (_selectedRoom == roomName)
+        {
+            return baseClasses + " border-slate-900 ring-2 ring-slate-900/40";
+        }
+
+        return baseClasses + " border-slate-200";
+    }
+
+    private string ContinueButtonClasses =>
+        "px-8 py-2 text-sm rounded-full font-medium " +
+        (HasSelection
+            ? "bg-slate-900 text-white hover:bg-black"
+            : "bg-slate-200 text-slate-500 cursor-not-allowed");
+
+    private void GoBack()
+    {
+        Nav.NavigateTo("/dates");
+    }
+
+    private void Continue()
+    {
+        if (!HasSelection)
+            return;
+
+        var url =
+            $"/payment?room={Uri.EscapeDataString(_selectedRoom!)}" +
+            $"&price={_selectedPrice}";
+
+        Nav.NavigateTo(url);
+    }
+}
