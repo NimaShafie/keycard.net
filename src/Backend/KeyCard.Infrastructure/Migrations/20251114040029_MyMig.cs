@@ -6,11 +6,32 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace KeyCard.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class Initial : Migration
+    public partial class MyMig : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.CreateTable(
+                name: "Amenities",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Key = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
+                    Label = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    IconKey = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<int>(type: "int", nullable: true),
+                    LastUpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastUpdatedBy = table.Column<int>(type: "int", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Amenities", x => x.Id);
+                });
+
             migrationBuilder.CreateTable(
                 name: "AspNetRoles",
                 columns: table => new
@@ -200,8 +221,8 @@ namespace KeyCard.Infrastructure.Migrations
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Capacity = table.Column<int>(type: "int", nullable: false),
-                    BaseRate = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    SeasonalRate = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    BaseRate = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    SeasonalRate = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
                     HotelId = table.Column<int>(type: "int", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatedBy = table.Column<int>(type: "int", nullable: true),
@@ -252,6 +273,38 @@ namespace KeyCard.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "RoomTypeAmenities",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    RoomTypeId = table.Column<int>(type: "int", nullable: false),
+                    AmenityId = table.Column<int>(type: "int", nullable: false),
+                    Value = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<int>(type: "int", nullable: true),
+                    LastUpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastUpdatedBy = table.Column<int>(type: "int", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RoomTypeAmenities", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RoomTypeAmenities_Amenities_AmenityId",
+                        column: x => x.AmenityId,
+                        principalTable: "Amenities",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_RoomTypeAmenities_RoomTypes_RoomTypeId",
+                        column: x => x.RoomTypeId,
+                        principalTable: "RoomTypes",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Bookings",
                 columns: table => new
                 {
@@ -261,9 +314,12 @@ namespace KeyCard.Infrastructure.Migrations
                     CheckInDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CheckOutDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
+                    CheckInTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CheckOutTime = table.Column<DateTime>(type: "datetime2", nullable: true),
                     Adults = table.Column<int>(type: "int", nullable: false),
                     Children = table.Column<int>(type: "int", nullable: false),
-                    TotalAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    TotalAmount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    ExtraFees = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
                     IsPrepaid = table.Column<bool>(type: "bit", nullable: false),
                     GuestProfileId = table.Column<int>(type: "int", nullable: false),
                     RoomId = table.Column<int>(type: "int", nullable: false),
@@ -358,10 +414,10 @@ namespace KeyCard.Infrastructure.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    InvoiceNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    InvoiceNumber = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     IssuedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     PdfPath = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    TotalAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    TotalAmount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
                     BookingId = table.Column<int>(type: "int", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatedBy = table.Column<int>(type: "int", nullable: true),
@@ -386,7 +442,7 @@ namespace KeyCard.Infrastructure.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
                     PaidAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Method = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     TransactionId = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -407,6 +463,12 @@ namespace KeyCard.Infrastructure.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Amenities_Key",
+                table: "Amenities",
+                column: "Key",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
@@ -480,6 +542,12 @@ namespace KeyCard.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Invoices_InvoiceNumber",
+                table: "Invoices",
+                column: "InvoiceNumber",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Payments_BookingId",
                 table: "Payments",
                 column: "BookingId");
@@ -492,6 +560,16 @@ namespace KeyCard.Infrastructure.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_Rooms_RoomTypeId",
                 table: "Rooms",
+                column: "RoomTypeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RoomTypeAmenities_AmenityId",
+                table: "RoomTypeAmenities",
+                column: "AmenityId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RoomTypeAmenities_RoomTypeId",
+                table: "RoomTypeAmenities",
                 column: "RoomTypeId");
 
             migrationBuilder.CreateIndex(
@@ -531,10 +609,16 @@ namespace KeyCard.Infrastructure.Migrations
                 name: "Payments");
 
             migrationBuilder.DropTable(
+                name: "RoomTypeAmenities");
+
+            migrationBuilder.DropTable(
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
                 name: "Bookings");
+
+            migrationBuilder.DropTable(
+                name: "Amenities");
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");

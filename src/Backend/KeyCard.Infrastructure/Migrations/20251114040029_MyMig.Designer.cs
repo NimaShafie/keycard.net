@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace KeyCard.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDBContext))]
-    [Migration("20251012183736_AddCheckInOutTime")]
-    partial class AddCheckInOutTime
+    [Migration("20251114040029_MyMig")]
+    partial class MyMig
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -61,6 +61,10 @@ namespace KeyCard.Infrastructure.Migrations
                     b.Property<int?>("CreatedBy")
                         .HasColumnType("int");
 
+                    b.Property<decimal>("ExtraFees")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<int>("GuestProfileId")
                         .HasColumnType("int");
 
@@ -83,6 +87,7 @@ namespace KeyCard.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal>("TotalAmount")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
@@ -139,6 +144,55 @@ namespace KeyCard.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("DigitalKeys");
+                });
+
+            modelBuilder.Entity("KeyCard.Infrastructure.Models.Entities.Amenity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CreatedBy")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("IconKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("LastUpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("LastUpdatedBy")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Key")
+                        .IsUnique();
+
+                    b.ToTable("Amenities");
                 });
 
             modelBuilder.Entity("KeyCard.Infrastructure.Models.Entities.Hotel", b =>
@@ -251,6 +305,7 @@ namespace KeyCard.Infrastructure.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("BaseRate")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("Capacity")
@@ -283,6 +338,7 @@ namespace KeyCard.Infrastructure.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal?>("SeasonalRate")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
@@ -290,6 +346,47 @@ namespace KeyCard.Infrastructure.Migrations
                     b.HasIndex("HotelId");
 
                     b.ToTable("RoomTypes");
+                });
+
+            modelBuilder.Entity("KeyCard.Infrastructure.Models.Entities.RoomTypeAmenity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AmenityId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CreatedBy")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastUpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("LastUpdatedBy")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RoomTypeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Value")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AmenityId");
+
+                    b.HasIndex("RoomTypeId");
+
+                    b.ToTable("RoomTypeAmenities");
                 });
 
             modelBuilder.Entity("KeyCard.Infrastructure.Models.HouseKeeping.HousekeepingTask", b =>
@@ -362,7 +459,7 @@ namespace KeyCard.Infrastructure.Migrations
 
                     b.Property<string>("InvoiceNumber")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
@@ -381,11 +478,15 @@ namespace KeyCard.Infrastructure.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("TotalAmount")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("BookingId")
+                        .IsUnique();
+
+                    b.HasIndex("InvoiceNumber")
                         .IsUnique();
 
                     b.ToTable("Invoices");
@@ -400,6 +501,7 @@ namespace KeyCard.Infrastructure.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("BookingId")
@@ -730,6 +832,25 @@ namespace KeyCard.Infrastructure.Migrations
                     b.Navigation("Hotel");
                 });
 
+            modelBuilder.Entity("KeyCard.Infrastructure.Models.Entities.RoomTypeAmenity", b =>
+                {
+                    b.HasOne("KeyCard.Infrastructure.Models.Entities.Amenity", "Amenity")
+                        .WithMany("RoomTypeAmenities")
+                        .HasForeignKey("AmenityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("KeyCard.Infrastructure.Models.Entities.RoomType", "RoomType")
+                        .WithMany("RoomTypeAmenities")
+                        .HasForeignKey("RoomTypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Amenity");
+
+                    b.Navigation("RoomType");
+                });
+
             modelBuilder.Entity("KeyCard.Infrastructure.Models.HouseKeeping.HousekeepingTask", b =>
                 {
                     b.HasOne("KeyCard.Infrastructure.Models.User.ApplicationUser", "AssignedTo")
@@ -828,6 +949,11 @@ namespace KeyCard.Infrastructure.Migrations
                     b.Navigation("Payments");
                 });
 
+            modelBuilder.Entity("KeyCard.Infrastructure.Models.Entities.Amenity", b =>
+                {
+                    b.Navigation("RoomTypeAmenities");
+                });
+
             modelBuilder.Entity("KeyCard.Infrastructure.Models.Entities.Hotel", b =>
                 {
                     b.Navigation("RoomTypes");
@@ -838,6 +964,11 @@ namespace KeyCard.Infrastructure.Migrations
             modelBuilder.Entity("KeyCard.Infrastructure.Models.Entities.Room", b =>
                 {
                     b.Navigation("Bookings");
+                });
+
+            modelBuilder.Entity("KeyCard.Infrastructure.Models.Entities.RoomType", b =>
+                {
+                    b.Navigation("RoomTypeAmenities");
                 });
 
             modelBuilder.Entity("KeyCard.Infrastructure.Models.User.ApplicationUser", b =>
