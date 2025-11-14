@@ -18,7 +18,7 @@ namespace KeyCard.BusinessLogic.ServiceInterfaces
         //guest
         Task<List<BookingViewModel>> GetBookingsByGuestIdAsync(GetMyBookingsCommand command, CancellationToken cancellationToken);
         Task<string> GetBookingStatusByIdAsync(GetBookingStatusByIdCommand command, CancellationToken cancellationToken);
-        Task<bool> GuestCheckInAsync(GuestCheckInCommand command, CancellationToken cancellationToken);
+        Task<BookingViewModel> GuestCheckInAsync(GuestCheckInCommand command, CancellationToken cancellationToken);
         Task<BookingViewModel> LookUpBookingAsync(LookupBookingCommand command, CancellationToken cancellationToken);   
     }
 }

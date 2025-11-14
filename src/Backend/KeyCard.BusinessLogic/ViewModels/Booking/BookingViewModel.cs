@@ -16,6 +16,7 @@ namespace KeyCard.BusinessLogic.ViewModels.Booking
         BookingStatus Status,
         string GuestName,
         string RoomNumber,
-        decimal TotalAmount
+        decimal TotalAmount,
+        DigitalKeyViewModel? DigitalKey
     );
 }

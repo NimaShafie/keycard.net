@@ -17,28 +17,40 @@ namespace KeyCard.Api.Controllers.Admin
 
         private readonly IMediator _mediator;
         private readonly IHttpContextAccessor _contextAccessor;
-        private readonly UserClaimsViewModel? _user;
         public DigitalKeyController(IMediator mediator, IHttpContextAccessor contextAccessor)
         {
             _mediator = mediator;
             _contextAccessor = contextAccessor;
-            _user = _contextAccessor.HttpContext!.User.GetUser();
         }
 
-        [HttpPost("{id:int}/key")]
+        [HttpPost("{id:int}/IssueKey")]
         [Authorize(Roles = "FrontDesk,Admin")]
         public async Task<ActionResult<DigitalKeyViewModel>> IssueKey(int id)
         {
-            var dto = await _mediator.Send(new IssueDigitalKeyCommand(id));
+            var command = new IssueDigitalKeyCommand(id);
+            command.User = _contextAccessor.HttpContext?.User.GetUser();
+
+            var dto = await _mediator.Send(command);
             return Ok(dto);
         }
 
-        [HttpPost("{id:int}/key/revoke")]
+        [HttpPost("{id:int}/RevokeKey")]
         [Authorize(Roles = "FrontDesk,Admin")]
         public async Task<ActionResult> RevokeKey(int id)
         {
-            var success = await _mediator.Send(new RevokeDigitalKeyCommand(id));
+            var command = new RevokeDigitalKeyCommand(id);
+            command.User = _contextAccessor.HttpContext?.User.GetUser();
+
+            var success = await _mediator.Send(command);
             return success ? Ok(new { message = "Key revoked." }) : NotFound(new { message = "Active key not found." });
+        }
+
+        [HttpGet("{id:int}/GetDigitalKey")]
+        //[Authorize(Roles = "Guest")]
+        public async Task<ActionResult> GetDigitalKey(int id)
+        {
+            var dto = await _mediator.Send(new GetDigitalKeyByBookingIdCommand(id));
+            return Ok(dto);
         }
     }
 }

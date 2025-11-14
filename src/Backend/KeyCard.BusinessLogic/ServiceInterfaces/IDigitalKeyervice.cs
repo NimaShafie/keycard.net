@@ -7,6 +7,7 @@ namespace KeyCard.BusinessLogic.ServiceInterfaces
     {
         Task<DigitalKeyViewModel> IssueKeyAsync(IssueDigitalKeyCommand command, CancellationToken cancellationToken);
         Task<bool> RevokeKeyAsync(RevokeDigitalKeyCommand command, CancellationToken cancellationToken);
+        Task<DigitalKeyViewModel> GetDigitalKeyByBookingIdAsync(GetDigitalKeyByBookingIdCommand command, CancellationToken cancellationToken);  
     }
 }
 
