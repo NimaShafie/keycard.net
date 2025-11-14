@@ -6,4 +6,7 @@
     <AssemblyName>KeyCard.Web</AssemblyName>
     <RootNamespace>KeyCard.Web</RootNamespace>
   </PropertyGroup>
+  <ItemGroup>
+    <Folder Include="images\" />
+  </ItemGroup>
 </Project>

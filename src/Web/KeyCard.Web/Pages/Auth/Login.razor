@@ -1,0 +1,67 @@
+﻿@page "/auth/login"
+@inject IHttpClientFactory Http
+@inject NavigationManager Nav
+
+<div class="min-h-screen flex items-center justify-center bg-slate-100 px-4">
+  <div class="w-full max-w-md bg-white p-8 rounded-xl shadow">
+
+    <h1 class="text-2xl font-bold mb-6 text-center">Login</h1>
+
+    <div class="space-y-4">
+      <input @bind="Email"
+             type="email"
+             placeholder="Email"
+             class="w-full px-4 py-2 border rounded-lg" />
+
+      <input @bind="Password"
+             type="password"
+             placeholder="Password"
+             class="w-full px-4 py-2 border rounded-lg" />
+
+      <button @onclick="LoginUser"
+              class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
+        Login
+      </button>
+
+      <p class="text-center text-sm">
+        No account?
+        <a href="/auth/signup" class="text-blue-600 underline">Sign up</a>
+      </p>
+    </div>
+
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+      <div class="mt-4 text-red-500 text-center">@ErrorMessage</div>
+    }
+  </div>
+</div>
+
+@code {
+
+  private string Email { get; set; }
+  private string Password { get; set; }
+  private string ErrorMessage { get; set; }
+
+  private async Task LoginUser()
+  {
+    var client = Http.CreateClient("api");
+
+    var body = new
+    {
+      email = Email,
+      password = Password
+    };
+
+    var response = await client.PostAsJsonAsync("/api/Auth/login", body);
+
+    if (!response.IsSuccessStatusCode)
+    {
+      ErrorMessage = "Invalid login.";
+      return;
+    }
+
+    // TODO: Store token if your backend returns it
+
+    Nav.NavigateTo("/dates");
+  }
+}
