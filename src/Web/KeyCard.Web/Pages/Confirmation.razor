@@ -1,0 +1,99 @@
+@page "/confirmation"
+@using Microsoft.AspNetCore.WebUtilities
+@inject NavigationManager Nav
+
+<div class="min-h-screen bg-slate-50 flex justify-center px-4 py-10">
+    <div class="w-full max-w-xl mx-auto">
+        <!-- Header -->
+        <div class="flex flex-col items-center mb-8">
+            <div class="flex items-center justify-center h-12 w-12 rounded-full bg-emerald-500 text-white mb-4">
+                ✓
+            </div>
+            <h1 class="text-2xl font-bold mb-1">Book Your Stay</h1>
+            <p class="text-sm text-slate-500">Your booking is confirmed</p>
+        </div>
+
+        <!-- Card -->
+        <div class="bg-white rounded-3xl shadow-lg border border-slate-100 p-8">
+            <h2 class="text-lg font-semibold mb-4">Booking Confirmed!</h2>
+            <p class="text-sm text-slate-500 mb-6">
+                Your reservation has been successfully created.
+            </p>
+
+            <!-- Confirmation Code -->
+            <div class="mb-6 bg-slate-50 rounded-2xl p-4 text-center">
+                <p class="text-xs text-slate-500 mb-1">Confirmation Code</p>
+                <p class="text-2xl font-mono font-semibold tracking-[0.25em]">
+                    @ConfirmationCode
+                </p>
+                <p class="text-xs text-slate-400 mt-2">
+                    Use this code to check in at the kiosk
+                </p>
+            </div>
+
+            <!-- Details -->
+            <div class="mb-6 text-sm">
+                <h3 class="font-semibold mb-3">Booking Details</h3>
+                <div class="space-y-1 text-slate-600">
+                    <div class="flex justify-between">
+                        <span>Room Type</span>
+                        <span>@RoomTypeDisplay</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Total Paid</span>
+                        <span class="font-semibold">$@Price</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="space-y-3">
+                <button
+                    class="w-full py-2 text-sm rounded-full bg-slate-900 text-white hover:bg-black">
+                    Email Confirmation
+                </button>
+                <button
+                    class="w-full py-2 text-sm rounded-full border border-slate-200 hover:bg-slate-50">
+                    Download Receipt
+                </button>
+                <button
+                    class="w-full py-2 text-sm rounded-full border border-slate-200 text-slate-700 hover:bg-slate-50"
+                    @onclick="MakeAnotherBooking">
+                    Make Another Booking
+                </button>
+            </div>
+        </div>
+
+        <p class="mt-6 text-center text-xs text-slate-400">
+            A confirmation email has been sent to your email address (mock).
+        </p>
+    </div>
+</div>
+
+@code {
+    private string ConfirmationCode = "------";
+    private string? RoomType;
+    private int Price;
+
+    private string RoomTypeDisplay => string.IsNullOrEmpty(RoomType) ? "Not available" : RoomType;
+
+    protected override void OnInitialized()
+    {
+        var uri = Nav.ToAbsoluteUri(Nav.Uri);
+        var query = QueryHelpers.ParseQuery(uri.Query);
+
+        if (query.TryGetValue("code", out var code))
+            ConfirmationCode = code!;
+
+        if (query.TryGetValue("room", out var room))
+            RoomType = room!;
+
+        if (query.TryGetValue("price", out var priceStr) && int.TryParse(priceStr, out var p))
+            Price = p;
+    }
+
+    private void MakeAnotherBooking()
+    {
+        Nav.NavigateTo("/dates");
+    }
+}
