@@ -1,18 +1,54 @@
 // Models/HousekeepingTask.cs
+using KeyCard.Desktop.Infrastructure;
+using KeyCard.Desktop.ViewModels;
+
 namespace KeyCard.Desktop.Models
 {
-    public sealed class HousekeepingTask
+    /// <summary>
+    /// Kanban task model with property change notifications
+    /// </summary>
+    public partial class HousekeepingTask : ViewModelBase
     {
-        // Use simple fields that are easy to bind in the UI.
-        public string Id { get; set; } = string.Empty;
-        public int RoomId { get; set; }
-        public string Title { get; set; } = string.Empty;
+        private string _id = string.Empty;
+        public string Id
+        {
+            get => _id;
+            set => SetProperty(ref _id, value);
+        }
 
-        // If your interface expects a string, change this to string; but most likely it's the enum:
-        public HkTaskStatus Status { get; set; } = HkTaskStatus.Pending;
+        private int _roomId;
+        public int RoomId
+        {
+            get => _roomId;
+            set => SetProperty(ref _roomId, value);
+        }
 
-        // Optional niceties you can keep or remove as needed:
-        public string? Notes { get; set; }
-        public string? AssignedTo { get; set; }
+        private string _title = string.Empty;
+        public string Title
+        {
+            get => _title;
+            set => SetProperty(ref _title, value);
+        }
+
+        private string? _notes;
+        public string? Notes
+        {
+            get => _notes;
+            set => SetProperty(ref _notes, value);
+        }
+
+        private HkTaskStatus _status = HkTaskStatus.Pending;
+        public HkTaskStatus Status
+        {
+            get => _status;
+            set => SetProperty(ref _status, value);
+        }
+
+        private string? _assignedTo;
+        public string? AssignedTo
+        {
+            get => _assignedTo;
+            set => SetProperty(ref _assignedTo, value);
+        }
     }
 }

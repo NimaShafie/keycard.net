@@ -102,6 +102,9 @@
     <AvaloniaXaml Update="Views\ForgotPasswordView.axaml">
       <SubType>Designer</SubType>
     </AvaloniaXaml>
+    <AvaloniaXaml Update="Views\GuestDetailWindow.axaml">
+      <SubType>Designer</SubType>
+    </AvaloniaXaml>
     <AvaloniaXaml Update="Views\HousekeepingKanbanView.axaml">
       <SubType>Designer</SubType>
     </AvaloniaXaml>

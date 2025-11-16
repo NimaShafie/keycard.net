@@ -2,7 +2,6 @@
 using System;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 
 using KeyCard.Desktop.Generated;
 using KeyCard.Desktop.Modules.Folio.Services;
@@ -13,13 +12,20 @@ using KeyCard.Desktop.ViewModels;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 using Polly;
 using Polly.Extensions.Http;
 
 namespace KeyCard.Desktop.Infrastructure
 {
+    // ✅ GLOBAL static storage for ViewModels - survives app restarts
+    internal static class ViewModelCache
+    {
+        public static HousekeepingViewModel? HousekeepingInstance { get; set; }
+        public static DashboardViewModel? DashboardInstance { get; set; }
+        public static FrontDeskViewModel? FrontDeskInstance { get; set; }
+    }
+
     public static class Bootstrap
     {
         public static IServiceCollection AddDesktopServices(
@@ -52,7 +58,7 @@ namespace KeyCard.Desktop.Infrastructure
             })
             .AddHttpMessageHandler(() => new RetryDelegatingHandler(RetryPolicy()));
 
-            // Typed API client (stub until NSwag is enabled)
+            // Typed API client
             services.AddSingleton(sp =>
             {
                 var factory = sp.GetRequiredService<IHttpClientFactory>();
@@ -60,90 +66,128 @@ namespace KeyCard.Desktop.Infrastructure
             });
 
             // SignalR
-            services.AddSingleton<KeyCard.Desktop.Services.ISignalRService>(sp =>
+            services.AddSingleton<ISignalRService>(sp =>
             {
-                var env = sp.GetRequiredService<KeyCard.Desktop.Services.IAppEnvironment>();
+                var env = sp.GetRequiredService<IAppEnvironment>();
                 return env.IsMock
                     ? new NoOpSignalRService()
-                    : new KeyCard.Desktop.Services.SignalRService(env.BookingsHubUrl);
+                    : new SignalRService(env.BookingsHubUrl);
             });
 
             // Business services - Booking
-            services.AddSingleton<KeyCard.Desktop.Services.IBookingService>(sp =>
+            services.AddSingleton<IBookingService>(sp =>
             {
-                var env = sp.GetRequiredService<KeyCard.Desktop.Services.IAppEnvironment>();
+                var env = sp.GetRequiredService<IAppEnvironment>();
                 if (env.IsMock)
-                {
-                    return new KeyCard.Desktop.Services.Mock.BookingService();
-                }
+                    return new Services.Mock.BookingService();
                 else
-                {
-                    // Adapter that uses IHttpClientFactory + RoutesOptions + ILogger
-                    return ActivatorUtilities.CreateInstance<KeyCard.Desktop.Services.BookingService>(sp);
-                }
+                    return ActivatorUtilities.CreateInstance<Services.BookingService>(sp);
             });
 
-            // Business services - Housekeeping
-            services.AddSingleton<KeyCard.Desktop.Services.IHousekeepingService>(sp =>
+            // BookingStateService
+            services.AddSingleton<IBookingStateService, BookingStateService>();
+
+            // Housekeeping
+            services.AddSingleton<IHousekeepingService>(sp =>
             {
-                var env = sp.GetRequiredService<KeyCard.Desktop.Services.IAppEnvironment>();
+                var env = sp.GetRequiredService<IAppEnvironment>();
                 if (env.IsMock)
-                {
-                    return new KeyCard.Desktop.Services.Mock.HousekeepingService();
-                }
+                    return new Services.Mock.HousekeepingService();
                 else
                 {
                     var factory = sp.GetRequiredService<IHttpClientFactory>();
-                    var http = factory.CreateClient("Api");
-                    return new KeyCard.Desktop.Services.Api.HousekeepingService(http);
+                    return new Services.Api.HousekeepingService(factory.CreateClient("Api"));
                 }
             });
 
-            // Business services - Auth
-            services.AddSingleton<KeyCard.Desktop.Services.IAuthService>(sp =>
+            // Auth
+            services.AddSingleton<IAuthService>(sp =>
             {
-                var env = sp.GetRequiredService<KeyCard.Desktop.Services.IAppEnvironment>();
+                var env = sp.GetRequiredService<IAppEnvironment>();
                 return env.IsMock
-                    ? new KeyCard.Desktop.Services.Mock.AuthService()
-                    : new KeyCard.Desktop.Services.Api.AuthService();
+                    ? new Services.Mock.AuthService()
+                    : new Services.Api.AuthService();
             });
 
-            // Business services - Folio
+            // Folio
             services.AddSingleton<IFolioService>(sp =>
             {
-                var env = sp.GetRequiredService<KeyCard.Desktop.Services.IAppEnvironment>();
+                var env = sp.GetRequiredService<IAppEnvironment>();
                 if (env.IsMock)
-                {
                     return new MockFolioService();
-                }
                 else
                 {
                     var factory = sp.GetRequiredService<IHttpClientFactory>();
-                    var http = factory.CreateClient("Api");
-                    return new LiveFolioService(http);
+                    return new LiveFolioService(factory.CreateClient("Api"));
+                }
+            });
+
+            // Rooms
+            services.AddSingleton<IRoomsService>(sp =>
+            {
+                var env = sp.GetRequiredService<IAppEnvironment>();
+                if (env.IsMock)
+                    return new Services.Mock.RoomsService();
+                else
+                {
+                    var factory = sp.GetRequiredService<IHttpClientFactory>();
+                    return new Services.Live.RoomsService(factory.CreateClient("Api"));
                 }
             });
 
             // Infrastructure services
-            services.AddSingleton<KeyCard.Desktop.Services.INavigationService, KeyCard.Desktop.Services.NavigationService>();
-            services.AddSingleton<KeyCard.Desktop.Services.IErrorHandlingService, KeyCard.Desktop.Services.ErrorHandlingService>();
+            services.AddSingleton<INavigationService, NavigationService>();
+            services.AddSingleton<IToolbarService, ToolbarService>();
+            services.AddSingleton<IErrorHandlingService, ErrorHandlingService>();
 
-            // ViewModels
+            // ✅ ViewModels with GLOBAL static caching
             services.AddSingleton<MainViewModel>();
-            services.AddTransient<LoginViewModel>();
-            services.AddTransient<DashboardViewModel>();
-            services.AddTransient<FrontDeskViewModel>();
-            services.AddTransient<HousekeepingViewModel>();
-            services.AddTransient<ProfileViewModel>();
-            services.AddTransient<SettingsViewModel>();
-            services.AddTransient<FolioViewModel>();
+            services.AddSingleton<LoginViewModel>();
+
+            services.AddSingleton<DashboardViewModel>(sp =>
+            {
+                if (ViewModelCache.DashboardInstance == null)
+                {
+                    ViewModelCache.DashboardInstance = ActivatorUtilities.CreateInstance<DashboardViewModel>(sp);
+                }
+                return ViewModelCache.DashboardInstance;
+            });
+
+            services.AddSingleton<FrontDeskViewModel>(sp =>
+            {
+                if (ViewModelCache.FrontDeskInstance == null)
+                {
+                    ViewModelCache.FrontDeskInstance = ActivatorUtilities.CreateInstance<FrontDeskViewModel>(sp);
+                }
+                return ViewModelCache.FrontDeskInstance;
+            });
+
+            services.AddSingleton<HousekeepingViewModel>(sp =>
+            {
+                if (ViewModelCache.HousekeepingInstance == null)
+                {
+                    var hkService = sp.GetRequiredService<IHousekeepingService>();
+                    var nav = sp.GetRequiredService<INavigationService>();
+                    var toolbar = sp.GetRequiredService<IToolbarService>();
+                    ViewModelCache.HousekeepingInstance = new HousekeepingViewModel(hkService, nav, toolbar);
+                    ViewModelCache.HousekeepingInstance.StatusMessage = $"✅ CREATED GLOBAL - Hash: {ViewModelCache.HousekeepingInstance.GetHashCode()}";
+                }
+                else
+                {
+                    ViewModelCache.HousekeepingInstance.StatusMessage = $"✅ REUSED GLOBAL - Hash: {ViewModelCache.HousekeepingInstance.GetHashCode()} | Rooms: {ViewModelCache.HousekeepingInstance.Rooms.Count}";
+                }
+                return ViewModelCache.HousekeepingInstance;
+            });
+
+            services.AddSingleton<ProfileViewModel>();
+            services.AddSingleton<SettingsViewModel>();
+            services.AddSingleton<FolioViewModel>();
 
             return services;
         }
     }
 
-    // No-op SignalR for mock mode
-    internal sealed class NoOpSignalRService : KeyCard.Desktop.Services.ISignalRService
+    internal sealed class NoOpSignalRService : ISignalRService
     {
         public HubConnection BookingsHub { get; }
 

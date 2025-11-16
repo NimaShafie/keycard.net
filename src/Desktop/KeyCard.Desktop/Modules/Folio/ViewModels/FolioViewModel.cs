@@ -24,6 +24,9 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
         private readonly ILogger<FolioViewModel> _logger;
         private readonly IToolbarService _toolbar;
 
+        // ✅ FIX 1: ADD THIS EVENT - Required by FolioView.axaml.cs
+        public event EventHandler<string>? OpenGuestDetailRequested;
+
         // --- Search / selection ---
 
         private string? _guestSearchText;
@@ -45,6 +48,8 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
                     (PostChargeCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
                     (ApplyPaymentCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
                     (PrintStatementCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    // ✅ FIX 2: ADD THIS LINE
+                    (OpenGuestDetailCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
 
                     // keep aliases in sync for views that use them
                     (AddChargeCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
@@ -140,6 +145,8 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
                     (PostChargeCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
                     (ApplyPaymentCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
                     (PrintStatementCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    // ✅ FIX 3: ADD THIS LINE
+                    (OpenGuestDetailCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
 
                     // aliases
                     (AddChargeCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
@@ -177,6 +184,8 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
         public ICommand ApplyPaymentCommand { get; }
         public ICommand PrintStatementCommand { get; }
         public ICommand RefreshCommand { get; }
+        // ✅ FIX 4: ADD THIS COMMAND
+        public ICommand OpenGuestDetailCommand { get; }
 
         // --- Aliases expected by alternative XAML bindings (added) ---
 
@@ -250,6 +259,12 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
             ApplyPaymentCommand = new UnifiedRelayCommand(ApplyPaymentAsync, () => CanApplyPayment());
             PrintStatementCommand = new UnifiedRelayCommand(PrintStatementAsync, () => SelectedFolio != null && !IsBusy);
             RefreshCommand = new UnifiedRelayCommand(RefreshAsync, () => !IsBusy);
+
+            // ✅ FIX 5: ADD THIS COMMAND INITIALIZATION
+            OpenGuestDetailCommand = new UnifiedRelayCommand(
+                OpenGuestDetailAsync,
+                () => !IsBusy
+            );
 
             _toolbar.AttachContext(
                 title: "Folio Manager",
@@ -465,6 +480,22 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
             {
                 IsBusy = false;
             }
+        }
+
+        // ✅ FIX 6: ADD THIS METHOD
+        private void OpenGuestDetail(string? folioId)
+        {
+            if (string.IsNullOrWhiteSpace(folioId))
+                folioId = SelectedFolio?.FolioId;
+
+            if (!string.IsNullOrWhiteSpace(folioId))
+                OpenGuestDetailRequested?.Invoke(this, folioId);
+        }
+
+        private async Task OpenGuestDetailAsync()
+        {
+            OpenGuestDetail(SelectedFolio?.FolioId);
+            await Task.CompletedTask;
         }
     }
 }

@@ -1,164 +1,172 @@
-<!-- Views/FrontDeskView.axaml -->
+<!-- Views/FrontDeskView.axaml - PHASE 1 FIX -->
 <UserControl
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vms="clr-namespace:KeyCard.Desktop.ViewModels"
-    xmlns:vctrl="clr-namespace:KeyCard.Desktop.Views.Controls"
     xmlns:conv="clr-namespace:KeyCard.Desktop.Converters"
     x:Class="KeyCard.Desktop.Views.FrontDeskView"
     x:DataType="vms:FrontDeskViewModel">
 
-  <!-- Keyboard shortcuts -->
   <UserControl.KeyBindings>
-    <!-- F5 refresh -->
     <KeyBinding Gesture="F5" Command="{Binding RefreshCommand}"/>
   </UserControl.KeyBindings>
 
   <UserControl.Resources>
     <conv:NamePartConverter x:Key="NamePartConverter"/>
     <conv:RoomTypeConverter x:Key="RoomTypeConverter"/>
-    <!-- NEW: for colored status badges -->
     <conv:StatusBrushConverter x:Key="StatusBrushConverter"/>
+    <conv:StringHasTextConverter x:Key="HasText"/>
   </UserControl.Resources>
 
-  <Grid RowDefinitions="Auto,Auto,*,Auto">
+  <Grid RowDefinitions="Auto,*" Margin="8">
+
     <!-- Header -->
-    <vctrl:ViewHeader Grid.Row="0"
-                      HeaderText="Front Desk Operations"
-                      SubHeaderText="Manage arrivals, departures, and check-ins"/>
-
-    <!-- Toolbar -->
-    <Border Grid.Row="1" Margin="8" CornerRadius="10"
-            BorderBrush="#3F2F73" BorderThickness="1" Padding="12">
-      <Grid ColumnDefinitions="*,12,Auto">
-        <!-- Search (duplicate of shared TopBar) -->
-        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" IsVisible="False">
-          <!-- HIDDEN: shared TopBar handles search/refresh -->
-          <TextBox x:Name="SearchBox"
-                   Width="300"
-                   Watermark="Search by booking ID, name, or confirmation code"
-                   Text="{Binding SearchText}"/>
-          <Button Content="Search"
-                  Command="{Binding SearchCommand}"
-                  IsEnabled="{Binding !IsBusy}"/>
-          <Button Content="Refresh"
-                  Command="{Binding RefreshCommand}"
-                  IsEnabled="{Binding !IsBusy}"/>
+    <Border Grid.Row="0"
+            CornerRadius="10"
+            BorderBrush="#3F2F73"
+            BorderThickness="1"
+            Padding="16,12"
+            Margin="0,0,0,8"
+            Background="#1B1B22">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel>
+          <TextBlock Text="Front Desk Operations"
+                     FontWeight="SemiBold"
+                     FontSize="18"
+                     Foreground="#E8E8F0"/>
+          <TextBlock Text="Manage arrivals, departures, and check-ins"
+                     FontSize="12"
+                     Opacity="0.7"
+                     Foreground="#CFCFEA"
+                     Margin="0,2,0,0"/>
         </StackPanel>
 
-        <!-- 12px spacer is Column 1 -->
-
-        <!-- Status indicator + Back (kept) -->
-        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
-          <ProgressBar IsIndeterminate="True"
-                       IsVisible="{Binding IsBusy}"
-                       Width="100"/>
-          <Button Content="← Back"
-                  Command="{Binding BackToDashboardCommand}"/>
-        </StackPanel>
+        <TextBlock Grid.Column="1"
+                   Text="Loaded mock data"
+                   VerticalAlignment="Center"
+                   FontSize="12"
+                   Foreground="#9C27B0"
+                   IsVisible="{Binding IsMockMode}"/>
       </Grid>
     </Border>
 
     <!-- Main content -->
-    <Grid Grid.Row="2" Margin="8" ColumnDefinitions="11*,12,4*">
+    <Grid Grid.Row="1" ColumnDefinitions="11*,12,4*">
       <!-- Bookings list -->
       <Border Grid.Column="0"
-              Background="#141419"
-              BorderBrush="#4B3A86"
-              BorderThickness="1"
               CornerRadius="8"
-              Padding="8">
-        <Grid RowDefinitions="Auto,8,*">
-          <TextBlock Text="Today's Activity"
-                     FontSize="16"
-                     FontWeight="SemiBold"/>
+              BorderBrush="#3F2F73"
+              BorderThickness="1"
+              Padding="12"
+              Background="#18181E">
+        <Grid RowDefinitions="Auto,*">
+          <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+            <TextBlock Text="Today's Activity"
+                       FontWeight="SemiBold"
+                       FontSize="14"
+                       Foreground="#E8E8F0"/>
+            <TextBlock FontSize="14" Opacity="0.7" VerticalAlignment="Center">
+              <Run Text="("/>
+              <Run Text="{Binding Results.Count}"/>
+              <Run Text=")"/>
+            </TextBlock>
+          </StackPanel>
 
-          <DataGrid Grid.Row="2"
-              ItemsSource="{Binding Results}"
-              SelectedItem="{Binding Selected, Mode=TwoWay}"
-              AutoGenerateColumns="False"
-              HeadersVisibility="Column"
-              GridLinesVisibility="All"
-              CanUserSortColumns="True"
-              CanUserResizeColumns="True"
-              CanUserReorderColumns="True"
-              IsReadOnly="True"
-              RowHeight="36"
-              Background="#141419">
+          <!-- ✅ FIX 1: Added Border wrapper with inner border around DataGrid -->
+          <Border Grid.Row="1"
+                  Background="#141419"
+                  BorderBrush="#4B3A86"
+                  BorderThickness="1"
+                  CornerRadius="8"
+                  Padding="0">
+            <DataGrid
+                ItemsSource="{Binding Results}"
+                SelectedItem="{Binding Selected, Mode=TwoWay}"
+                AutoGenerateColumns="False"
+                HeadersVisibility="Column"
+                GridLinesVisibility="All"
+                CanUserSortColumns="True"
+                CanUserResizeColumns="True"
+                CanUserReorderColumns="True"
+                IsReadOnly="True"
+                RowHeight="36"
+                Background="#141419">
 
-            <DataGrid.Columns>
-              <DataGridTextColumn Header="Confirmation" Width="*"
-                                  Binding="{Binding ConfirmationCode}"
-                                  SortMemberPath="ConfirmationCode"/>
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="Confirmation" Width="*"
+                                    Binding="{Binding ConfirmationCode}"
+                                    SortMemberPath="ConfirmationCode"/>
 
-              <!-- Split guest into First/Last -->
-              <DataGridTextColumn Header="First" Width="*"
-                                  Binding="{Binding GuestName, Converter={StaticResource NamePartConverter}, ConverterParameter=First}"
-                                  SortMemberPath="GuestName"/>
-              <DataGridTextColumn Header="Last" Width="*"
-                                  Binding="{Binding GuestName, Converter={StaticResource NamePartConverter}, ConverterParameter=Last}"
-                                  SortMemberPath="GuestName"/>
+                <DataGridTextColumn Header="First" Width="*"
+                                    Binding="{Binding GuestName, Converter={StaticResource NamePartConverter}, ConverterParameter=First}"
+                                    SortMemberPath="GuestName"/>
+                <DataGridTextColumn Header="Last" Width="*"
+                                    Binding="{Binding GuestName, Converter={StaticResource NamePartConverter}, ConverterParameter=Last}"
+                                    SortMemberPath="GuestName"/>
 
-              <DataGridTextColumn Header="Room" Width="*"
-                                  Binding="{Binding RoomNumber}"
-                                  SortMemberPath="RoomNumber"/>
+                <DataGridTextColumn Header="Room" Width="*"
+                                    Binding="{Binding RoomNumber}"
+                                    SortMemberPath="RoomNumber"/>
 
-              <!-- New: Room Type -->
-              <DataGridTextColumn Header="Room Type" Width="*"
-                                  Binding="{Binding RoomNumber, Converter={StaticResource RoomTypeConverter}}"
-                                  SortMemberPath="RoomNumber"/>
+                <DataGridTextColumn Header="Room Type" Width="*"
+                                    Binding="{Binding RoomNumber, Converter={StaticResource RoomTypeConverter}}"
+                                    SortMemberPath="RoomNumber"/>
 
-              <DataGridTextColumn Header="Check-In" Width="*"
-                                  Binding="{Binding CheckIn}"
-                                  SortMemberPath="CheckIn"/>
-              <DataGridTextColumn Header="Check-Out" Width="*"
-                                  Binding="{Binding CheckOut}"
-                                  SortMemberPath="CheckOut"/>
+                <DataGridTextColumn Header="Check-In" Width="*"
+                                    Binding="{Binding CheckIn}"
+                                    SortMemberPath="CheckIn"/>
+                <DataGridTextColumn Header="Check-Out" Width="*"
+                                    Binding="{Binding CheckOut}"
+                                    SortMemberPath="CheckOut"/>
 
-              <!-- NEW: colored badge for Status -->
-              <DataGridTemplateColumn Header="Status" Width="*">
-                <DataGridTemplateColumn.CellTemplate>
-                  <DataTemplate>
-                    <Border CornerRadius="12"
-                            Padding="6,2"
-                            HorizontalAlignment="Center"
-                            Background="{Binding Status, Converter={StaticResource StatusBrushConverter}, ConverterParameter=bg}">
-                      <TextBlock Text="{Binding Status}"
-                                 FontSize="12"
-                                 Foreground="{Binding Status, Converter={StaticResource StatusBrushConverter}, ConverterParameter=fg}"/>
-                    </Border>
-                  </DataTemplate>
-                </DataGridTemplateColumn.CellTemplate>
-              </DataGridTemplateColumn>
-            </DataGrid.Columns>
-          </DataGrid>
+                <!-- ✅ FIX 2: Status badge with centered text -->
+                <DataGridTemplateColumn Header="Status" Width="*">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <Border CornerRadius="12"
+                              Padding="10,5"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              Background="{Binding Status, Converter={StaticResource StatusBrushConverter}, ConverterParameter=bg}">
+                        <TextBlock Text="{Binding Status}"
+                                   FontSize="12"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Center"
+                                   Foreground="{Binding Status, Converter={StaticResource StatusBrushConverter}, ConverterParameter=fg}"/>
+                      </Border>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+              </DataGrid.Columns>
+            </DataGrid>
+          </Border>
         </Grid>
       </Border>
 
-      <!-- Column 1 is the 12px spacer -->
-
       <!-- Actions panel -->
       <Border Grid.Column="2"
-              Background="#141419"
-              BorderBrush="#4B3A86"
-              BorderThickness="1"
               CornerRadius="8"
-              Padding="16">
+              BorderBrush="#3F2F73"
+              BorderThickness="1"
+              Padding="16"
+              Background="#18181E">
         <StackPanel Spacing="16">
           <TextBlock Text="Booking Actions"
                      FontSize="16"
-                     FontWeight="SemiBold"/>
+                     FontWeight="SemiBold"
+                     Foreground="#E8E8F0"/>
 
-          <!-- Selected booking info -->
           <Border BorderBrush="#3F2F73"
                   BorderThickness="1"
                   CornerRadius="6"
                   Padding="12"
+                  Background="#2A2A33"
                   IsVisible="{Binding Selected, Converter={x:Static ObjectConverters.IsNotNull}}">
             <StackPanel Spacing="6">
               <TextBlock Text="{Binding Selected.GuestName}"
                          FontWeight="SemiBold"
-                         FontSize="14"/>
+                         FontSize="14"
+                         Foreground="#E8E8F0"/>
               <TextBlock Text="{Binding Selected.ConfirmationCode, StringFormat='Code: {0}'}"
                          Opacity="0.8"
                          FontSize="12"/>
@@ -171,13 +179,11 @@
             </StackPanel>
           </Border>
 
-          <!-- Room assignment -->
           <StackPanel Spacing="8">
-            <TextBlock Text="Assign Room" FontWeight="SemiBold"/>
+            <TextBlock Text="Assign Room" FontWeight="SemiBold" Foreground="#E8E8F0"/>
             <TextBox Watermark="Room number"
                      Text="{Binding RoomNumberInput}"
                      IsEnabled="{Binding !IsBusy}"/>
-            <!-- Inline error from duplicate/conflict validation -->
             <TextBlock Text="{Binding AssignRoomError}"
                        Foreground="#ff7777"
                        FontSize="12"
@@ -185,17 +191,18 @@
             <Button Content="Assign Room"
                     Command="{Binding AssignRoomCommand}"
                     HorizontalAlignment="Stretch"
-                    HorizontalContentAlignment="Center"/>
+                    HorizontalContentAlignment="Center"
+                    CornerRadius="6"/>
           </StackPanel>
 
           <Separator Background="#3F2F73"/>
 
-          <!-- Check-in/out buttons -->
           <StackPanel Spacing="10">
             <Button Content="Check In Guest"
                     Command="{Binding CheckInCommand}"
                     HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Center"
+                    CornerRadius="6"
                     Background="#2E7D32"
                     BorderBrush="#4CAF50"/>
 
@@ -203,28 +210,20 @@
                     Command="{Binding CheckOutCommand}"
                     HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Center"
+                    CornerRadius="6"
                     Background="#D32F2F"
                     BorderBrush="#F44336"/>
           </StackPanel>
 
-          <TextBlock Text="Additional actions coming soon..."
-                     Opacity="0.5"
-                     FontSize="11"
+          <TextBlock Text="{Binding StatusMessage}"
+                     FontSize="12"
+                     Opacity="0.9"
                      TextAlignment="Center"
-                     Margin="0,16,0,0"/>
+                     TextWrapping="Wrap"
+                     Foreground="#CFCFEA"
+                     IsVisible="{Binding StatusMessage, Converter={StaticResource HasText}}"/>
         </StackPanel>
       </Border>
     </Grid>
-
-    <!-- Status bar -->
-    <Border Grid.Row="3"
-            Background="#1E1F29"
-            BorderBrush="#3F2F73"
-            BorderThickness="0,1,0,0"
-            Padding="12,8">
-      <TextBlock Text="{Binding StatusMessage}"
-                 Opacity="0.9"
-                 IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-    </Border>
   </Grid>
 </UserControl>

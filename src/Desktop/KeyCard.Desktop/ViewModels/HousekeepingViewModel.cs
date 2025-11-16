@@ -19,7 +19,7 @@ namespace KeyCard.Desktop.ViewModels
         private readonly INavigationService _nav;
         private readonly IToolbarService _toolbar;
 
-        public HousekeepingKanbanAdapter Kanban { get; }
+        public HousekeepingKanbanAdapter Kanban { get; } = null!; // Initialized in constructor
 
         private string? _syncMessage;
         public string? SyncMessage
@@ -105,16 +105,32 @@ namespace KeyCard.Desktop.ViewModels
                 title: "Housekeeping",
                 subtitle: "Rooms & tasks",
                 onRefreshAsync: RefreshAsync,
-                onSearch: q => { Kanban.FilterText = q ?? string.Empty; }, // or your own filter field
+                onSearch: q => { Kanban.FilterText = q ?? string.Empty; },
                 initialSearchText: Kanban?.FilterText
             );
 
-            _ = RefreshAsync();
+            // ✅ Only load data once on first visit
+            // Don't reload on subsequent navigations to preserve Kanban state
+            if (Rooms.Count == 0 && Tasks.Count == 0)
+            {
+                _ = RefreshAsync();
+            }
+            // Note: Kanban collections persist because this is a Singleton
+            // and we don't call RefreshAsync on subsequent navigations
         }
 
         private async Task RefreshAsync()
         {
             if (IsBusy) return;
+
+            // ✅ CRITICAL: Don't reload if we already have data (preserve Kanban state)
+            // User can manually click Refresh button if they want to reload
+            var hasExistingData = Rooms.Count > 0 || Tasks.Count > 0;
+            if (hasExistingData)
+            {
+                StatusMessage = "Data already loaded - use Refresh button to reload";
+                return;
+            }
 
             try
             {
@@ -185,15 +201,26 @@ namespace KeyCard.Desktop.ViewModels
                 IsBusy = true;
                 StatusMessage = $"Marking room {SelectedRoom.Number} as clean...";
 
+                var roomNumber = SelectedRoom.Number;
+
                 var success = await _service.UpdateRoomStatusAsync(
-                    SelectedRoom.Number,
+                    roomNumber,
                     RoomStatus.Clean);
 
                 if (success)
                 {
-                    SelectedRoom.IsClean = true;
-                    SelectedRoom.Status = "Clean";
-                    StatusMessage = $"Room {SelectedRoom.Number} marked as clean";
+                    // ✅ Find the room in the collection and update it
+                    var room = Rooms.FirstOrDefault(r => r.Number == roomNumber);
+                    if (room != null)
+                    {
+                        room.IsClean = true;
+                        room.Status = "Clean";
+                    }
+
+                    // ✅ Update Selected to point to the updated instance
+                    SelectedRoom = room;
+
+                    StatusMessage = $"Room {roomNumber} marked as clean";
                 }
                 else
                 {
@@ -224,14 +251,25 @@ namespace KeyCard.Desktop.ViewModels
                 IsBusy = true;
                 StatusMessage = "Marking task as completed...";
 
+                var taskId = SelectedTask.Id;
+
                 var success = await _service.UpdateTaskStatusAsync(
-                    SelectedTask.Id,
+                    taskId,
                     HkTaskStatus.Completed);
 
                 if (success)
                 {
-                    SelectedTask.IsCompleted = true;
-                    SelectedTask.Status = HkTaskStatus.Completed;
+                    // ✅ Find the task in the collection and update it
+                    var task = Tasks.FirstOrDefault(t => t.Id == taskId);
+                    if (task != null)
+                    {
+                        task.IsCompleted = true;
+                        task.Status = HkTaskStatus.Completed;
+                    }
+
+                    // ✅ Update Selected to point to the updated instance
+                    SelectedTask = task;
+
                     StatusMessage = "Task marked as completed";
                     Kanban.UpdateFrom(Tasks); // reflect in Kanban
                 }
@@ -352,6 +390,7 @@ namespace KeyCard.Desktop.ViewModels
     public sealed class HousekeepingKanbanAdapter : ViewModelBase
     {
         private readonly HousekeepingViewModel _parent;
+        private static int _assignmentCounter; // Track total assignments made
 
         public ObservableCollection<HousekeepingTask> Pending { get; } = new();
         public ObservableCollection<HousekeepingTask> InProgress { get; } = new();
@@ -421,13 +460,15 @@ namespace KeyCard.Desktop.ViewModels
         {
             _parent = parent;
 
+            // ✅ DIAGNOSTIC: Track adapter creation
+            _parent.StatusMessage = $"Kanban adapter created at {DateTime.Now:HH:mm:ss.fff}";
+
             RefreshCommand = parent.RefreshCommand;
 
             AddTaskCommand = new UnifiedRelayCommand(() =>
             {
                 // Basic "add" into Pending only (non-persistent placeholder)
-                var rid = 0;
-                int.TryParse(NewRoom, out rid);
+                _ = int.TryParse(NewRoom, out var rid);
                 var item = new HousekeepingTask
                 {
                     Id = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
@@ -450,8 +491,13 @@ namespace KeyCard.Desktop.ViewModels
 
             AssignAttendantCommand = new UnifiedRelayCommand(o =>
             {
-                if (o is HousekeepingTask)
+                if (o is HousekeepingTask task)
                 {
+                    _assignmentCounter++;
+
+                    // ✅ DIAGNOSTIC: Show assignment with permanent counter
+                    _parent.StatusMessage = $"Assignment #{_assignmentCounter}: {task.AssignedTo} → {task.Title} | Collections: P={Pending.Count}, IP={InProgress.Count}, C={Completed.Count}";
+
                     // No persistence yet; VM already two-way binds AssignedTo.
                     // Raise change for filter projections (if filtering by attendant).
                     OnPropertyChanged(nameof(PendingView));
@@ -483,6 +529,22 @@ namespace KeyCard.Desktop.ViewModels
 
         public void UpdateFrom(ObservableCollection<TaskRow> tasks)
         {
+            // ✅ DIAGNOSTIC: Track what's happening
+            var isFirstLoad = Pending.Count == 0 && InProgress.Count == 0 && Completed.Count == 0;
+
+            var diagnostic = $"UpdateFrom: Pending={Pending.Count}, InProgress={InProgress.Count}, Completed={Completed.Count} | isFirst={isFirstLoad}";
+            _parent.StatusMessage = diagnostic;
+
+            if (!isFirstLoad)
+            {
+                // Kanban already populated - preserve user's manual moves
+                _parent.StatusMessage = $"{diagnostic} | SKIPPED (preserving state)";
+                return;
+            }
+
+            _parent.StatusMessage = $"{diagnostic} | REBUILDING";
+
+            // First load - build Kanban from Tasks
             Pending.Clear(); InProgress.Clear(); Completed.Clear();
 
             foreach (var t in tasks)
@@ -557,4 +619,7 @@ namespace KeyCard.Desktop.ViewModels
             if (item is not null) list.Remove(item);
         }
     }
+
+    // ✅ Navigation lifecycle - Dashboard uses this, Housekeeping doesn't need it
+    // The Kanban is already synced because MoveTo updates both Kanban AND Tasks collections
 }

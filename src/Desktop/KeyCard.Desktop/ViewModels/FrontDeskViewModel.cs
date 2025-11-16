@@ -16,9 +16,10 @@ namespace KeyCard.Desktop.ViewModels
     public partial class FrontDeskViewModel : ViewModelBase
     {
         private readonly INavigationService _nav;
-        private readonly IBookingService _bookings;
+        private readonly IBookingStateService _bookingState;
         private readonly IRoomsService _rooms;
         private readonly IToolbarService _toolbar;
+        private readonly IAppEnvironment? _env;
 
         private Booking? _selected;
         public Booking? Selected
@@ -104,11 +105,15 @@ namespace KeyCard.Desktop.ViewModels
             set => SetProperty(ref _statusMessage, value);
         }
 
-        public ObservableCollection<Booking> Arrivals { get; } = new();
+        // Mock mode indicator for UI
+        public bool IsMockMode => _env?.IsMock ?? true;
+
+        // ✅ Use the shared collection from BookingStateService
+        public ObservableCollection<Booking> Arrivals => _bookingState.TodayArrivals;
+
         public ObservableCollection<Booking> Departures { get; } = new();
         public ObservableCollection<Booking> Results { get; } = new();
 
-        private readonly ObservableCollection<Booking> _allArrivals = new();
         private readonly ObservableCollection<Booking> _allDepartures = new();
 
         public ICommand BackToDashboardCommand { get; }
@@ -118,12 +123,18 @@ namespace KeyCard.Desktop.ViewModels
         public ICommand CheckOutCommand { get; }
         public ICommand AssignRoomCommand { get; }
 
-        public FrontDeskViewModel(INavigationService nav, IBookingService bookings, IRoomsService rooms, IToolbarService toolbar)
+        public FrontDeskViewModel(
+            INavigationService nav,
+            IBookingStateService bookingState,
+            IRoomsService rooms,
+            IToolbarService toolbar,
+            IAppEnvironment? env = null)
         {
             _nav = nav ?? throw new ArgumentNullException(nameof(nav));
-            _bookings = bookings ?? throw new ArgumentNullException(nameof(bookings));
+            _bookingState = bookingState ?? throw new ArgumentNullException(nameof(bookingState));
             _rooms = rooms ?? throw new ArgumentNullException(nameof(rooms));
             _toolbar = toolbar;
+            _env = env;
 
             BackToDashboardCommand = new UnifiedRelayCommand(() => _nav.NavigateTo<DashboardViewModel>());
             RefreshCommand = new UnifiedRelayCommand(RefreshAsync, () => !IsBusy);
@@ -140,7 +151,16 @@ namespace KeyCard.Desktop.ViewModels
                 initialSearchText: SearchText
             );
 
-            _ = RefreshAsync();
+            // ✅ Only refresh if data hasn't been loaded yet
+            if (_bookingState.AllBookings.Count == 0)
+            {
+                _ = RefreshAsync();
+            }
+            else
+            {
+                // Data already loaded, just apply filter to display it
+                ApplyFilter();
+            }
         }
 
         private async Task RefreshAsync()
@@ -152,26 +172,21 @@ namespace KeyCard.Desktop.ViewModels
                 IsBusy = true;
                 StatusMessage = "Loading bookings...";
 
-                // Pull bookings
-                var arrivals = await _bookings.GetTodayArrivalsAsync();
-                var allBookings = await _bookings.ListAsync();
-                var today = DateOnly.FromDateTime(DateTime.Today);
-                var departures = allBookings.Where(b => b.CheckOutDate == today).ToList();
+                // ✅ Refresh the shared state
+                await _bookingState.RefreshAsync();
 
-                _allArrivals.Clear();
-                foreach (var a in arrivals) _allArrivals.Add(a);
+                // Calculate departures locally
+                var today = DateOnly.FromDateTime(DateTime.Today);
+                var departures = _bookingState.AllBookings.Where(b => b.CheckOutDate == today).ToList();
 
                 _allDepartures.Clear();
                 foreach (var d in departures) _allDepartures.Add(d);
-
-                Arrivals.Clear();
-                foreach (var a in arrivals) Arrivals.Add(a);
 
                 Departures.Clear();
                 foreach (var d in departures) Departures.Add(d);
 
                 ApplyFilter();
-                StatusMessage = $"Loaded {arrivals.Count} arrivals, {departures.Count} departures";
+                StatusMessage = $"Loaded {Arrivals.Count} arrivals, {departures.Count} departures";
             }
             catch (Exception ex)
             {
@@ -198,7 +213,8 @@ namespace KeyCard.Desktop.ViewModels
                 IsBusy = true;
                 StatusMessage = $"Searching for '{Query}'...";
 
-                var booking = await _bookings.FindBookingByCodeAsync(Query);
+                // ✅ Search in the shared state
+                var booking = _bookingState.FindByCode(Query);
 
                 if (booking is not null)
                 {
@@ -292,15 +308,19 @@ namespace KeyCard.Desktop.ViewModels
                 AssignRoomError = null;
                 StatusMessage = $"Assigning room {roomNumber}...";
 
-                var success = await _bookings.AssignRoomAsync(
-                    Selected.ConfirmationCode,
-                    roomNumber);
+                var confirmationCode = Selected.ConfirmationCode;
+
+                // ✅ Use the state service - it updates the shared collection
+                var success = await _bookingState.AssignRoomAsync(confirmationCode, roomNumber);
 
                 if (success)
                 {
-                    var updated = Selected with { RoomNumber = roomNumber };
-                    ReplaceBookingInCollections(Selected, updated);
-                    Selected = updated;
+                    // ✅ CRITICAL: Refresh Results collection to show updated booking
+                    ApplyFilter();
+
+                    // ✅ CRITICAL: Update Selected to point to the new booking instance
+                    Selected = _bookingState.FindByCode(confirmationCode);
+
                     RoomNumberInput = string.Empty;
                     StatusMessage = $"Room {roomNumber} assigned successfully";
                 }
@@ -333,14 +353,20 @@ namespace KeyCard.Desktop.ViewModels
                 IsBusy = true;
                 StatusMessage = $"Checking in {Selected.GuestName}...";
 
-                var success = await _bookings.CheckInAsync(Selected.ConfirmationCode);
+                var confirmationCode = Selected.ConfirmationCode;
+
+                // ✅ Use the state service - it updates the shared collection
+                var success = await _bookingState.CheckInAsync(confirmationCode);
 
                 if (success)
                 {
-                    var updated = Selected with { Status = "CheckedIn" };
-                    ReplaceBookingInCollections(Selected, updated);
-                    Selected = updated;
-                    StatusMessage = $"{Selected.GuestName} checked in successfully";
+                    // ✅ CRITICAL: Refresh Results collection to show updated booking
+                    ApplyFilter();
+
+                    // ✅ CRITICAL: Update Selected to point to the new booking instance
+                    Selected = _bookingState.FindByCode(confirmationCode);
+
+                    StatusMessage = $"{Selected?.GuestName ?? "Guest"} checked in successfully";
                 }
                 else
                 {
@@ -371,12 +397,20 @@ namespace KeyCard.Desktop.ViewModels
                 IsBusy = true;
                 StatusMessage = $"Checking out {Selected.GuestName}...";
 
+                var confirmationCode = Selected.ConfirmationCode;
+
                 await Task.Delay(500);
 
-                var updated = Selected with { Status = "CheckedOut" };
-                ReplaceBookingInCollections(Selected, updated);
-                Selected = updated;
-                StatusMessage = $"{Selected.GuestName} checked out successfully";
+                // ✅ Update the shared state directly
+                _bookingState.UpdateBookingStatus(confirmationCode, "CheckedOut");
+
+                // ✅ CRITICAL: Refresh Results collection to show updated booking
+                ApplyFilter();
+
+                // ✅ CRITICAL: Update Selected to point to the new booking instance
+                Selected = _bookingState.FindByCode(confirmationCode);
+
+                StatusMessage = $"{Selected?.GuestName ?? "Guest"} checked out successfully";
             }
             catch (Exception ex)
             {
@@ -399,20 +433,32 @@ namespace KeyCard.Desktop.ViewModels
             var hasTerm = term.Length > 0;
 
             var filteredArrivals = hasTerm
-                ? _allArrivals.Where(b => MatchesFilter(b, term))
-                : _allArrivals;
+                ? Arrivals.Where(b => MatchesFilter(b, term))
+                : Arrivals;
 
             var filteredDepartures = hasTerm
                 ? _allDepartures.Where(b => MatchesFilter(b, term))
                 : _allDepartures;
 
-            Arrivals.ReplaceWith(filteredArrivals);
             Departures.ReplaceWith(filteredDepartures);
             Results.ReplaceWith(filteredArrivals.Concat(filteredDepartures));
 
-            if (Selected is not null && !Results.Contains(Selected))
+            // ✅ CRITICAL: If Selected was updated, find the new instance in Results
+            if (Selected is not null)
             {
-                Selected = null;
+                var updatedSelected = Results.FirstOrDefault(b => b.ConfirmationCode == Selected.ConfirmationCode);
+                if (updatedSelected != null)
+                {
+                    // Don't trigger property change if it's the same instance
+                    if (!ReferenceEquals(Selected, updatedSelected))
+                    {
+                        Selected = updatedSelected;
+                    }
+                }
+                else if (!Results.Contains(Selected))
+                {
+                    Selected = null;
+                }
             }
         }
 
@@ -422,24 +468,6 @@ namespace KeyCard.Desktop.ViewModels
                 || b.GuestName.Contains(term, StringComparison.OrdinalIgnoreCase)
                 || b.RoomNumber.ToString(CultureInfo.InvariantCulture).Contains(term, StringComparison.OrdinalIgnoreCase)
                 || b.ConfirmationCode.Contains(term, StringComparison.OrdinalIgnoreCase);
-        }
-
-        private void ReplaceBookingInCollections(Booking old, Booking updated)
-        {
-            ReplaceInCollection(_allArrivals, old, updated);
-            ReplaceInCollection(_allDepartures, old, updated);
-            ReplaceInCollection(Arrivals, old, updated);
-            ReplaceInCollection(Departures, old, updated);
-            ReplaceInCollection(Results, old, updated);
-        }
-
-        private static void ReplaceInCollection(ObservableCollection<Booking> collection, Booking old, Booking updated)
-        {
-            var index = collection.IndexOf(old);
-            if (index >= 0)
-            {
-                collection[index] = updated;
-            }
         }
     }
 

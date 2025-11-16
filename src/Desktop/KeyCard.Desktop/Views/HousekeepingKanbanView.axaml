@@ -6,6 +6,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:vm="clr-namespace:KeyCard.Desktop.ViewModels"
+    xmlns:bhv="clr-namespace:KeyCard.Desktop.Behaviors"
     mc:Ignorable="d"
     x:DataType="vm:HousekeepingViewModel">
 
@@ -47,9 +48,15 @@
                    FontSize="22"
                    FontWeight="Bold" />
         <TextBlock Grid.Column="1" Grid.Row="1"
-                   Margin="0 4 0 0"
-                   Opacity="0.8"
-                   Text="Track housekeeping tasks by status, assign attendants, and drag cards between columns." />
+                   FontSize="13"
+                   Opacity="0.7">
+          <Run Text="Track room status, tasks, and Kanban workflow"/>
+          <Run Text=" | "/>
+          <Run Text="{Binding StatusMessage}" Foreground="#FF4444" FontWeight="Bold"/>
+        </TextBlock>
+        Margin="0 4 0 0"
+        Opacity="0.8"
+        Text="Track housekeeping tasks by status, assign attendants, and drag cards between columns." />
 
         <!-- Quick actions / new task mini panel -->
         <StackPanel Grid.Column="2"
@@ -105,7 +112,9 @@
         <Border Grid.Column="0"
                 BorderThickness="0,0,1,0"
                 BorderBrush="#302E2458"
-                Padding="0 0 12 0">
+                Padding="0 0 12 0"
+                bhv:DragDropBehavior.EnableDrop="True"
+                bhv:DragDropBehavior.DropCommand="{Binding Kanban.DropOnPendingCommand}">
           <DockPanel>
             <TextBlock Classes="column-title" DockPanel.Dock="Top" Text="Pending"/>
             <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -114,7 +123,8 @@
                        Background="Transparent"
                        BorderThickness="0"
                        Margin="0"
-                       SelectionMode="Single">
+                       SelectionMode="Single"
+                       bhv:DragDropBehavior.EnableDrag="True">
                 <ListBox.ItemTemplate>
                   <!-- Non-compiled bindings to avoid AVLN:0004 -->
                   <DataTemplate x:CompileBindings="False">
@@ -149,7 +159,9 @@
         <Border Grid.Column="2"
                 BorderThickness="1,0,1,0"
                 BorderBrush="#302E2458"
-                Padding="12 0">
+                Padding="12 0"
+                bhv:DragDropBehavior.EnableDrop="True"
+                bhv:DragDropBehavior.DropCommand="{Binding Kanban.DropOnInProgressCommand}">
           <DockPanel>
             <TextBlock Classes="column-title" DockPanel.Dock="Top" Text="In Progress"/>
             <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -157,7 +169,8 @@
                        ItemsSource="{Binding Kanban.InProgressView}"
                        Background="Transparent"
                        BorderThickness="0"
-                       SelectionMode="Single">
+                       SelectionMode="Single"
+                       bhv:DragDropBehavior.EnableDrag="True">
                 <ListBox.ItemTemplate>
                   <!-- Non-compiled bindings -->
                   <DataTemplate x:CompileBindings="False">
@@ -192,7 +205,9 @@
         <Border Grid.Column="4"
                 BorderThickness="1,0,0,0"
                 BorderBrush="#302E2458"
-                Padding="12 0 0 0">
+                Padding="12 0 0 0"
+                bhv:DragDropBehavior.EnableDrop="True"
+                bhv:DragDropBehavior.DropCommand="{Binding Kanban.DropOnCompletedCommand}">
           <DockPanel>
             <TextBlock Classes="column-title" DockPanel.Dock="Top" Text="Completed"/>
             <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -200,7 +215,8 @@
                        ItemsSource="{Binding Kanban.CompletedView}"
                        Background="Transparent"
                        BorderThickness="0"
-                       SelectionMode="Single">
+                       SelectionMode="Single"
+                       bhv:DragDropBehavior.EnableDrag="True">
                 <ListBox.ItemTemplate>
                   <!-- Non-compiled bindings -->
                   <DataTemplate x:CompileBindings="False">
@@ -234,10 +250,18 @@
       </Grid>
     </Border>
 
-    <!-- status bar -->
-    <TextBlock Grid.Row="3"
-               Margin="12 0 12 8"
-               Text="{Binding StatusMessage}"
-               Opacity="0.8"/>
+    <!-- status bar - DIAGNOSTIC VERSION -->
+    <Border Grid.Row="3"
+            Margin="12 4 12 8"
+            Padding="8"
+            Background="#20FF0000"
+            BorderBrush="#80FF0000"
+            BorderThickness="1"
+            CornerRadius="4">
+      <TextBlock Text="{Binding StatusMessage}"
+                 FontSize="13"
+                 FontWeight="Bold"
+                 Foreground="#FFFF4444"/>
+    </Border>
   </Grid>
 </UserControl>

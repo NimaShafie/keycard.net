@@ -56,6 +56,9 @@ public static class ServiceRegistration
         // NOTE: We intentionally DO NOT register IAppEnvironment here to avoid
         // colliding with your existing Services/IAppEnvironment.cs + Program.cs wiring.
 
+        // ✅ Register BookingStateService as Singleton for shared state across all views
+        services.AddSingleton<IBookingStateService, BookingStateService>();
+
         return services;
     }
 }

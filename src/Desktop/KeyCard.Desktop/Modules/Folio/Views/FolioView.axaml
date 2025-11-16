@@ -1,5 +1,4 @@
 <!-- Modules/Folio/Views/FolioView.axaml -->
-<!-- Modules/Folio/Views/FolioView.axaml -->
 <UserControl
     x:Class="KeyCard.Desktop.Modules.Folio.Views.FolioView"
     xmlns="https://github.com/avaloniaui"
@@ -17,7 +16,6 @@
       <Border Classes="panel-header" BorderThickness="0,0,0,1" BorderBrush="#5C46A3" Padding="0,0,0,8">
         <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
           <StackPanel Grid.Column="0" Grid.RowSpan="2" Orientation="Vertical" Spacing="4">
-            <!-- Match Front Desk/Dashboard sizing -->
             <TextBlock Text="Folio Manager"
                        FontSize="28"
                        FontWeight="Bold"
@@ -45,6 +43,8 @@
 
       <Border Classes="panel-body" Padding="12">
         <Grid ColumnDefinitions="*,380" RowDefinitions="*">
+
+          <!-- Folios table -->
           <DataGrid
               Grid.Row="0" Grid.Column="0"
               ItemsSource="{Binding Folios}"
@@ -57,14 +57,29 @@
               Margin="0,0,12,0">
             <DataGrid.Columns>
               <DataGridTextColumn Header="Guest"   Binding="{Binding GuestName}"   Width="180"/>
+              <!-- Keep previous binding name 'FolioId' exactly as before -->
               <DataGridTextColumn Header="Folio #" Binding="{Binding FolioId}"     Width="220"/>
               <DataGridTextColumn Header="Balance" Binding="{Binding Balance, StringFormat=\{0:C\}}" Width="140"/>
               <DataGridTextColumn Header="Status"  Binding="{Binding Status}"      Width="*"/>
+
+              <!-- Actions -->
+              <DataGridTemplateColumn Header="Actions" Width="140">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <Button Content="Details"
+                            Padding="10,6"
+                            Command="{Binding $parent[DataGrid].((vm:FolioViewModel)DataContext).OpenGuestDetailCommand}"
+                            CommandParameter="{Binding}" />
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
             </DataGrid.Columns>
           </DataGrid>
 
+          <!-- Right-side actions -->
           <StackPanel Grid.Column="1" Spacing="16">
 
+            <!-- Add Charge -->
             <Border Classes="panel-subcard" Padding="12">
               <StackPanel Spacing="8">
                 <TextBlock Text="Add Charge" FontWeight="SemiBold" Opacity="0.92"/>
@@ -80,6 +95,7 @@
               </StackPanel>
             </Border>
 
+            <!-- Add Payment -->
             <Border Classes="panel-subcard" Padding="12">
               <StackPanel Spacing="8">
                 <TextBlock Text="Add Payment" FontWeight="SemiBold" Opacity="0.92"/>
@@ -97,6 +113,7 @@
               </StackPanel>
             </Border>
 
+            <!-- Invoice -->
             <Border Classes="panel-subcard" Padding="12">
               <StackPanel Spacing="8">
                 <TextBlock Text="Invoice" FontWeight="SemiBold" Opacity="0.92"/>

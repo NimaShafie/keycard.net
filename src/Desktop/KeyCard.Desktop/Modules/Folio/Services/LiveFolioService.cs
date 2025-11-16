@@ -2,16 +2,16 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
-using System.Net.Http.Json;
 using System.Threading.Tasks;
 
-using KeyCard.Desktop.Modules.Folio.Models;
+using ModuleModels = KeyCard.Desktop.Modules.Folio.Models; // GuestFolio
+using AppModels = KeyCard.Desktop.Models;                  // FolioCharge, FolioPayment
 
 namespace KeyCard.Desktop.Modules.Folio.Services
 {
     /// <summary>
     /// Live API implementation of IFolioService.
-    /// Returns empty/stub data until backend endpoints are ready.
+    /// Currently stubbed; replace throws with real HTTP calls when backend endpoints are ready.
     /// </summary>
     public sealed class LiveFolioService : IFolioService
     {
@@ -22,81 +22,54 @@ namespace KeyCard.Desktop.Modules.Folio.Services
             _http = http ?? throw new ArgumentNullException(nameof(http));
         }
 
-        public async Task<IReadOnlyList<GuestFolio>> GetActiveFoliosAsync()
-        {
-            // TODO: Implement when endpoint is ready
-            // return await _http.GetFromJsonAsync<List<GuestFolio>>("/api/folio/active") 
-            //     ?? new List<GuestFolio>();
+        // -------- Queries --------
 
-            await Task.Delay(100); // Simulate network call
-            return Array.Empty<GuestFolio>();
-        }
+        public Task<List<ModuleModels.GuestFolio>> GetAllFoliosAsync()
+            => Task.FromResult(new List<ModuleModels.GuestFolio>());
 
-        public async Task<GuestFolio?> GetFolioByIdAsync(string folioId)
-        {
-            // TODO: Implement when endpoint is ready
-            // return await _http.GetFromJsonAsync<GuestFolio>($"/api/folio/{folioId}");
+        public Task<ModuleModels.GuestFolio?> GetFolioAsync(string folioId)
+            => Task.FromResult<ModuleModels.GuestFolio?>(null);
 
-            await Task.Delay(100);
-            return null;
-        }
+        // Back-compat alias required by IFolioService
+        public Task<ModuleModels.GuestFolio?> GetFolioByIdAsync(string folioId)
+            => GetFolioAsync(folioId);
 
-        public async Task<IReadOnlyList<GuestFolio>> SearchFoliosAsync(string searchTerm)
-        {
-            // TODO: Implement when endpoint is ready
-            // var encoded = Uri.EscapeDataString(searchTerm);
-            // return await _http.GetFromJsonAsync<List<GuestFolio>>($"/api/folio/search?q={encoded}") 
-            //     ?? new List<GuestFolio>();
+        public Task<IReadOnlyList<ModuleModels.GuestFolio>> GetActiveFoliosAsync()
+            => Task.FromResult<IReadOnlyList<ModuleModels.GuestFolio>>(Array.Empty<ModuleModels.GuestFolio>());
 
-            await Task.Delay(100);
-            return Array.Empty<GuestFolio>();
-        }
+        public Task<IReadOnlyList<ModuleModels.GuestFolio>> SearchFoliosAsync(string searchTerm)
+            => Task.FromResult<IReadOnlyList<ModuleModels.GuestFolio>>(Array.Empty<ModuleModels.GuestFolio>());
 
-        public async Task PostChargeAsync(string folioId, decimal amount, string description)
-        {
-            // TODO: Implement when endpoint is ready
-            // await _http.PostAsJsonAsync($"/api/folio/{folioId}/charges", new
-            // {
-            //     amount,
-            //     description
-            // });
+        // -------- Mutations --------
 
-            await Task.Delay(100);
-            throw new NotSupportedException("Folio charges not yet available on backend");
-        }
+        public Task AddChargeAsync(string folioId, AppModels.FolioCharge charge)
+            => throw new NotSupportedException("AddCharge is not yet implemented on the backend.");
 
-        public async Task ApplyPaymentAsync(string folioId, decimal amount, string paymentMethod)
-        {
-            // TODO: Implement when endpoint is ready
-            // await _http.PostAsJsonAsync($"/api/folio/{folioId}/payments", new
-            // {
-            //     amount,
-            //     paymentMethod
-            // });
+        public Task AddPaymentAsync(string folioId, AppModels.FolioPayment payment)
+            => throw new NotSupportedException("AddPayment is not yet implemented on the backend.");
 
-            await Task.Delay(100);
-            throw new NotSupportedException("Folio payments not yet available on backend");
-        }
+        public Task RemoveChargeAsync(string folioId, string lineItemId)
+            => throw new NotSupportedException("RemoveCharge is not yet implemented on the backend.");
 
-        public async Task PrintStatementAsync(string folioId)
-        {
-            // TODO: Implement when endpoint is ready
-            // var response = await _http.GetAsync($"/api/folio/{folioId}/statement");
-            // response.EnsureSuccessStatusCode();
-            // var pdfBytes = await response.Content.ReadAsByteArrayAsync();
-            // // Save or display PDF
+        public Task RemovePaymentAsync(string folioId, string lineItemId)
+            => throw new NotSupportedException("RemovePayment is not yet implemented on the backend.");
 
-            await Task.Delay(100);
-            throw new NotSupportedException("Statement printing not yet available on backend");
-        }
+        // Legacy helpers (kept for callers still using them)
+        public Task PostChargeAsync(string folioId, decimal amount, string description)
+            => throw new NotSupportedException("PostCharge is not yet implemented on the backend.");
 
-        public async Task CloseFolioAsync(string folioId)
-        {
-            // TODO: Implement when endpoint is ready
-            // await _http.PostAsync($"/api/folio/{folioId}/close", null);
+        public Task ApplyPaymentAsync(string folioId, decimal amount, string paymentMethod)
+            => throw new NotSupportedException("ApplyPayment is not yet implemented on the backend.");
 
-            await Task.Delay(100);
-            throw new NotSupportedException("Close folio not yet available on backend");
-        }
+        // -------- Statements / Invoice --------
+
+        public Task PrintStatementAsync(string folioId)
+            => throw new NotSupportedException("PrintStatement is not yet implemented on the backend.");
+
+        public Task<string> GenerateInvoiceAsync(string folioId)
+            => throw new NotSupportedException("GenerateInvoice is not yet implemented on the backend.");
+
+        public Task CloseFolioAsync(string folioId)
+            => throw new NotSupportedException("CloseFolio is not yet implemented on the backend.");
     }
 }

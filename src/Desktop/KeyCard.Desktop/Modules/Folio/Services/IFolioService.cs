@@ -2,48 +2,34 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-using KeyCard.Desktop.Modules.Folio.Models;
+using KeyCard.Desktop.Modules.Folio.Models; // GuestFolio
+
+using AppModels = KeyCard.Desktop.Models;   // FolioCharge, FolioPayment
 
 namespace KeyCard.Desktop.Modules.Folio.Services
 {
-    /// <summary>
-    /// Service for managing guest folios (financial accounts).
-    /// </summary>
     public interface IFolioService
     {
-        /// <summary>
-        /// Get all active (open) folios.
-        /// </summary>
-        Task<IReadOnlyList<GuestFolio>> GetActiveFoliosAsync();
+        Task<List<GuestFolio>> GetAllFoliosAsync();
+        Task<GuestFolio?> GetFolioAsync(string folioId);
 
-        /// <summary>
-        /// Get a specific folio by ID.
-        /// </summary>
+        // Back-compat for callers (e.g., FolioViewModel) still using the older name
         Task<GuestFolio?> GetFolioByIdAsync(string folioId);
 
-        /// <summary>
-        /// Search folios by guest name, booking ID, or room number.
-        /// </summary>
+        Task<IReadOnlyList<GuestFolio>> GetActiveFoliosAsync();
         Task<IReadOnlyList<GuestFolio>> SearchFoliosAsync(string searchTerm);
 
-        /// <summary>
-        /// Post a charge to a folio.
-        /// </summary>
-        Task PostChargeAsync(string folioId, decimal amount, string description);
+        Task AddChargeAsync(string folioId, AppModels.FolioCharge charge);
+        Task AddPaymentAsync(string folioId, AppModels.FolioPayment payment);
+        Task RemoveChargeAsync(string folioId, string lineItemId);
+        Task RemovePaymentAsync(string folioId, string lineItemId);
 
-        /// <summary>
-        /// Apply a payment to a folio.
-        /// </summary>
+        // Legacy helpers preserved for older calling code
+        Task PostChargeAsync(string folioId, decimal amount, string description);
         Task ApplyPaymentAsync(string folioId, decimal amount, string paymentMethod);
 
-        /// <summary>
-        /// Print/generate a folio statement.
-        /// </summary>
         Task PrintStatementAsync(string folioId);
-
-        /// <summary>
-        /// Close/settle a folio.
-        /// </summary>
+        Task<string> GenerateInvoiceAsync(string folioId);
         Task CloseFolioAsync(string folioId);
     }
 }

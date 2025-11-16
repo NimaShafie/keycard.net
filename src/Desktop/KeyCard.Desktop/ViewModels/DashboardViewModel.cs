@@ -13,12 +13,13 @@ using KeyCard.Desktop.Services;
 
 namespace KeyCard.Desktop.ViewModels
 {
-    public partial class DashboardViewModel : ViewModelBase
+    public partial class DashboardViewModel : ViewModelBase, INavigationAware
     {
         private readonly INavigationService _nav;
-        private readonly IBookingService _bookings;
+        private readonly IBookingStateService _bookingState;
         private readonly IAuthService _auth;
         private readonly IToolbarService? _toolbar;
+        private readonly IAppEnvironment? _env;
 
         private string? _currentUserDisplay;
         public string? CurrentUserDisplay
@@ -56,7 +57,12 @@ namespace KeyCard.Desktop.ViewModels
             set => SetProperty(ref _syncMessage, value);
         }
 
-        public ObservableCollection<Booking> Arrivals { get; } = new();
+        // Mock mode indicator for UI
+        public bool IsMockMode => _env?.IsMock ?? true;
+
+        // ✅ Use the shared collection from BookingStateService
+        public ObservableCollection<Booking> Arrivals => _bookingState.TodayArrivals;
+
         public ObservableCollection<Booking> FilteredArrivals { get; } = new();
 
         public ICommand GoFrontDeskCommand { get; }
@@ -67,14 +73,16 @@ namespace KeyCard.Desktop.ViewModels
 
         public DashboardViewModel(
             INavigationService nav,
-            IBookingService bookings,
+            IBookingStateService bookingState,
             IAuthService auth,
-            IToolbarService? toolbar = null)
+            IToolbarService? toolbar = null,
+            IAppEnvironment? env = null)
         {
             _nav = nav ?? throw new ArgumentNullException(nameof(nav));
-            _bookings = bookings ?? throw new ArgumentNullException(nameof(bookings));
+            _bookingState = bookingState ?? throw new ArgumentNullException(nameof(bookingState));
             _auth = auth ?? throw new ArgumentNullException(nameof(auth));
             _toolbar = toolbar;
+            _env = env;
 
             CurrentUserDisplay = _auth.DisplayName ?? "Staff Console";
 
@@ -101,7 +109,16 @@ namespace KeyCard.Desktop.ViewModels
                 );
             }
 
-            _ = RefreshAsync();
+            // ✅ Only refresh if data hasn't been loaded yet
+            if (_bookingState.AllBookings.Count == 0)
+            {
+                _ = RefreshAsync();
+            }
+            else
+            {
+                // Data already loaded, just apply filter to display it
+                ApplyFilter();
+            }
         }
 
         private async Task RefreshAsync()
@@ -112,20 +129,14 @@ namespace KeyCard.Desktop.ViewModels
             {
                 IsRefreshing = true;
 
-                var arrivals = await _bookings.GetTodayArrivalsAsync();
-
-                Arrivals.Clear();
-                foreach (var booking in arrivals)
-                {
-                    Arrivals.Add(booking);
-                }
+                // ✅ Refresh the shared state - all views update automatically
+                await _bookingState.RefreshAsync();
 
                 ApplyFilter();
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Failed to refresh arrivals: {ex.Message}");
-                Arrivals.Clear();
                 FilteredArrivals.Clear();
             }
             finally
@@ -156,6 +167,18 @@ namespace KeyCard.Desktop.ViewModels
                 || booking.GuestName.Contains(term, StringComparison.OrdinalIgnoreCase)
                 || booking.RoomNumber.ToString(CultureInfo.InvariantCulture).Contains(term, StringComparison.OrdinalIgnoreCase)
                 || booking.ConfirmationCode.Contains(term, StringComparison.OrdinalIgnoreCase);
+        }
+
+        // ✅ Refresh display when navigating back to Dashboard
+        public void OnNavigatedTo()
+        {
+            // Reapply filter to show latest booking changes from FrontDesk
+            ApplyFilter();
+        }
+
+        public void OnNavigatedFrom()
+        {
+            // Nothing to do when leaving
         }
     }
 }

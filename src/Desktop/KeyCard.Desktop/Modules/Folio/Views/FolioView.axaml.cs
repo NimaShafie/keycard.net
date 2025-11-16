@@ -1,12 +1,13 @@
-// /Modules/Folio/Views/FolioView.axaml.cs
+// Modules/Folio/Views/FolioView.axaml.cs
 using System;
 
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 
 using KeyCard.Desktop.Modules.Folio.ViewModels;
-using KeyCard.Desktop.ViewModels; // for MainViewModel
+using KeyCard.Desktop.ViewModels; // MainViewModel
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -18,24 +19,71 @@ namespace KeyCard.Desktop.Modules.Folio.Views
         {
             InitializeComponent();
 
-            // Resolve VM via DI; fallback to existing DataContext if DI isn't exposed yet.
-            var sp = (Avalonia.Application.Current as IHaveServiceProvider)?.Services;
-            if (sp != null)
+            if (Design.IsDesignMode)
+                return;
+
+            // Only set DataContext if not already provided
+            if (DataContext is not FolioViewModel vm)
             {
-                var vm = ActivatorUtilities.CreateInstance<FolioViewModel>(sp);
-                DataContext = vm;
-                _ = vm.InitializeAsync(null);
+                var sp = (Application.Current as IHaveServiceProvider)?.Services;
+                if (sp is not null)
+                {
+                    try
+                    {
+                        vm = sp.GetRequiredService<FolioViewModel>();
+                    }
+                    catch
+                    {
+                        vm = ActivatorUtilities.CreateInstance<FolioViewModel>(sp);
+                    }
+
+                    DataContext = vm;
+                }
             }
-            else if (DataContext is FolioViewModel vm)
+
+            if (DataContext is FolioViewModel folioVm)
             {
-                _ = vm.InitializeAsync(null);
+                folioVm.OpenGuestDetailRequested -= OnOpenGuestDetailRequested;
+                folioVm.OpenGuestDetailRequested += OnOpenGuestDetailRequested;
+
+                Dispatcher.UIThread.Post(async () =>
+                {
+                    try { await folioVm.InitializeAsync(null); } catch { /* ignore */ }
+                });
             }
         }
 
-        // Click handler for the Back button to avoid cross-VM compiled-binding issues.
+        private async void OnOpenGuestDetailRequested(object? sender, string folioId)
+        {
+            var sp = (Application.Current as IHaveServiceProvider)?.Services;
+            var owner = this.VisualRoot as Window;
+
+            var detailWindow = new KeyCard.Desktop.Modules.Folio.Views.GuestDetailWindow();
+
+            GuestDetailViewModel detailVm;
+            try
+            {
+                detailVm = sp?.GetRequiredService<GuestDetailViewModel>()
+                           ?? ActivatorUtilities.CreateInstance<GuestDetailViewModel>(sp!);
+            }
+            catch
+            {
+                detailVm = new GuestDetailViewModel();
+            }
+
+            try { await detailVm.LoadAsync(folioId); } catch { /* ignore */ }
+            detailWindow.DataContext = detailVm;
+
+            if (owner is not null)
+                await detailWindow.ShowDialog(owner);
+            else
+                detailWindow.Show();
+        }
+
         private void OnBackClick(object? sender, RoutedEventArgs e)
         {
-            if (VisualRoot is Window w && w.DataContext is MainViewModel main &&
+            if (VisualRoot is Window w &&
+                w.DataContext is MainViewModel main &&
                 main.NavigateDashboardCommand?.CanExecute(null) == true)
             {
                 main.NavigateDashboardCommand.Execute(null);
