@@ -117,6 +117,9 @@
     <AvaloniaXaml Update="Views\Shared\TopBar.axaml">
       <SubType>Designer</SubType>
     </AvaloniaXaml>
+    <AvaloniaXaml Update="Views\StartupView.axaml">
+      <SubType>Designer</SubType>
+    </AvaloniaXaml>
   </ItemGroup>
 
   <ItemGroup>

@@ -157,10 +157,39 @@ namespace KeyCard.Desktop
                         {
                             services.AddKeyCardApi(ctx.Configuration, appEnv);
 
+                            // ✅ CRITICAL FIX: Add SSL bypass for localhost development
                             services.AddHttpClient("KeyCardApi", (sp, http) =>
                             {
                                 var env = sp.GetRequiredService<IAppEnvironment>();
                                 http.BaseAddress = new Uri(env.ApiBaseUrl, UriKind.Absolute);
+                                http.Timeout = TimeSpan.FromSeconds(30);
+                            })
+                            .ConfigurePrimaryHttpMessageHandler(() =>
+                            {
+                                return new HttpClientHandler
+                                {
+                                    // CRITICAL: Accept self-signed certificates for localhost development
+                                    // Remove this in production!
+                                    ServerCertificateCustomValidationCallback =
+                                        HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                                };
+                            });
+
+                            // Also register the "Api" client name for AuthServiceAdapter
+                            services.AddHttpClient("Api", (sp, http) =>
+                            {
+                                var env = sp.GetRequiredService<IAppEnvironment>();
+                                http.BaseAddress = new Uri(env.ApiBaseUrl, UriKind.Absolute);
+                                http.Timeout = TimeSpan.FromSeconds(30);
+                                http.DefaultRequestHeaders.Add("Accept", "application/json");
+                            })
+                            .ConfigurePrimaryHttpMessageHandler(() =>
+                            {
+                                return new HttpClientHandler
+                                {
+                                    ServerCertificateCustomValidationCallback =
+                                        HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                                };
                             });
 
                             services.AddTransient(sp =>
@@ -171,10 +200,9 @@ namespace KeyCard.Desktop
 
                             services.AddSingleton<IBookingService, KeyCard.Desktop.Services.Api.BookingService>();
 
-                            WriteBreadcrumb("LIVE mode: IAuthService & IHousekeepingService temporarily bound to mock implementations (backend not required to boot).");
-                            services.AddSingleton<IAuthService, Services.Mock.AuthService>();
-                            services.AddSingleton<IHousekeepingService, Services.Mock.HousekeepingService>();
+                            WriteBreadcrumb("LIVE mode: Registering AuthServiceAdapter and HousekeepingServiceAdapter");
 
+                            // Remove the duplicate mock registrations and use only the live adapters
                             services.AddSingleton<IAuthService, AuthServiceAdapter>();
                             services.AddSingleton<IHousekeepingService, HousekeepingServiceAdapter>();
                             services.AddSingleton<IBookingService, BookingServiceAdapter>();
@@ -207,6 +235,7 @@ namespace KeyCard.Desktop
                     // ✅ CRITICAL FIX: ViewModels MUST be Singleton to preserve state across navigation
                     services.AddSingleton<MainViewModel>();
                     services.AddSingleton<LoginViewModel>();
+                    services.AddSingleton<RegistrationViewModel>();  // ✅ Added missing ViewModel
                     services.AddSingleton<DashboardViewModel>();
                     services.AddSingleton<FrontDeskViewModel>();
                     services.AddSingleton<HousekeepingViewModel>();
@@ -242,7 +271,12 @@ namespace KeyCard.Desktop
                 {
                     if (!envSvc.IsMock && !string.IsNullOrWhiteSpace(envSvc.ApiBaseUrl))
                     {
-                        using var http = new HttpClient { BaseAddress = new Uri(envSvc.ApiBaseUrl) };
+                        using var handler = new HttpClientHandler
+                        {
+                            ServerCertificateCustomValidationCallback =
+                                HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                        };
+                        using var http = new HttpClient(handler) { BaseAddress = new Uri(envSvc.ApiBaseUrl) };
                         http.Timeout = TimeSpan.FromSeconds(5);
                         var resp = await http.GetAsync("/api/v1/Health");
                         var txt = await resp.Content.ReadAsStringAsync();

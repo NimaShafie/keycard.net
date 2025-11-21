@@ -180,16 +180,31 @@
                        Opacity="0.8"
                        Foreground="White"/>
 
-            <!-- Environment badge -->
+            <!-- Environment badge - FIXED: Two separate borders instead of converters -->
             <Border CornerRadius="12"
                     Padding="12,4"
-                    Background="{Binding IsMockMode, Converter={StaticResource MockModeBadgeBackgroundConverter}}"
+                    Background="#4B3A86"
                     HorizontalAlignment="Center"
-                    Margin="0,8,0,0">
+                    Margin="0,8,0,0"
+                    IsVisible="{Binding IsMockMode}">
               <TextBlock Text="{Binding EnvironmentLabel}"
                          FontWeight="SemiBold"
                          FontSize="11"
-                         Foreground="{Binding IsMockMode, Converter={StaticResource MockModeBadgeForegroundConverter}}"
+                         Foreground="#E1BEE7"
+                         VerticalAlignment="Center"
+                         LetterSpacing="0.5"/>
+            </Border>
+
+            <Border CornerRadius="12"
+                    Padding="12,4"
+                    Background="#1B5E20"
+                    HorizontalAlignment="Center"
+                    Margin="0,8,0,0"
+                    IsVisible="{Binding !IsMockMode}">
+              <TextBlock Text="{Binding EnvironmentLabel}"
+                         FontWeight="SemiBold"
+                         FontSize="11"
+                         Foreground="#C8E6C9"
                          VerticalAlignment="Center"
                          LetterSpacing="0.5"/>
             </Border>
@@ -219,19 +234,21 @@
                       Opacity="0.8"
                       IsVisible="{Binding !IsMockMode}"/>
 
-            <!-- Error message -->
-            <Border Background="#3D1F1F"
+            <!-- Error message - FIXED: Named elements for code-behind control -->
+            <Border x:Name="ErrorPanel"
+                    Background="#3D1F1F"
                     BorderBrush="#FF6B6B"
                     BorderThickness="1"
                     CornerRadius="6"
                     Padding="12,8"
-                    IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                    IsVisible="False">
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <TextBlock Text="⚠"
                            Foreground="#FF6B6B"
                            FontSize="16"
                            VerticalAlignment="Center"/>
-                <TextBlock Text="{Binding Error}"
+                <TextBlock x:Name="ErrorText"
+                           Text=""
                            Foreground="#FFB3B3"
                            FontSize="12"
                            TextWrapping="Wrap"

@@ -1,0 +1,75 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="KeyCard.Desktop.Models.GuestFolio" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="5.5" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>EAAAABAEAABAAAAAIAgAAAAAgAAAAAAAAIAAIIAAAAA=</HashCode>
+      <FileName>Models\FolioModels.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="KeyCard.Desktop.Models.FolioCharge" Collapsed="true">
+    <Position X="7.25" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAACAAAAAAAgAAAAAAAAAACAAAAAAAABAAAAAAAAAAA=</HashCode>
+      <FileName>Models\FolioModels.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="KeyCard.Desktop.Models.FolioPayment" Collapsed="true">
+    <Position X="9" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAACAACAAAAAAAAAAAAgAACAAAAAAAABAAAAAAAAAAA=</HashCode>
+      <FileName>Models\FolioModels.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="KeyCard.Desktop.Models.FolioAuditEntry" Collapsed="true">
+    <Position X="5.5" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAABAAAAAAAgAAAAAAACAAAAAAAAAAAAAAAAAAAAAAQ=</HashCode>
+      <FileName>Models\FolioModels.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="KeyCard.Desktop.Models.HousekeepingTask" Collapsed="true">
+    <Position X="7.25" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AEAyAAAGQIAAAEAAACBAAAAAAAAAAAAAAAABAAAAAAA=</HashCode>
+      <FileName>Models\HouseKeepingTask.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="KeyCard.Desktop.Models.HousekeepingTaskDto" Collapsed="true">
+    <Position X="9" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAiAAAEBAAAAEAEAAAAIAAAAAAAAAAAAAAABAAAIAA=</HashCode>
+      <FileName>Models\HousekeepingTaskDto.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="KeyCard.Desktop.Models.RoomOption" Collapsed="true">
+    <Position X="5.5" Y="4.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAQAAAAAAAAA=</HashCode>
+      <FileName>Models\RoomOptions.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Enum Name="KeyCard.Desktop.Models.HkTaskStatus" Collapsed="true">
+    <Position X="5.5" Y="5.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAIAgABAAAAAAAAAAAAAAAAAIBAAABA=</HashCode>
+      <FileName>Models\HkTaskStatus.cs</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="KeyCard.Desktop.Models.TaskStatus" Collapsed="true">
+    <Position X="9" Y="5.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAIBAAAAA=</HashCode>
+      <FileName>Models\HousekeepingTaskDto.cs</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="KeyCard.Desktop.Models.RoomStatus" Collapsed="true">
+    <Position X="7.25" Y="5.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAQAAAAAMBAAIABAAAAAAABBAAAAAAAAEAAQAAIAQBA=</HashCode>
+      <FileName>Models\RoomStatus.cs</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

@@ -13,6 +13,9 @@
     <converters:MockModeBadgeForegroundConverter x:Key="MockModeBadgeForegroundConverter"/>
     <converters:EnvironmentLabelConverter x:Key="EnvironmentLabelConverter"/>
     <converters:MockModeOpacityConverter x:Key="MockModeOpacityConverter"/>
+    <converters:BoolToOpacityConverter x:Key="StartupCheckOpacityConverter"
+                                   TrueOpacity="0.3"
+                                   FalseOpacity="1.0"/>
   </Application.Resources>
 
   <!-- You are using a ViewLocator; kept as-is -->

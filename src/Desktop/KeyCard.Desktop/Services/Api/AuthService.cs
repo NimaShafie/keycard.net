@@ -5,20 +5,23 @@ using System.Threading.Tasks;
 
 namespace KeyCard.Desktop.Services.Api
 {
+    /// <summary>
+    /// API-based authentication service (transitional implementation).
+    /// Note: In Live mode, AuthServiceAdapter is used instead.
+    /// </summary>
     public sealed class AuthService : IAuthService
     {
         public bool IsAuthenticated { get; private set; }
-        public string? DisplayName { get; private set; }
+        public string DisplayName { get; private set; } = string.Empty;  // ✅ Fixed: non-nullable
 
         public event EventHandler? StateChanged;
 
-        // ---- canonical ----
         public async Task<bool> LoginAsync(string username, string password, CancellationToken ct = default)
         {
-            // TODO: call real API. For now, succeed if both provided.
+            // Transitional: succeed if both provided
             await Task.Yield();
             IsAuthenticated = !string.IsNullOrWhiteSpace(username) && !string.IsNullOrWhiteSpace(password);
-            DisplayName = IsAuthenticated ? username : null;
+            DisplayName = IsAuthenticated ? username : string.Empty;  // ✅ Fixed: always returns string
             StateChanged?.Invoke(this, EventArgs.Empty);
             return IsAuthenticated;
         }
@@ -31,17 +34,29 @@ namespace KeyCard.Desktop.Services.Api
             return Task.FromResult(true);
         }
 
-        // ---- compatibility aliases ----
         public Task<bool> SignInAsync(string username, string password, CancellationToken ct = default)
             => LoginAsync(username, password, ct);
 
         public Task<bool> SignInMockAsync(CancellationToken ct = default)
             => LoginMockAsync(ct);
 
+        public Task<(bool success, string? errorMessage)> RegisterStaffAsync(
+            string username,
+            string email,
+            string password,
+            string firstName,
+            string lastName,
+            string? employeeId = null,
+            CancellationToken ct = default)
+        {
+            // Transitional: return success
+            return Task.FromResult((true, (string?)null));
+        }
+
         public void Logout()
         {
             IsAuthenticated = false;
-            DisplayName = null;
+            DisplayName = string.Empty;  // ✅ Fixed: set to empty string instead of null
             StateChanged?.Invoke(this, EventArgs.Empty);
         }
     }

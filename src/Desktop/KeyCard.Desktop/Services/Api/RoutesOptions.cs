@@ -10,19 +10,16 @@ namespace KeyCard.Desktop.Services.Api
     public sealed class RoutesOptions
     {
         public string? StaffLogin { get; set; }
-
+        public string? StaffRegister { get; set; }
         public string? Bookings_Get { get; set; }
         public string? Bookings_GetByCode { get; set; }
         public string? Bookings_CheckIn { get; set; }
         public string? Bookings_CheckOut { get; set; }
-
         public string? Hk_Tasks_List { get; set; }
         public string? Hk_Task_Assign { get; set; }
         public string? Hk_Task_Complete { get; set; }
-
         public string? Keys_Issue { get; set; }
         public string? Keys_Revoke { get; set; }
-
         public string? Hotels_List { get; set; }
         public string? Rooms_List { get; set; }
         public string? Rooms_Get { get; set; }

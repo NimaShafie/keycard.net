@@ -1,0 +1,169 @@
+<!-- Views/StartupView.axaml -->
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vms="clr-namespace:KeyCard.Desktop.ViewModels"
+    x:Class="KeyCard.Desktop.Views.StartupView"
+    x:DataType="vms:StartupViewModel">
+
+  <UserControl.Styles>
+    <!-- Animated gradient background -->
+    <Style Selector="Border#AnimatedBackground">
+      <Style.Animations>
+        <Animation Duration="0:0:10" IterationCount="Infinite" Easing="SineEaseInOut">
+          <KeyFrame Cue="0%">
+            <Setter Property="Background">
+              <Setter.Value>
+                <RadialGradientBrush Center="0.3,0.3" GradientOrigin="0.3,0.3" Radius="1.2">
+                  <GradientStop Color="#2D1B4E" Offset="0"/>
+                  <GradientStop Color="#1a0033" Offset="0.4"/>
+                  <GradientStop Color="#0f0f12" Offset="1"/>
+                </RadialGradientBrush>
+              </Setter.Value>
+            </Setter>
+          </KeyFrame>
+          <KeyFrame Cue="50%">
+            <Setter Property="Background">
+              <Setter.Value>
+                <RadialGradientBrush Center="0.7,0.7" GradientOrigin="0.7,0.7" Radius="1.2">
+                  <GradientStop Color="#3D2463" Offset="0"/>
+                  <GradientStop Color="#1a0033" Offset="0.4"/>
+                  <GradientStop Color="#0f0f12" Offset="1"/>
+                </RadialGradientBrush>
+              </Setter.Value>
+            </Setter>
+          </KeyFrame>
+          <KeyFrame Cue="100%">
+            <Setter Property="Background">
+              <Setter.Value>
+                <RadialGradientBrush Center="0.3,0.3" GradientOrigin="0.3,0.3" Radius="1.2">
+                  <GradientStop Color="#2D1B4E" Offset="0"/>
+                  <GradientStop Color="#1a0033" Offset="0.4"/>
+                  <GradientStop Color="#0f0f12" Offset="1"/>
+                </RadialGradientBrush>
+              </Setter.Value>
+            </Setter>
+          </KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+  </UserControl.Styles>
+
+  <Grid>
+    <!-- Animated background -->
+    <Border x:Name="AnimatedBackground"/>
+
+    <!-- Content -->
+    <Border Classes="login-card"
+            Width="500"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center">
+      <StackPanel Spacing="24">
+        
+        <!-- Logo/Title -->
+        <StackPanel Spacing="8">
+          <TextBlock Text="KeyCard.NET"
+                     FontSize="32"
+                     FontWeight="Bold"
+                     HorizontalAlignment="Center"
+                     Foreground="White"/>
+          <TextBlock Text="Hotel Management System"
+                     FontSize="14"
+                     HorizontalAlignment="Center"
+                     Opacity="0.8"
+                     Foreground="White"/>
+        </StackPanel>
+
+        <!-- Loading indicator -->
+        <StackPanel Spacing="16"
+                    IsVisible="{Binding IsChecking}">
+          
+          <!-- Spinning progress ring -->
+          <Viewbox Width="64" Height="64"
+                   HorizontalAlignment="Center">
+            <PathIcon Data="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"
+                      Foreground="#B388FF">
+              <PathIcon.RenderTransform>
+                <RotateTransform/>
+              </PathIcon.RenderTransform>
+              <PathIcon.Styles>
+                <Style Selector="PathIcon">
+                  <Style.Animations>
+                    <Animation Duration="0:0:1" IterationCount="Infinite">
+                      <KeyFrame Cue="0%">
+                        <Setter Property="RenderTransform">
+                          <RotateTransform Angle="0"/>
+                        </Setter>
+                      </KeyFrame>
+                      <KeyFrame Cue="100%">
+                        <Setter Property="RenderTransform">
+                          <RotateTransform Angle="360"/>
+                        </Setter>
+                      </KeyFrame>
+                    </Animation>
+                  </Style.Animations>
+                </Style>
+              </PathIcon.Styles>
+            </PathIcon>
+          </Viewbox>
+
+          <!-- Status message -->
+          <TextBlock Text="{Binding StatusMessage}"
+                     FontSize="14"
+                     HorizontalAlignment="Center"
+                     TextAlignment="Center"
+                     Foreground="White"
+                     Opacity="0.9"/>
+        </StackPanel>
+
+        <!-- Error display -->
+        <Border Background="#3D1F1F"
+                BorderBrush="#FF6B6B"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="16"
+                IsVisible="{Binding HasError}">
+          <StackPanel Spacing="8">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Text="⚠"
+                         Foreground="#FF6B6B"
+                         FontSize="20"
+                         VerticalAlignment="Center"/>
+              <TextBlock Text="Connection Error"
+                         Foreground="#FFB3B3"
+                         FontSize="16"
+                         FontWeight="SemiBold"
+                         VerticalAlignment="Center"/>
+            </StackPanel>
+            <TextBlock Text="{Binding ErrorMessage}"
+                       Foreground="#FFB3B3"
+                       FontSize="12"
+                       TextWrapping="Wrap"
+                       LineHeight="18"/>
+          </StackPanel>
+        </Border>
+
+        <!-- Mock mode indicator -->
+        <Border CornerRadius="12"
+                Padding="12,6"
+                Background="#4A2B7A"
+                HorizontalAlignment="Center"
+                IsVisible="{Binding IsMockMode}">
+          <TextBlock Text="MOCK ENVIRONMENT"
+                     FontWeight="SemiBold"
+                     FontSize="11"
+                     Foreground="#E1BEE7"
+                     LetterSpacing="0.5"/>
+        </Border>
+
+        <!-- Footer -->
+        <TextBlock Text="© 2025 KeyCard.NET"
+                   FontSize="11"
+                   HorizontalAlignment="Center"
+                   Opacity="0.5"
+                   Foreground="White"
+                   Margin="0,8,0,0"/>
+      </StackPanel>
+    </Border>
+  </Grid>
+</UserControl>
