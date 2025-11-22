@@ -265,6 +265,13 @@
 
             <!-- Buttons -->
             <StackPanel Spacing="10" Margin="0,8,0,0">
+              <!-- BACKEND STATUS MESSAGE - ONLY NEW ADDITION -->
+              <TextBlock Text="{Binding BackendStatus}"
+                         FontSize="12"
+                         Foreground="#B388FF"
+                         HorizontalAlignment="Center"
+                         Margin="0,0,0,4"/>
+
               <Button Content="Sign In"
                       Command="{Binding LoginCommand}"
                       IsDefault="True"

@@ -19,6 +19,7 @@ namespace KeyCard.Desktop.ViewModels
         private string _password = string.Empty;
         private string _error = string.Empty;
         private string _statusMessage = string.Empty;
+        private string _backendStatus = string.Empty;
         private bool _isBusy;
         private bool _rememberMe;
         private bool _showUsernameError;
@@ -103,6 +104,12 @@ namespace KeyCard.Desktop.ViewModels
         {
             get => _statusMessage;
             private set => SetProperty(ref _statusMessage, value);
+        }
+
+        public string BackendStatus
+        {
+            get => _backendStatus;
+            private set => SetProperty(ref _backendStatus, value);
         }
 
         public bool IsCheckingBackend
@@ -269,6 +276,7 @@ namespace KeyCard.Desktop.ViewModels
         private async Task CheckBackendAsync()
         {
             StatusMessage = "Connecting to backend...";
+            BackendStatus = "Connecting to backend...";
             IsCheckingBackend = true;
             BackendReady = false;
             BackendCheckFailed = false;
@@ -277,6 +285,7 @@ namespace KeyCard.Desktop.ViewModels
             if (string.IsNullOrWhiteSpace(_env.ApiBaseUrl))
             {
                 StatusMessage = "Backend URL not configured";
+                BackendStatus = "Backend URL not configured";
                 BackendCheckFailed = true;
                 IsCheckingBackend = false;
                 return;
@@ -289,15 +298,18 @@ namespace KeyCard.Desktop.ViewModels
             {
                 attempt++;
                 StatusMessage = $"Connecting to backend... ({attempt}/{maxAttempts})";
+                BackendStatus = $"Connecting... ({attempt}/{maxAttempts})";
 
                 var isAlive = await PingBackendHealthAsync();
                 if (isAlive)
                 {
                     StatusMessage = "Backend connected";
+                    BackendStatus = "Connected!";
                     BackendReady = true;
                     IsCheckingBackend = false;
                     await Task.Delay(1500);
                     StatusMessage = string.Empty;
+                    BackendStatus = string.Empty;
                     return;
                 }
 
@@ -305,6 +317,7 @@ namespace KeyCard.Desktop.ViewModels
             }
 
             StatusMessage = "Connection to backend could not be established";
+            BackendStatus = "Backend unavailable";
             BackendCheckFailed = true;
             IsCheckingBackend = false;
             BackendReady = false;
