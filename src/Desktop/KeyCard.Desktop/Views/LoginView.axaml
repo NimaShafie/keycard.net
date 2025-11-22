@@ -272,22 +272,31 @@
                          HorizontalAlignment="Center"
                          Margin="0,0,0,4"/>
 
-              <Button Content="Sign In"
+              <Button Content="{Binding SignInButtonText}"
                       Command="{Binding LoginCommand}"
                       IsDefault="True"
                       Height="42"
                       FontWeight="SemiBold"
                       CornerRadius="8"
-                      Background="#7B1FA2"
-                      BorderBrush="#9C27B0"
                       Foreground="White"
                       HorizontalAlignment="Stretch"
                       HorizontalContentAlignment="Center">
                 <Button.Styles>
-                  <Style Selector="Button:pointerover">
+                  <!-- Loading state - red background -->
+                  <Style Selector="Button:disabled">
+                    <Setter Property="Background" Value="#B71C1C"/>
+                    <Setter Property="BorderBrush" Value="#C62828"/>
+                    <Setter Property="Opacity" Value="0.8"/>
+                  </Style>
+                  <!-- Normal state - purple background -->
+                  <Style Selector="Button:not(:disabled)">
+                    <Setter Property="Background" Value="#7B1FA2"/>
+                    <Setter Property="BorderBrush" Value="#9C27B0"/>
+                  </Style>
+                  <Style Selector="Button:not(:disabled):pointerover">
                     <Setter Property="Background" Value="#8E24AA"/>
                   </Style>
-                  <Style Selector="Button:pressed">
+                  <Style Selector="Button:not(:disabled):pressed">
                     <Setter Property="Background" Value="#6A1B9A"/>
                   </Style>
                 </Button.Styles>

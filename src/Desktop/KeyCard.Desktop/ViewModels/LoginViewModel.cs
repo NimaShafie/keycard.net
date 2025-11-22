@@ -27,6 +27,7 @@ namespace KeyCard.Desktop.ViewModels
         private bool _isCheckingBackend;
         private bool _backendCheckFailed;
         private bool _backendReady;
+        private string _loadingDots = "";
 
         public LoginViewModel(IAuthService auth, INavigationService nav, IAppEnvironment env)
         {
@@ -38,6 +39,15 @@ namespace KeyCard.Desktop.ViewModels
             ContinueMockCommand = new DelegateCommand(() => ContinueMock(), () => IsMockMode);
             RegisterCommand = new DelegateCommand(() => Register());
             ForgotPasswordCommand = new DelegateCommand(() => ForgotPassword());
+
+            // CRITICAL: Initialize button state BEFORE the view is shown
+            if (!IsMockMode)
+            {
+                System.Diagnostics.Debug.WriteLine("=== CONSTRUCTOR: Setting initial loading state ===");
+                _isCheckingBackend = true;
+                _signInButtonText = "Loading Backend";
+                System.Diagnostics.Debug.WriteLine($"=== CONSTRUCTOR: IsCheckingBackend={_isCheckingBackend}, SignInButtonText={_signInButtonText} ===");
+            }
         }
 
         public string Username
@@ -112,13 +122,40 @@ namespace KeyCard.Desktop.ViewModels
             private set => SetProperty(ref _backendStatus, value);
         }
 
+        public string LoadingDots
+        {
+            get => _loadingDots;
+            private set
+            {
+                if (SetProperty(ref _loadingDots, value))
+                {
+                    UpdateSignInButtonText();
+                }
+            }
+        }
+
+        private string _signInButtonText = "Sign In";
+        public string SignInButtonText
+        {
+            get => _signInButtonText;
+            private set => SetProperty(ref _signInButtonText, value);
+        }
+
+        private void UpdateSignInButtonText()
+        {
+            SignInButtonText = IsCheckingBackend ? $"Loading Backend{LoadingDots}" : "Sign In";
+        }
+
         public bool IsCheckingBackend
         {
             get => _isCheckingBackend;
             private set
             {
                 if (SetProperty(ref _isCheckingBackend, value))
+                {
                     RaiseCanExecuteChanged();
+                    UpdateSignInButtonText();
+                }
             }
         }
 
@@ -242,6 +279,7 @@ namespace KeyCard.Desktop.ViewModels
         public async Task InitializeAsync()
         {
             System.Diagnostics.Debug.WriteLine("=== InitializeAsync STARTED ===");
+            System.Diagnostics.Debug.WriteLine("=== WATCH THE LOGIN SCREEN - 15 SECOND LOADING ANIMATION COMING! ===");
 
             try
             {
@@ -275,52 +313,91 @@ namespace KeyCard.Desktop.ViewModels
 
         private async Task CheckBackendAsync()
         {
+            System.Diagnostics.Debug.WriteLine("=== CheckBackendAsync STARTED ===");
+
             StatusMessage = "Connecting to backend...";
             BackendStatus = "Connecting to backend...";
             IsCheckingBackend = true;
             BackendReady = false;
             BackendCheckFailed = false;
 
-            // Validate API URL
-            if (string.IsNullOrWhiteSpace(_env.ApiBaseUrl))
+            System.Diagnostics.Debug.WriteLine("=== IsCheckingBackend SET TO TRUE ===");
+            System.Diagnostics.Debug.WriteLine("=== BUTTON SHOULD NOW BE RED WITH 'Loading Backend...' ===");
+
+            // Start animated dots timer IMMEDIATELY
+            var dotTimer = new System.Timers.Timer(500); // Update every 500ms (0.5 seconds)
+            var dotCount = 0;
+            dotTimer.Elapsed += (s, e) =>
             {
-                StatusMessage = "Backend URL not configured";
-                BackendStatus = "Backend URL not configured";
-                BackendCheckFailed = true;
-                IsCheckingBackend = false;
-                return;
-            }
+                dotCount = (dotCount + 1) % 4; // Cycle 0, 1, 2, 3
+                var dots = new string('.', dotCount);
 
-            var maxAttempts = 30; // 15 seconds
-            var attempt = 0;
-
-            while (attempt < maxAttempts)
-            {
-                attempt++;
-                StatusMessage = $"Connecting to backend... ({attempt}/{maxAttempts})";
-                BackendStatus = $"Connecting... ({attempt}/{maxAttempts})";
-
-                var isAlive = await PingBackendHealthAsync();
-                if (isAlive)
+                // CRITICAL: Update on UI thread using Dispatcher
+                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
                 {
-                    StatusMessage = "Backend connected";
-                    BackendStatus = "Connected!";
-                    BackendReady = true;
+                    LoadingDots = dots;
+                    System.Diagnostics.Debug.WriteLine($"Dots updated: '{LoadingDots}' (count: {dotCount})");
+                });
+            };
+            dotTimer.Start();
+            System.Diagnostics.Debug.WriteLine("=== TIMER STARTED ===");
+
+            try
+            {
+                // TEMPORARY: Add 15 second delay to see the loading animation
+                System.Diagnostics.Debug.WriteLine("=== STARTING 15 SECOND DELAY - WATCH THE BUTTON! ===");
+                await Task.Delay(15000);
+                System.Diagnostics.Debug.WriteLine("=== 15 SECOND DELAY COMPLETE ===");
+
+                // Validate API URL
+                if (string.IsNullOrWhiteSpace(_env.ApiBaseUrl))
+                {
+                    StatusMessage = "Backend URL not configured";
+                    BackendStatus = "Backend URL not configured";
+                    BackendCheckFailed = true;
                     IsCheckingBackend = false;
-                    await Task.Delay(1500);
-                    StatusMessage = string.Empty;
-                    BackendStatus = string.Empty;
                     return;
                 }
 
-                await Task.Delay(500);
-            }
+                var maxAttempts = 30; // 15 seconds
+                var attempt = 0;
 
-            StatusMessage = "Connection to backend could not be established";
-            BackendStatus = "Backend unavailable";
-            BackendCheckFailed = true;
-            IsCheckingBackend = false;
-            BackendReady = false;
+                while (attempt < maxAttempts)
+                {
+                    attempt++;
+                    StatusMessage = $"Connecting to backend... ({attempt}/{maxAttempts})";
+                    BackendStatus = $"Connecting... ({attempt}/{maxAttempts})";
+
+                    var isAlive = await PingBackendHealthAsync();
+                    if (isAlive)
+                    {
+                        StatusMessage = "Backend connected";
+                        BackendStatus = "Connected!";
+                        BackendReady = true;
+                        IsCheckingBackend = false;
+                        System.Diagnostics.Debug.WriteLine("=== BACKEND CONNECTED - BUTTON SHOULD TURN PURPLE ===");
+                        await Task.Delay(1500);
+                        StatusMessage = string.Empty;
+                        BackendStatus = string.Empty;
+                        return;
+                    }
+
+                    await Task.Delay(500);
+                }
+
+                StatusMessage = "Connection to backend could not be established";
+                BackendStatus = "Backend unavailable";
+                BackendCheckFailed = true;
+                IsCheckingBackend = false;
+                BackendReady = false;
+            }
+            finally
+            {
+                dotTimer.Stop();
+                dotTimer.Dispose();
+                LoadingDots = "";
+                System.Diagnostics.Debug.WriteLine("=== TIMER STOPPED ===");
+            }
         }
 
         private async Task<bool> PingBackendHealthAsync()
