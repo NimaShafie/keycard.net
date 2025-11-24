@@ -1,7 +1,10 @@
 // Views/FrontDeskView.axaml.cs
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+
+using KeyCard.Desktop.ViewModels;
 
 namespace KeyCard.Desktop.Views;
 
@@ -28,6 +31,22 @@ public partial class FrontDeskView : UserControl
             var box = this.FindControl<TextBox>("SearchBox");
             box?.Focus();
             e.Handled = true;
+        }
+    }
+
+    private void OnBookingsAreaClicked(object? sender, PointerPressedEventArgs e)
+    {
+        // Check if the click was directly on the background (not on a DataGrid row)
+        var source = e.Source as Control;
+
+        // If clicked on Border, Grid, or StackPanel (not DataGrid cells), deselect
+        if (source is Border || source is Grid || source is StackPanel || source is TextBlock)
+        {
+            // Get the ViewModel and clear selection
+            if (DataContext is FrontDeskViewModel vm)
+            {
+                vm.Selected = null;
+            }
         }
     }
 }

@@ -1,4 +1,4 @@
-<!-- Views/FrontDeskView.axaml - PHASE 1 FIX -->
+<!-- Views/FrontDeskView.axaml -->
 <UserControl
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -58,7 +58,8 @@
               BorderBrush="#3F2F73"
               BorderThickness="1"
               Padding="12"
-              Background="#18181E">
+              Background="#18181E"
+              PointerPressed="OnBookingsAreaClicked">
         <Grid RowDefinitions="Auto,*">
           <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
             <TextBlock Text="Today's Activity"
@@ -72,7 +73,6 @@
             </TextBlock>
           </StackPanel>
 
-          <!-- ✅ FIX 1: Added Border wrapper with inner border around DataGrid -->
           <Border Grid.Row="1"
                   Background="#141419"
                   BorderBrush="#4B3A86"
@@ -97,20 +97,20 @@
                                     Binding="{Binding ConfirmationCode}"
                                     SortMemberPath="ConfirmationCode"/>
 
-                <DataGridTextColumn Header="First" Width="*"
-                                    Binding="{Binding GuestName, Converter={StaticResource NamePartConverter}, ConverterParameter=First}"
-                                    SortMemberPath="GuestName"/>
-                <DataGridTextColumn Header="Last" Width="*"
-                                    Binding="{Binding GuestName, Converter={StaticResource NamePartConverter}, ConverterParameter=Last}"
-                                    SortMemberPath="GuestName"/>
+                <DataGridTextColumn Header="First Name" Width="*"
+                                    Binding="{Binding GuestFirstName}"
+                                    SortMemberPath="GuestFirstName"/>
+                <DataGridTextColumn Header="Last Name" Width="*"
+                                    Binding="{Binding GuestLastName}"
+                                    SortMemberPath="GuestLastName"/>
 
                 <DataGridTextColumn Header="Room" Width="*"
                                     Binding="{Binding RoomNumber}"
                                     SortMemberPath="RoomNumber"/>
 
                 <DataGridTextColumn Header="Room Type" Width="*"
-                                    Binding="{Binding RoomNumber, Converter={StaticResource RoomTypeConverter}}"
-                                    SortMemberPath="RoomNumber"/>
+                                    Binding="{Binding RoomType}"
+                                    SortMemberPath="RoomType"/>
 
                 <DataGridTextColumn Header="Check-In" Width="*"
                                     Binding="{Binding CheckIn}"
@@ -119,7 +119,6 @@
                                     Binding="{Binding CheckOut}"
                                     SortMemberPath="CheckOut"/>
 
-                <!-- ✅ FIX 2: Status badge with centered text -->
                 <DataGridTemplateColumn Header="Status" Width="*">
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate>
@@ -150,79 +149,185 @@
               BorderThickness="1"
               Padding="16"
               Background="#18181E">
-        <StackPanel Spacing="16">
-          <TextBlock Text="Booking Actions"
-                     FontSize="16"
-                     FontWeight="SemiBold"
-                     Foreground="#E8E8F0"/>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,16">
+          <StackPanel Spacing="16" Margin="0,0,0,8">
+            <TextBlock Text="Booking Actions"
+                       FontSize="16"
+                       FontWeight="SemiBold"
+                       Foreground="#E8E8F0"/>
 
-          <Border BorderBrush="#3F2F73"
-                  BorderThickness="1"
-                  CornerRadius="6"
-                  Padding="12"
-                  Background="#2A2A33"
-                  IsVisible="{Binding Selected, Converter={x:Static ObjectConverters.IsNotNull}}">
-            <StackPanel Spacing="6">
-              <TextBlock Text="{Binding Selected.GuestName}"
-                         FontWeight="SemiBold"
-                         FontSize="14"
-                         Foreground="#E8E8F0"/>
-              <TextBlock Text="{Binding Selected.ConfirmationCode, StringFormat='Code: {0}'}"
-                         Opacity="0.8"
-                         FontSize="12"/>
-              <TextBlock Text="{Binding Selected.RoomNumber, StringFormat='Room: {0}'}"
-                         Opacity="0.8"
-                         FontSize="12"/>
-              <TextBlock Text="{Binding Selected.Status, StringFormat='Status: {0}'}"
-                         Opacity="0.8"
-                         FontSize="12"/>
+            <Border BorderBrush="#3F2F73"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Padding="12"
+                    Background="#2A2A33"
+                    IsVisible="{Binding Selected, Converter={x:Static ObjectConverters.IsNotNull}}">
+              <StackPanel Spacing="6">
+                <TextBlock Text="{Binding Selected.GuestName}"
+                           FontWeight="SemiBold"
+                           FontSize="14"
+                           Foreground="#E8E8F0"/>
+                <TextBlock Text="{Binding Selected.ConfirmationCode, StringFormat='Code: {0}'}"
+                           Opacity="0.8"
+                           FontSize="12"/>
+                <TextBlock Text="{Binding Selected.RoomNumber, StringFormat='Room: {0}'}"
+                           Opacity="0.8"
+                           FontSize="12"/>
+                <TextBlock Text="{Binding Selected.Status, StringFormat='Status: {0}'}"
+                           Opacity="0.8"
+                           FontSize="12"/>
+              </StackPanel>
+            </Border>
+
+            <!-- Edit Booking Details Section -->
+            <Border BorderBrush="#4B3A86"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Padding="12"
+                    Background="#1E1E28"
+                    IsVisible="{Binding Selected, Converter={x:Static ObjectConverters.IsNotNull}}">
+              <StackPanel Spacing="12">
+                <TextBlock Text="Edit Booking Details"
+                           FontWeight="SemiBold"
+                           FontSize="13"
+                           Foreground="#E8E8F0"
+                           Margin="0,0,0,4"/>
+
+                <!-- First Name -->
+                <StackPanel Spacing="4">
+                  <TextBlock Text="First Name"
+                             FontSize="12"
+                             Opacity="0.8"
+                             Foreground="#CFCFEA"/>
+                  <TextBox Text="{Binding EditFirstName}"
+                           Watermark="Enter first name"
+                           IsEnabled="{Binding !IsBusy}"/>
+                </StackPanel>
+
+                <!-- Last Name -->
+                <StackPanel Spacing="4">
+                  <TextBlock Text="Last Name"
+                             FontSize="12"
+                             Opacity="0.8"
+                             Foreground="#CFCFEA"/>
+                  <TextBox Text="{Binding EditLastName}"
+                           Watermark="Enter last name"
+                           IsEnabled="{Binding !IsBusy}"/>
+                </StackPanel>
+
+                <!-- Assign Room -->
+                <StackPanel Spacing="4">
+                  <TextBlock Text="Assign Room"
+                             FontSize="12"
+                             Opacity="0.8"
+                             Foreground="#CFCFEA"/>
+                  <TextBox Text="{Binding RoomNumberInput}"
+                           Watermark="Room number"
+                           IsEnabled="{Binding !IsBusy}"/>
+                  <TextBlock Text="{Binding AssignRoomError}"
+                             Foreground="#ff7777"
+                             FontSize="11"
+                             TextWrapping="Wrap"
+                             IsVisible="{Binding AssignRoomError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                  <Button Content="Assign Room"
+                          Command="{Binding AssignRoomCommand}"
+                          HorizontalAlignment="Stretch"
+                          HorizontalContentAlignment="Center"
+                          CornerRadius="6"
+                          Padding="8,6"/>
+                </StackPanel>
+
+                <!-- Room Type -->
+                <StackPanel Spacing="4">
+                  <TextBlock Text="Room Type"
+                             FontSize="12"
+                             Opacity="0.8"
+                             Foreground="#CFCFEA"/>
+                  <ComboBox ItemsSource="{Binding RoomTypes}"
+                            SelectedItem="{Binding EditRoomType}"
+                            PlaceholderText="Select room type"
+                            IsEnabled="{Binding !IsBusy}"
+                            HorizontalAlignment="Stretch"/>
+                </StackPanel>
+
+                <!-- Check-In Date -->
+                <StackPanel Spacing="4">
+                  <TextBlock Text="Check-In Date"
+                             FontSize="12"
+                             Opacity="0.8"
+                             Foreground="#CFCFEA"/>
+                  <CalendarDatePicker SelectedDate="{Binding EditCheckInDate}"
+                                      IsEnabled="{Binding !IsBusy}"
+                                      HorizontalAlignment="Stretch"/>
+                </StackPanel>
+
+                <!-- Check-Out Date -->
+                <StackPanel Spacing="4">
+                  <TextBlock Text="Check-Out Date"
+                             FontSize="12"
+                             Opacity="0.8"
+                             Foreground="#CFCFEA"/>
+                  <CalendarDatePicker SelectedDate="{Binding EditCheckOutDate}"
+                                      IsEnabled="{Binding !IsBusy}"
+                                      HorizontalAlignment="Stretch"/>
+                </StackPanel>
+
+                <!-- Validation Error -->
+                <TextBlock Text="{Binding ValidationError}"
+                           Foreground="#ff7777"
+                           FontSize="12"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding ValidationError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                <!-- Save Changes Button -->
+                <Button Content="Save Changes"
+                        Command="{Binding SaveChangesCommand}"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        CornerRadius="6"
+                        Background="#1976D2"
+                        BorderBrush="#2196F3"
+                        Padding="8,8"
+                        Margin="0,4,0,0"/>
+              </StackPanel>
+            </Border>
+
+            <Separator Background="#3F2F73"/>
+
+            <StackPanel Spacing="10" Margin="0,0,0,24">
+              <Button Content="Check In Guest"
+                      Command="{Binding CheckInCommand}"
+                      HorizontalAlignment="Stretch"
+                      HorizontalContentAlignment="Center"
+                      CornerRadius="6"
+                      Background="#2E7D32"
+                      BorderBrush="#4CAF50"
+                      Padding="12,12"
+                      MinHeight="44"
+                      Margin="0,0,0,2"/>
+
+              <Button Content="Check Out Guest"
+                      Command="{Binding CheckOutCommand}"
+                      HorizontalAlignment="Stretch"
+                      HorizontalContentAlignment="Center"
+                      CornerRadius="6"
+                      Background="#D32F2F"
+                      BorderBrush="#F44336"
+                      Padding="12,12"
+                      MinHeight="44"
+                      Margin="0,0,0,2"/>
             </StackPanel>
-          </Border>
 
-          <StackPanel Spacing="8">
-            <TextBlock Text="Assign Room" FontWeight="SemiBold" Foreground="#E8E8F0"/>
-            <TextBox Watermark="Room number"
-                     Text="{Binding RoomNumberInput}"
-                     IsEnabled="{Binding !IsBusy}"/>
-            <TextBlock Text="{Binding AssignRoomError}"
-                       Foreground="#ff7777"
+            <TextBlock Text="{Binding StatusMessage}"
                        FontSize="12"
-                       IsVisible="{Binding AssignRoomError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-            <Button Content="Assign Room"
-                    Command="{Binding AssignRoomCommand}"
-                    HorizontalAlignment="Stretch"
-                    HorizontalContentAlignment="Center"
-                    CornerRadius="6"/>
+                       Opacity="0.9"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap"
+                       Foreground="#CFCFEA"
+                       Margin="0,0,0,16"
+                       IsVisible="{Binding StatusMessage, Converter={StaticResource HasText}}"/>
           </StackPanel>
-
-          <Separator Background="#3F2F73"/>
-
-          <StackPanel Spacing="10">
-            <Button Content="Check In Guest"
-                    Command="{Binding CheckInCommand}"
-                    HorizontalAlignment="Stretch"
-                    HorizontalContentAlignment="Center"
-                    CornerRadius="6"
-                    Background="#2E7D32"
-                    BorderBrush="#4CAF50"/>
-
-            <Button Content="Check Out Guest"
-                    Command="{Binding CheckOutCommand}"
-                    HorizontalAlignment="Stretch"
-                    HorizontalContentAlignment="Center"
-                    CornerRadius="6"
-                    Background="#D32F2F"
-                    BorderBrush="#F44336"/>
-          </StackPanel>
-
-          <TextBlock Text="{Binding StatusMessage}"
-                     FontSize="12"
-                     Opacity="0.9"
-                     TextAlignment="Center"
-                     TextWrapping="Wrap"
-                     Foreground="#CFCFEA"
-                     IsVisible="{Binding StatusMessage, Converter={StaticResource HasText}}"/>
-        </StackPanel>
+        </ScrollViewer>
       </Border>
     </Grid>
   </Grid>

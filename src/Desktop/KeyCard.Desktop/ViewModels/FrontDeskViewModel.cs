@@ -29,9 +29,31 @@ namespace KeyCard.Desktop.ViewModels
             {
                 if (SetProperty(ref _selected, value))
                 {
+                    // Populate edit fields when a booking is selected
+                    if (_selected != null)
+                    {
+                        EditFirstName = _selected.GuestFirstName;
+                        EditLastName = _selected.GuestLastName;
+                        EditRoomType = _selected.RoomType;
+                        // Convert DateOnly to DateTime for the date pickers
+                        EditCheckInDate = _selected.CheckInDate.ToDateTime(TimeOnly.MinValue);
+                        EditCheckOutDate = _selected.CheckOutDate.ToDateTime(TimeOnly.MinValue);
+                        ValidationError = null;
+                    }
+                    else
+                    {
+                        EditFirstName = null;
+                        EditLastName = null;
+                        EditRoomType = null;
+                        EditCheckInDate = null;
+                        EditCheckOutDate = null;
+                        ValidationError = null;
+                    }
+
                     (CheckInCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
                     (CheckOutCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
                     (AssignRoomCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    (SaveChangesCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
                 }
             }
         }
@@ -81,6 +103,92 @@ namespace KeyCard.Desktop.ViewModels
             private set => SetProperty(ref _assignRoomError, value);
         }
 
+        // Editable fields for the selected booking
+        private string? _editFirstName;
+        public string? EditFirstName
+        {
+            get => _editFirstName;
+            set
+            {
+                if (SetProperty(ref _editFirstName, value))
+                {
+                    ValidationError = null;
+                    (SaveChangesCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        private string? _editLastName;
+        public string? EditLastName
+        {
+            get => _editLastName;
+            set
+            {
+                if (SetProperty(ref _editLastName, value))
+                {
+                    ValidationError = null;
+                    (SaveChangesCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        private string? _editRoomType;
+        public string? EditRoomType
+        {
+            get => _editRoomType;
+            set
+            {
+                if (SetProperty(ref _editRoomType, value))
+                {
+                    ValidationError = null;
+                    (SaveChangesCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        private DateTime? _editCheckInDate;
+        public DateTime? EditCheckInDate
+        {
+            get => _editCheckInDate;
+            set
+            {
+                if (SetProperty(ref _editCheckInDate, value))
+                {
+                    ValidateDates();
+                    (SaveChangesCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        private DateTime? _editCheckOutDate;
+        public DateTime? EditCheckOutDate
+        {
+            get => _editCheckOutDate;
+            set
+            {
+                if (SetProperty(ref _editCheckOutDate, value))
+                {
+                    ValidateDates();
+                    (SaveChangesCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        private string? _validationError;
+        public string? ValidationError
+        {
+            get => _validationError;
+            set => SetProperty(ref _validationError, value);
+        }
+
+        // Available room types from backend
+        public ObservableCollection<string> RoomTypes { get; } = new()
+        {
+            "Regular Room",
+            "King Room",
+            "Luxury Room"
+        };
+
         private bool _isBusy;
         public bool IsBusy
         {
@@ -94,6 +202,7 @@ namespace KeyCard.Desktop.ViewModels
                     (CheckInCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
                     (CheckOutCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
                     (AssignRoomCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    (SaveChangesCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
                 }
             }
         }
@@ -122,6 +231,7 @@ namespace KeyCard.Desktop.ViewModels
         public ICommand CheckInCommand { get; }
         public ICommand CheckOutCommand { get; }
         public ICommand AssignRoomCommand { get; }
+        public ICommand SaveChangesCommand { get; }
 
         public FrontDeskViewModel(
             INavigationService nav,
@@ -142,6 +252,7 @@ namespace KeyCard.Desktop.ViewModels
             CheckInCommand = new UnifiedRelayCommand(CheckInAsync, () => CanCheckIn());
             CheckOutCommand = new UnifiedRelayCommand(CheckOutAsync, () => CanCheckOut());
             AssignRoomCommand = new UnifiedRelayCommand(AssignRoomAsync, () => CanAssignRoom());
+            SaveChangesCommand = new UnifiedRelayCommand(SaveChangesAsync, () => CanSaveChanges());
 
             _toolbar.AttachContext(
                 title: "Front Desk Operations",
@@ -277,21 +388,37 @@ namespace KeyCard.Desktop.ViewModels
 
             // 1) Validate existence using live/mock rooms service
             bool exists;
-            try
-            {
-                exists = await _rooms.ExistsAsync(roomNumber, CancellationToken.None);
-            }
-            catch
-            {
-                // If service fails, we fall back to allowing the assignment as long as there is no conflict.
-                exists = true;
-            }
 
-            if (!exists)
+            // In mock mode, allow any room between 1-1000
+            if (IsMockMode)
             {
-                AssignRoomError = $"Room {roomNumber} does not exist.";
-                StatusMessage = AssignRoomError;
-                return;
+                if (roomNumber < 1 || roomNumber > 1000)
+                {
+                    AssignRoomError = $"Room number must be between 1 and 1000.";
+                    StatusMessage = AssignRoomError;
+                    return;
+                }
+                exists = true; // Accept any room in valid range for mock mode
+            }
+            else
+            {
+                // In live mode, validate room existence via the rooms service
+                try
+                {
+                    exists = await _rooms.ExistsAsync(roomNumber, CancellationToken.None);
+                }
+                catch
+                {
+                    // If service fails, we fall back to allowing the assignment as long as there is no conflict.
+                    exists = true;
+                }
+
+                if (!exists)
+                {
+                    AssignRoomError = $"Room {roomNumber} does not exist.";
+                    StatusMessage = AssignRoomError;
+                    return;
+                }
             }
 
             // 2) Local conflict detection
@@ -426,6 +553,156 @@ namespace KeyCard.Desktop.ViewModels
             !IsBusy &&
             Selected is not null &&
             Selected.Status == "CheckedIn";
+
+        private void ValidateDates()
+        {
+            if (EditCheckInDate.HasValue && EditCheckOutDate.HasValue)
+            {
+                if (EditCheckInDate.Value >= EditCheckOutDate.Value)
+                {
+                    ValidationError = "Check-out date must be after check-in date";
+                }
+                else
+                {
+                    ValidationError = null;
+                }
+            }
+            else
+            {
+                ValidationError = null;
+            }
+        }
+
+        private bool CanSaveChanges()
+        {
+            if (IsBusy || Selected == null) return false;
+
+            // Convert DateTime? to DateOnly for comparison
+            DateOnly? editCheckInDateOnly = EditCheckInDate.HasValue
+                ? DateOnly.FromDateTime(EditCheckInDate.Value)
+                : null;
+            DateOnly? editCheckOutDateOnly = EditCheckOutDate.HasValue
+                ? DateOnly.FromDateTime(EditCheckOutDate.Value)
+                : null;
+
+            // Check if any field has changed
+            bool hasChanges =
+                EditFirstName != Selected.GuestFirstName ||
+                EditLastName != Selected.GuestLastName ||
+                EditRoomType != Selected.RoomType ||
+                editCheckInDateOnly != Selected.CheckInDate ||
+                editCheckOutDateOnly != Selected.CheckOutDate;
+
+            // Check if there are validation errors
+            bool isValid = string.IsNullOrEmpty(ValidationError);
+
+            // Must have at least first or last name
+            bool hasName = !string.IsNullOrWhiteSpace(EditFirstName) || !string.IsNullOrWhiteSpace(EditLastName);
+
+            // Must have valid dates
+            bool hasDates = EditCheckInDate.HasValue && EditCheckOutDate.HasValue;
+
+            return hasChanges && isValid && hasName && hasDates;
+        }
+
+        private async Task SaveChangesAsync()
+        {
+            if (Selected is null || !EditCheckInDate.HasValue || !EditCheckOutDate.HasValue) return;
+
+            try
+            {
+                IsBusy = true;
+                StatusMessage = "Saving changes...";
+
+                var confirmationCode = Selected.ConfirmationCode;
+
+                // Create updated booking with new values (convert DateTime back to DateOnly)
+                var updatedBooking = Selected with
+                {
+                    GuestFirstName = EditFirstName?.Trim() ?? "",
+                    GuestLastName = EditLastName?.Trim() ?? "",
+                    RoomType = EditRoomType ?? "Regular Room",
+                    CheckInDate = DateOnly.FromDateTime(EditCheckInDate.Value),
+                    CheckOutDate = DateOnly.FromDateTime(EditCheckOutDate.Value)
+                };
+
+                // In mock mode, directly update the shared collection
+                // Find the booking in all collections and replace it
+                var allBookings = _bookingState.AllBookings;
+                var arrivals = _bookingState.TodayArrivals;
+
+                // Find index in AllBookings
+                var indexInAll = -1;
+                for (int i = 0; i < allBookings.Count; i++)
+                {
+                    if (allBookings[i].ConfirmationCode == confirmationCode)
+                    {
+                        indexInAll = i;
+                        break;
+                    }
+                }
+
+                // Find index in TodayArrivals
+                var indexInArrivals = -1;
+                for (int i = 0; i < arrivals.Count; i++)
+                {
+                    if (arrivals[i].ConfirmationCode == confirmationCode)
+                    {
+                        indexInArrivals = i;
+                        break;
+                    }
+                }
+
+                // Replace in both collections
+                if (indexInAll >= 0)
+                {
+                    allBookings[indexInAll] = updatedBooking;
+                }
+
+                if (indexInArrivals >= 0)
+                {
+                    arrivals[indexInArrivals] = updatedBooking;
+                }
+
+                // Also update departures if needed
+                if (updatedBooking.CheckOutDate == DateOnly.FromDateTime(DateTime.Today))
+                {
+                    var indexInDepartures = -1;
+                    for (int i = 0; i < _allDepartures.Count; i++)
+                    {
+                        if (_allDepartures[i].ConfirmationCode == confirmationCode)
+                        {
+                            indexInDepartures = i;
+                            break;
+                        }
+                    }
+
+                    if (indexInDepartures >= 0)
+                    {
+                        _allDepartures[indexInDepartures] = updatedBooking;
+                    }
+                }
+
+                await Task.Delay(300); // Simulate save delay
+
+                // Refresh the display
+                ApplyFilter();
+
+                // Update Selected to point to the new booking instance
+                Selected = _bookingState.FindByCode(confirmationCode);
+
+                StatusMessage = "Changes saved successfully";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error: {ex.Message}";
+                ValidationError = $"Failed to save: {ex.Message}";
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
 
         private void ApplyFilter()
         {
