@@ -1,8 +1,10 @@
 // Views/FrontDeskView.axaml.cs
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.VisualTree;
 
 using KeyCard.Desktop.ViewModels;
 
@@ -46,6 +48,33 @@ public partial class FrontDeskView : UserControl
             if (DataContext is FrontDeskViewModel vm)
             {
                 vm.Selected = null;
+            }
+        }
+    }
+
+    private void OnDatePickerAttached(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        if (sender is CalendarDatePicker datePicker)
+        {
+            // Find all child controls and disable mouse wheel on them
+            DisableMouseWheelRecursively(datePicker);
+        }
+    }
+
+    private void DisableMouseWheelRecursively(Control control)
+    {
+        // Add mouse wheel handler to this control
+        control.AddHandler(PointerWheelChangedEvent, (s, e) =>
+        {
+            e.Handled = true;
+        }, RoutingStrategies.Tunnel | RoutingStrategies.Bubble);
+
+        // Recursively apply to all children
+        foreach (var child in control.GetVisualChildren())
+        {
+            if (child is Control childControl)
+            {
+                DisableMouseWheelRecursively(childControl);
             }
         }
     }

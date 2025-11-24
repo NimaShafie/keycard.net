@@ -74,7 +74,8 @@
                 BorderBrush="#4B3A86"
                 BorderThickness="1"
                 CornerRadius="8"
-                Padding="6">
+                Padding="6"
+                ClipToBounds="True">
           <DataGrid
               ItemsSource="{Binding FilteredArrivals}"
               AutoGenerateColumns="False"
@@ -113,7 +114,7 @@
                                   Binding="{Binding CheckOut, StringFormat='{}{0:MMM d}'}"
                                   SortMemberPath="CheckOut"/>
 
-              <!-- FIX: Status badge with centered text -->
+              <!-- Status badge with centered text -->
               <DataGridTemplateColumn Header="Status" Width="*">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate>

@@ -1,6 +1,7 @@
 // Modules/Folio/ViewModels/FolioViewModel.cs
 using System;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
@@ -16,7 +17,6 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
 {
     /// <summary>
     /// Main view model for the Folio Manager module.
-    /// NOW inherits from ViewModelBase to work with INavigationService.
     /// </summary>
     public class FolioViewModel : ViewModelBase
     {
@@ -24,7 +24,7 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
         private readonly ILogger<FolioViewModel> _logger;
         private readonly IToolbarService _toolbar;
 
-        // ✅ FIX 1: ADD THIS EVENT - Required by FolioView.axaml.cs
+        // Event for opening guest detail window
         public event EventHandler<string>? OpenGuestDetailRequested;
 
         // --- Search / selection ---
@@ -44,33 +44,22 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
             {
                 if (SetProperty(ref _selectedFolio, value))
                 {
-                    (SearchFoliosCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
-                    (PostChargeCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
-                    (ApplyPaymentCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
-                    (PrintStatementCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
-                    // ✅ FIX 2: ADD THIS LINE
-                    (OpenGuestDetailCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
-
-                    // keep aliases in sync for views that use them
-                    (AddChargeCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
-                    (AddPaymentCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
-                    (GenerateInvoiceCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    RaiseAllCanExecuteChanged();
                 }
             }
         }
 
-        // --- Charge inputs (original) ---
+        // --- Charge inputs (using string for TextBox binding) ---
 
-        private decimal _chargeAmount;
-        public decimal ChargeAmount
+        private string? _chargeAmountText;
+        public string? ChargeAmountText
         {
-            get => _chargeAmount;
+            get => _chargeAmountText;
             set
             {
-                if (SetProperty(ref _chargeAmount, value))
+                if (SetProperty(ref _chargeAmountText, value))
                 {
-                    (PostChargeCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
-                    (AddChargeCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    RaiseAllCanExecuteChanged();
                     OnPropertyChanged(nameof(CanAddCharge));
                 }
             }
@@ -84,25 +73,30 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
             {
                 if (SetProperty(ref _chargeDescription, value))
                 {
-                    (PostChargeCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
-                    (AddChargeCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    RaiseAllCanExecuteChanged();
                     OnPropertyChanged(nameof(CanAddCharge));
                 }
             }
         }
 
-        // --- Payment inputs (original) ---
-
-        private decimal _paymentAmount;
-        public decimal PaymentAmount
+        // Alias for XAML binding compatibility
+        public string? NewChargeDescription
         {
-            get => _paymentAmount;
+            get => ChargeDescription;
+            set => ChargeDescription = value;
+        }
+
+        // --- Payment inputs (using string for TextBox binding) ---
+
+        private string? _paymentAmountText;
+        public string? PaymentAmountText
+        {
+            get => _paymentAmountText;
             set
             {
-                if (SetProperty(ref _paymentAmount, value))
+                if (SetProperty(ref _paymentAmountText, value))
                 {
-                    (ApplyPaymentCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
-                    (AddPaymentCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    RaiseAllCanExecuteChanged();
                     OnPropertyChanged(nameof(CanAddPayment));
                 }
             }
@@ -116,19 +110,17 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
             {
                 if (SetProperty(ref _paymentMethod, value))
                 {
-                    (ApplyPaymentCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
-                    (AddPaymentCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+                    RaiseAllCanExecuteChanged();
                     OnPropertyChanged(nameof(CanAddPayment));
                 }
             }
         }
 
-        // Optional: reference/notes field used by some UIs; safe no-op for backend
-        private string? _paymentReference;
-        public string? PaymentReference
+        // Alias for XAML binding compatibility
+        public string? NewPaymentMethod
         {
-            get => _paymentReference;
-            set => SetProperty(ref _paymentReference, value);
+            get => PaymentMethod;
+            set => PaymentMethod = value;
         }
 
         // --- Busy / status ---
@@ -141,18 +133,7 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
             {
                 if (SetProperty(ref _isBusy, value))
                 {
-                    (SearchFoliosCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
-                    (PostChargeCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
-                    (ApplyPaymentCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
-                    (PrintStatementCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
-                    // ✅ FIX 3: ADD THIS LINE
-                    (OpenGuestDetailCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
-
-                    // aliases
-                    (AddChargeCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
-                    (AddPaymentCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
-                    (GenerateInvoiceCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
-
+                    RaiseAllCanExecuteChanged();
                     OnPropertyChanged(nameof(CanAddCharge));
                     OnPropertyChanged(nameof(CanAddPayment));
                 }
@@ -177,76 +158,23 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
             "Check"
         };
 
-        // --- Commands (original) ---
+        // --- Commands ---
 
         public ICommand SearchFoliosCommand { get; }
         public ICommand PostChargeCommand { get; }
         public ICommand ApplyPaymentCommand { get; }
         public ICommand PrintStatementCommand { get; }
         public ICommand RefreshCommand { get; }
-        // ✅ FIX 4: ADD THIS COMMAND
         public ICommand OpenGuestDetailCommand { get; }
 
-        // --- Aliases expected by alternative XAML bindings (added) ---
-
-        /// <summary>
-        /// Mirrors <see cref="ChargeDescription"/> for views that bind to NewChargeDescription.
-        /// </summary>
-        public string? NewChargeDescription
-        {
-            get => ChargeDescription;
-            set => ChargeDescription = value;
-        }
-
-        /// <summary>
-        /// Mirrors <see cref="ChargeAmount"/> for views that bind to NewChargeAmount.
-        /// </summary>
-        public decimal NewChargeAmount
-        {
-            get => ChargeAmount;
-            set => ChargeAmount = value;
-        }
-
-        /// <summary>
-        /// Mirrors <see cref="PaymentAmount"/> for views that bind to NewPaymentAmount.
-        /// </summary>
-        public decimal NewPaymentAmount
-        {
-            get => PaymentAmount;
-            set => PaymentAmount = value;
-        }
-
-        /// <summary>
-        /// Mirrors <see cref="PaymentMethod"/> for views that bind to NewPaymentMethod.
-        /// </summary>
-        public string? NewPaymentMethod
-        {
-            get => PaymentMethod;
-            set => PaymentMethod = value;
-        }
-
-        /// <summary>
-        /// Mirrors <see cref="PaymentReference"/> for views that bind to NewPaymentReference.
-        /// (Not all backends store this yet; safe to keep local.)
-        /// </summary>
-        public string? NewPaymentReference
-        {
-            get => PaymentReference;
-            set => PaymentReference = value;
-        }
-
-        /// <summary>
-        /// Convenience booleans for enabling buttons in some views.
-        /// </summary>
-        public bool CanAddCharge => CanPostCharge();
-        public bool CanAddPayment => CanApplyPayment();
-
-        /// <summary>
-        /// Command aliases so both naming schemes work without changing the rest of your app.
-        /// </summary>
+        // --- Command aliases ---
         public ICommand AddChargeCommand { get; }
         public ICommand AddPaymentCommand { get; }
         public ICommand GenerateInvoiceCommand { get; }
+
+        // --- Convenience booleans for UI ---
+        public bool CanAddCharge => CanPostCharge();
+        public bool CanAddPayment => CanApplyPayment();
 
         public FolioViewModel(IFolioService folio, ILogger<FolioViewModel> logger, IToolbarService toolbar)
         {
@@ -255,26 +183,26 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
             _toolbar = toolbar;
 
             SearchFoliosCommand = new UnifiedRelayCommand(SearchFoliosAsync, () => !IsBusy);
-            PostChargeCommand = new UnifiedRelayCommand(PostChargeAsync, () => CanPostCharge());
-            ApplyPaymentCommand = new UnifiedRelayCommand(ApplyPaymentAsync, () => CanApplyPayment());
+            PostChargeCommand = new UnifiedRelayCommand(PostChargeAsync, CanPostCharge);
+            ApplyPaymentCommand = new UnifiedRelayCommand(ApplyPaymentAsync, CanApplyPayment);
             PrintStatementCommand = new UnifiedRelayCommand(PrintStatementAsync, () => SelectedFolio != null && !IsBusy);
             RefreshCommand = new UnifiedRelayCommand(RefreshAsync, () => !IsBusy);
 
-            // ✅ FIX 5: ADD THIS COMMAND INITIALIZATION
+            // Use non-generic UnifiedRelayCommand with object parameter
             OpenGuestDetailCommand = new UnifiedRelayCommand(
-                OpenGuestDetailAsync,
-                () => !IsBusy
+                async (param) => await OpenGuestDetailAsync(param as string),
+                (param) => !IsBusy && (param is string || SelectedFolio != null)
             );
 
             _toolbar.AttachContext(
                 title: "Folio Manager",
                 subtitle: "Manage charges, payments, and statements",
-                onRefreshAsync: RefreshAsync, // or null if none
+                onRefreshAsync: RefreshAsync,
                 onSearch: q => { /* optional: set your own search/filter */ },
                 initialSearchText: null
             );
 
-            // Alias commands simply reuse the originals to keep behavior identical.
+            // Alias commands
             AddChargeCommand = PostChargeCommand;
             AddPaymentCommand = ApplyPaymentCommand;
             GenerateInvoiceCommand = PrintStatementCommand;
@@ -285,20 +213,16 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
 
         /// <summary>
         /// Initialize the ViewModel - called by view after construction.
-        /// Loads initial folio data.
         /// </summary>
-        /// <param name="bookingId">Optional booking ID to filter folios</param>
         public async Task InitializeAsync(Guid? bookingId = null)
         {
             if (bookingId.HasValue)
             {
-                // If specific booking requested, search for it
                 GuestSearchText = bookingId.ToString();
                 await SearchFoliosAsync();
             }
             else
             {
-                // Otherwise load all active folios
                 await RefreshAsync();
             }
         }
@@ -367,17 +291,27 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
 
         private async Task PostChargeAsync()
         {
-            if (SelectedFolio == null) return;
+            if (SelectedFolio == null)
+            {
+                StatusMessage = "Please select a folio first";
+                return;
+            }
 
             try
             {
                 IsBusy = true;
                 StatusMessage = "Posting charge...";
 
+                var amount = ParseDecimal(ChargeAmountText);
+                var description = ChargeDescription ?? "Miscellaneous Charge";
+
+                _logger.LogInformation("Posting charge: {Amount} - {Description} to folio {FolioId}",
+                    amount, description, SelectedFolio.FolioId);
+
                 await _folio.PostChargeAsync(
                     SelectedFolio.FolioId,
-                    ChargeAmount,
-                    ChargeDescription ?? "Miscellaneous Charge");
+                    amount,
+                    description);
 
                 // Refresh the selected folio
                 var updated = await _folio.GetFolioByIdAsync(SelectedFolio.FolioId);
@@ -391,9 +325,12 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
                     }
                 }
 
-                ChargeAmount = 0;
+                // Clear inputs
+                ChargeAmountText = string.Empty;
                 ChargeDescription = null;
-                StatusMessage = "Charge posted successfully";
+
+                StatusMessage = $"Charge of {amount:C} posted successfully";
+                _logger.LogInformation("Charge posted successfully");
             }
             catch (Exception ex)
             {
@@ -406,25 +343,38 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
             }
         }
 
-        private bool CanPostCharge() =>
-            !IsBusy &&
-            SelectedFolio is not null &&
-            ChargeAmount > 0 &&
-            !string.IsNullOrWhiteSpace(ChargeDescription);
+        private bool CanPostCharge()
+        {
+            var amount = ParseDecimal(ChargeAmountText);
+            return !IsBusy &&
+                   SelectedFolio is not null &&
+                   amount > 0 &&
+                   !string.IsNullOrWhiteSpace(ChargeDescription);
+        }
 
         private async Task ApplyPaymentAsync()
         {
-            if (SelectedFolio is null) return;
+            if (SelectedFolio is null)
+            {
+                StatusMessage = "Please select a folio first";
+                return;
+            }
 
             try
             {
                 IsBusy = true;
                 StatusMessage = "Applying payment...";
 
+                var amount = ParseDecimal(PaymentAmountText);
+                var method = PaymentMethod ?? "Cash";
+
+                _logger.LogInformation("Applying payment: {Amount} via {Method} to folio {FolioId}",
+                    amount, method, SelectedFolio.FolioId);
+
                 await _folio.ApplyPaymentAsync(
                     SelectedFolio.FolioId,
-                    PaymentAmount,
-                    PaymentMethod ?? "Cash");
+                    amount,
+                    method);
 
                 // Refresh the selected folio
                 var updated = await _folio.GetFolioByIdAsync(SelectedFolio.FolioId);
@@ -438,8 +388,11 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
                     }
                 }
 
-                PaymentAmount = 0;
-                StatusMessage = "Payment applied successfully";
+                // Clear inputs
+                PaymentAmountText = string.Empty;
+
+                StatusMessage = $"Payment of {amount:C} applied successfully";
+                _logger.LogInformation("Payment applied successfully");
             }
             catch (Exception ex)
             {
@@ -452,20 +405,29 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
             }
         }
 
-        private bool CanApplyPayment() =>
-            !IsBusy &&
-            SelectedFolio is not null &&
-            PaymentAmount > 0 &&
-            !string.IsNullOrWhiteSpace(PaymentMethod);
+        private bool CanApplyPayment()
+        {
+            var amount = ParseDecimal(PaymentAmountText);
+            return !IsBusy &&
+                   SelectedFolio is not null &&
+                   amount > 0 &&
+                   !string.IsNullOrWhiteSpace(PaymentMethod);
+        }
 
         private async Task PrintStatementAsync()
         {
-            if (SelectedFolio is null) return;
+            if (SelectedFolio is null)
+            {
+                StatusMessage = "Please select a folio first";
+                return;
+            }
 
             try
             {
                 IsBusy = true;
                 StatusMessage = "Generating statement...";
+
+                _logger.LogInformation("Generating statement for folio {FolioId}", SelectedFolio.FolioId);
 
                 await _folio.PrintStatementAsync(SelectedFolio.FolioId);
 
@@ -482,20 +444,54 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
             }
         }
 
-        // ✅ FIX 6: ADD THIS METHOD
-        private void OpenGuestDetail(string? folioId)
+        private async Task OpenGuestDetailAsync(string? folioId)
         {
             if (string.IsNullOrWhiteSpace(folioId))
+            {
                 folioId = SelectedFolio?.FolioId;
+            }
 
             if (!string.IsNullOrWhiteSpace(folioId))
+            {
+                _logger.LogInformation("Opening guest detail for folio {FolioId}", folioId);
                 OpenGuestDetailRequested?.Invoke(this, folioId);
+            }
+            else
+            {
+                StatusMessage = "Please select a folio first";
+            }
+
+            await Task.CompletedTask;
         }
 
-        private async Task OpenGuestDetailAsync()
+        /// <summary>
+        /// Safely parse decimal from string input, handling null/empty/invalid cases
+        /// </summary>
+        private static decimal ParseDecimal(string? input)
         {
-            OpenGuestDetail(SelectedFolio?.FolioId);
-            await Task.CompletedTask;
+            if (string.IsNullOrWhiteSpace(input))
+                return 0m;
+
+            // Remove any currency symbols or spaces
+            input = input.Replace("$", "").Replace(" ", "").Trim();
+
+            if (decimal.TryParse(input, NumberStyles.Number, CultureInfo.InvariantCulture, out var result))
+                return Math.Abs(result);
+
+            return 0m;
+        }
+
+        /// <summary>
+        /// Helper to raise CanExecuteChanged on all commands
+        /// </summary>
+        private void RaiseAllCanExecuteChanged()
+        {
+            (SearchFoliosCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+            (PostChargeCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+            (ApplyPaymentCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+            (PrintStatementCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+            (OpenGuestDetailCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
+            (RefreshCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
         }
     }
 }

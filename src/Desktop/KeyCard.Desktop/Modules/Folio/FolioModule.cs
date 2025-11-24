@@ -1,4 +1,4 @@
-// /Modules/Folio/FolioModule.cs
+// Modules/Folio/FolioModule.cs
 using KeyCard.Desktop.Modules.Folio.Services;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -13,6 +13,7 @@ namespace KeyCard.Desktop.Modules.Folio
                 services.AddSingleton<IFolioService, MockFolioService>();
             else
                 services.AddSingleton<IFolioService, LiveFolioService>();
+
             return services;
         }
     }

@@ -78,7 +78,8 @@
                   BorderBrush="#4B3A86"
                   BorderThickness="1"
                   CornerRadius="8"
-                  Padding="0">
+                  Padding="6"
+                  ClipToBounds="True">
             <DataGrid
                 ItemsSource="{Binding Results}"
                 SelectedItem="{Binding Selected, Mode=TwoWay}"
@@ -142,13 +143,44 @@
         </Grid>
       </Border>
 
-      <!-- Actions panel -->
+      <!-- Empty state panel - shown when no booking is selected -->
       <Border Grid.Column="2"
               CornerRadius="8"
               BorderBrush="#3F2F73"
               BorderThickness="1"
               Padding="16"
-              Background="#18181E">
+              Background="#18181E"
+              IsVisible="{Binding Selected, Converter={x:Static ObjectConverters.IsNull}}">
+        <StackPanel VerticalAlignment="Center" Spacing="16">
+          <Viewbox Width="80" Height="80" Opacity="0.3">
+            <Path Data="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M11,16.5L18,9.5L16.59,8.09L11,13.67L7.91,10.59L6.5,12L11,16.5Z"
+                  Fill="#9C27B0"
+                  Stretch="Uniform"/>
+          </Viewbox>
+          <TextBlock Text="No Booking Selected"
+                     FontSize="18"
+                     FontWeight="SemiBold"
+                     Foreground="#E8E8F0"
+                     HorizontalAlignment="Center"/>
+          <TextBlock Text="Select a guest check-in row from Today's Activity to view and edit the booking details"
+                     FontSize="13"
+                     Foreground="#CFCFEA"
+                     Opacity="0.8"
+                     TextAlignment="Center"
+                     TextWrapping="Wrap"
+                     MaxWidth="250"
+                     LineHeight="20"/>
+        </StackPanel>
+      </Border>
+
+      <!-- Actions panel - shown when booking is selected -->
+      <Border Grid.Column="2"
+              CornerRadius="8"
+              BorderBrush="#3F2F73"
+              BorderThickness="1"
+              Padding="16"
+              Background="#18181E"
+              IsVisible="{Binding Selected, Converter={x:Static ObjectConverters.IsNotNull}}">
         <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,16">
           <StackPanel Spacing="16" Margin="0,0,0,8">
             <TextBlock Text="Booking Actions"
@@ -256,9 +288,11 @@
                              FontSize="12"
                              Opacity="0.8"
                              Foreground="#CFCFEA"/>
-                  <CalendarDatePicker SelectedDate="{Binding EditCheckInDate}"
+                  <CalendarDatePicker x:Name="CheckInDatePicker"
+                                      SelectedDate="{Binding EditCheckInDate}"
                                       IsEnabled="{Binding !IsBusy}"
-                                      HorizontalAlignment="Stretch"/>
+                                      HorizontalAlignment="Stretch"
+                                      AttachedToVisualTree="OnDatePickerAttached"/>
                 </StackPanel>
 
                 <!-- Check-Out Date -->
@@ -267,9 +301,11 @@
                              FontSize="12"
                              Opacity="0.8"
                              Foreground="#CFCFEA"/>
-                  <CalendarDatePicker SelectedDate="{Binding EditCheckOutDate}"
+                  <CalendarDatePicker x:Name="CheckOutDatePicker"
+                                      SelectedDate="{Binding EditCheckOutDate}"
                                       IsEnabled="{Binding !IsBusy}"
-                                      HorizontalAlignment="Stretch"/>
+                                      HorizontalAlignment="Stretch"
+                                      AttachedToVisualTree="OnDatePickerAttached"/>
                 </StackPanel>
 
                 <!-- Validation Error -->
