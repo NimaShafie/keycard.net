@@ -416,18 +416,18 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
             try
             {
                 IsBusy = true;
-                StatusMessage = "Generating statement...";
+                StatusMessage = "📄 Generating statement...";
 
                 _logger.LogInformation("Generating statement for folio {FolioId}", SelectedFolio.FolioId);
 
                 await _folio.PrintStatementAsync(SelectedFolio.FolioId);
 
-                StatusMessage = "Statement generated successfully";
+                StatusMessage = "✅ Statement opened in browser - Click 'Print / Save as PDF' button to save";
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error printing statement");
-                StatusMessage = $"Error: {ex.Message}";
+                StatusMessage = $"❌ Error: {ex.Message}";
             }
             finally
             {

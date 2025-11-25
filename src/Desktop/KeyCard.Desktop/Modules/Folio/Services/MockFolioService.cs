@@ -359,7 +359,8 @@ namespace KeyCard.Desktop.Modules.Folio.Services
 
             var totalCharges = Sum(charges);
             var totalPayments = Sum(payments);
-            var balance = GetBalance(folio);
+            // ✅ FIX: Calculate balance from actual charges/payments, not cached Balance property
+            var balance = totalCharges - totalPayments;
 
             var html = $@"
 <!DOCTYPE html>
@@ -538,7 +539,8 @@ namespace KeyCard.Desktop.Modules.Folio.Services
 
             var totalCharges = Sum(charges);
             var totalPayments = Sum(payments);
-            var balance = GetBalance(folio);
+            // ✅ FIX: Calculate balance from actual charges/payments, not cached Balance property
+            var balance = totalCharges - totalPayments;
 
             var lines = new List<string>
             {
