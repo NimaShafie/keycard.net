@@ -12,7 +12,8 @@
         x:DataType="vm:GuestDetailViewModel"
         Title="Guest Folio Details"
         Background="#2B2B33"
-        Foreground="White">
+        Foreground="White"
+        WindowStartupLocation="CenterOwner">
 
   <Grid RowDefinitions="Auto,*,Auto" Margin="24">
 
