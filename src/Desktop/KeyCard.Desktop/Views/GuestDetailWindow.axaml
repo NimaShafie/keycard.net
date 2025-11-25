@@ -1,112 +1,106 @@
-<!-- Views/GuestDetailWindow.axaml -->
+<!-- Modules/Folio/Views/GuestDetailWindow.axaml -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vms="clr-namespace:KeyCard.Desktop.Modules.Folio.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:KeyCard.Desktop.Modules.Folio.ViewModels"
+        mc:Ignorable="d"
+        d:DesignWidth="1000" d:DesignHeight="700"
+        Width="1000" Height="700"
+        MinWidth="900" MinHeight="600"
         x:Class="KeyCard.Desktop.Modules.Folio.Views.GuestDetailWindow"
-        x:DataType="vms:GuestDetailViewModel"
+        x:DataType="vm:GuestDetailViewModel"
         Title="Guest Folio Details"
-        Width="900"
-        Height="700"
-        MinWidth="800"
-        MinHeight="600"
-        WindowStartupLocation="CenterOwner"
-        Background="#1E1E2E"
-        CanResize="True">
+        Background="#2B2B33"
+        Foreground="White">
 
-  <Grid RowDefinitions="Auto,*,Auto" Margin="16">
+  <Grid RowDefinitions="Auto,*,Auto" Margin="24">
 
     <!-- Header -->
     <Border Grid.Row="0"
-            CornerRadius="10"
-            BorderBrush="#3F2F73"
-            BorderThickness="1"
-            Padding="16,12"
-            Margin="0,0,0,12"
-            Background="#1B1B22">
-      <Grid ColumnDefinitions="*,Auto">
-        <StackPanel>
-          <TextBlock Text="{Binding GuestName}"
-                     FontWeight="SemiBold"
-                     FontSize="20"
-                     Foreground="#E8E8F0"/>
-          <StackPanel Orientation="Horizontal" Spacing="16" Margin="0,4,0,0">
-            <TextBlock FontSize="13" Opacity="0.8">
-              <Run Text="Folio #:"/>
-              <Run Text="{Binding FolioNumber}" FontWeight="SemiBold"/>
-            </TextBlock>
-            <TextBlock FontSize="13" Opacity="0.8">
-              <Run Text="Status:"/>
-              <Run Text="{Binding Status}" FontWeight="SemiBold"/>
-            </TextBlock>
-            <TextBlock FontSize="13" Opacity="0.8">
-              <Run Text="Balance:"/>
-              <Run Text="{Binding CurrentBalance, StringFormat='${0:F2}'}" FontWeight="SemiBold" Foreground="#FFB74D"/>
-            </TextBlock>
-          </StackPanel>
+            Background="#3B3B43"
+            CornerRadius="8"
+            Padding="20"
+            Margin="0,0,0,16">
+      <StackPanel>
+        <TextBlock Text="{Binding GuestName}"
+                   FontSize="24"
+                   FontWeight="Bold"/>
+        <StackPanel Orientation="Horizontal" Spacing="20" Margin="0,8,0,0">
+          <TextBlock>
+            <Run Text="Folio #: "/>
+            <Run Text="{Binding FolioNumber}" FontWeight="SemiBold"/>
+          </TextBlock>
+          <TextBlock>
+            <Run Text="Status: "/>
+            <Run Text="{Binding Status}" FontWeight="SemiBold"/>
+          </TextBlock>
+          <TextBlock>
+            <Run Text="Balance: "/>
+            <Run Text="{Binding CurrentBalance, StringFormat=\{0:C\}}"
+                 FontWeight="Bold"
+                 Foreground="#FFD700"/>
+          </TextBlock>
         </StackPanel>
-
-        <TextBlock Grid.Column="1"
-                   Text="{Binding ModeNotice}"
-                   VerticalAlignment="Center"
-                   FontSize="11"
-                   Foreground="#9C27B0"
-                   Opacity="0.8"/>
-      </Grid>
+      </StackPanel>
     </Border>
 
-    <!-- Tabbed Content -->
+    <!-- Tabs Content -->
     <TabControl Grid.Row="1"
-                Background="#141419"
-                BorderBrush="#4B3A86"
-                BorderThickness="1"
-                CornerRadius="8"
-                Padding="8"
+                Background="#2B2B33"
                 SelectedIndex="{Binding SelectedTabIndex}">
 
       <!-- Charges Tab -->
       <TabItem Header="Charges">
-        <Grid RowDefinitions="Auto,*,Auto" Margin="12">
+        <Grid RowDefinitions="Auto,*,Auto" Margin="0,12,0,0">
 
+          <!-- Guest Charges Section -->
           <TextBlock Grid.Row="0"
                      Text="Guest Charges"
+                     FontSize="16"
                      FontWeight="SemiBold"
-                     FontSize="14"
-                     Foreground="#E8E8F0"
-                     Margin="0,0,0,8"/>
+                     Margin="0,0,0,12"/>
 
+          <!-- Charges DataGrid -->
           <Border Grid.Row="1"
-                  Background="#1B1B22"
-                  BorderBrush="#3F2F73"
+                  Background="#1E1E26"
+                  BorderBrush="#5C46A3"
                   BorderThickness="1"
                   CornerRadius="6"
-                  Margin="0,0,0,12">
+                  ClipToBounds="True"
+                  Margin="0,0,0,16">
             <DataGrid ItemsSource="{Binding Charges}"
                       AutoGenerateColumns="False"
                       HeadersVisibility="Column"
-                      GridLinesVisibility="All"
-                      CanUserSortColumns="True"
-                      CanUserResizeColumns="True"
+                      GridLinesVisibility="Horizontal"
                       IsReadOnly="True"
-                      RowHeight="32"
-                      Background="#1B1B22">
+                      Background="Transparent"
+                      BorderThickness="0">
               <DataGrid.Columns>
-                <DataGridTextColumn Header="Date" Width="*"
-                                    Binding="{Binding TransactionDate, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"/>
-                <DataGridTextColumn Header="Description" Width="3*"
-                                    Binding="{Binding Description}"/>
-                <DataGridTextColumn Header="Amount" Width="*"
-                                    Binding="{Binding Amount, StringFormat='${0:F2}'}"/>
-                <DataGridTemplateColumn Header="Actions" Width="*">
+                <!-- ✅ FIX: Wider Date column (was too narrow) -->
+                <DataGridTextColumn Header="Date"
+                                    Binding="{Binding TransactionDate, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
+                                    Width="160"/>
+                <DataGridTextColumn Header="Description"
+                                    Binding="{Binding Description}"
+                                    Width="*"/>
+                <DataGridTextColumn Header="Amount"
+                                    Binding="{Binding Amount, StringFormat=\{0:C\}}"
+                                    Width="120"/>
+
+                <!-- ✅ FIX: Centered Remove button -->
+                <DataGridTemplateColumn Header="Actions" Width="120">
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate>
                       <Button Content="Remove"
-                              Command="{Binding $parent[Window].((vms:GuestDetailViewModel)DataContext).RemoveChargeCommand}"
-                              CommandParameter="{Binding}"
-                              Padding="8,4"
-                              FontSize="11"
-                              Background="#D32F2F"
-                              BorderBrush="#F44336"
-                              CornerRadius="4"/>
+                              Background="#DC3545"
+                              Foreground="White"
+                              Padding="12,6"
+                              CornerRadius="4"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              Command="{Binding $parent[DataGrid].((vm:GuestDetailViewModel)DataContext).RemoveChargeCommand}"
+                              CommandParameter="{Binding Id}"/>
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
@@ -114,31 +108,49 @@
             </DataGrid>
           </Border>
 
+          <!-- Add New Charge Section -->
           <Border Grid.Row="2"
-                  Background="#18181E"
-                  BorderBrush="#3F2F73"
+                  Background="#3B3B43"
+                  BorderBrush="#5C46A3"
                   BorderThickness="1"
                   CornerRadius="6"
-                  Padding="12">
-            <StackPanel Spacing="8">
+                  Padding="16">
+            <StackPanel Spacing="12">
               <TextBlock Text="Add New Charge"
-                         FontWeight="SemiBold"
-                         FontSize="12"
-                         Foreground="#E8E8F0"/>
-              <Grid ColumnDefinitions="3*,*,Auto">
+                         FontSize="14"
+                         FontWeight="SemiBold"/>
+
+              <Grid ColumnDefinitions="*,200,Auto">
                 <TextBox Grid.Column="0"
+                         Text="{Binding ChargeDescription}"
                          Watermark="Description (e.g., Room Service)"
-                         Text="{Binding ChargeDescription}"/>
+                         Background="#1E1E26"
+                         Foreground="White"
+                         BorderBrush="#5C46A3"
+                         CornerRadius="4"
+                         Padding="10,8"
+                         Height="36"
+                         Margin="0,0,12,0"/>
+
                 <TextBox Grid.Column="1"
+                         Text="{Binding ChargeAmount}"
                          Watermark="Amount"
-                         Text="{Binding ChargeAmount}"/>
+                         Background="#1E1E26"
+                         Foreground="White"
+                         BorderBrush="#5C46A3"
+                         CornerRadius="4"
+                         Padding="10,8"
+                         Height="36"
+                         Margin="0,0,12,0"/>
+
                 <Button Grid.Column="2"
                         Content="Add Charge"
                         Command="{Binding AddChargeCommand}"
-                        Padding="16,8"
-                        Background="#5E35B1"
-                        BorderBrush="#7E57C2"
-                        CornerRadius="6"/>
+                        Background="#5C46A3"
+                        Foreground="White"
+                        Padding="20,8"
+                        CornerRadius="4"
+                        Height="36"/>
               </Grid>
             </StackPanel>
           </Border>
@@ -147,50 +159,54 @@
 
       <!-- Payments Tab -->
       <TabItem Header="Payments">
-        <Grid RowDefinitions="Auto,*,Auto" Margin="12">
+        <Grid RowDefinitions="Auto,*,Auto" Margin="0,12,0,0">
 
           <TextBlock Grid.Row="0"
                      Text="Guest Payments"
+                     FontSize="16"
                      FontWeight="SemiBold"
-                     FontSize="14"
-                     Foreground="#E8E8F0"
-                     Margin="0,0,0,8"/>
+                     Margin="0,0,0,12"/>
 
+          <!-- Payments DataGrid -->
           <Border Grid.Row="1"
-                  Background="#1B1B22"
-                  BorderBrush="#3F2F73"
+                  Background="#1E1E26"
+                  BorderBrush="#5C46A3"
                   BorderThickness="1"
                   CornerRadius="6"
-                  Margin="0,0,0,12">
+                  ClipToBounds="True"
+                  Margin="0,0,0,16">
             <DataGrid ItemsSource="{Binding Payments}"
                       AutoGenerateColumns="False"
                       HeadersVisibility="Column"
-                      GridLinesVisibility="All"
-                      CanUserSortColumns="True"
-                      CanUserResizeColumns="True"
+                      GridLinesVisibility="Horizontal"
                       IsReadOnly="True"
-                      RowHeight="32"
-                      Background="#1B1B22">
+                      Background="Transparent"
+                      BorderThickness="0">
               <DataGrid.Columns>
-                <DataGridTextColumn Header="Date" Width="*"
-                                    Binding="{Binding TransactionDate, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"/>
-                <DataGridTextColumn Header="Description" Width="2*"
-                                    Binding="{Binding Description}"/>
-                <DataGridTextColumn Header="Reference" Width="*"
-                                    Binding="{Binding Reference}"/>
-                <DataGridTextColumn Header="Amount" Width="*"
-                                    Binding="{Binding Amount, StringFormat='${0:F2}'}"/>
-                <DataGridTemplateColumn Header="Actions" Width="*">
+                <!-- ✅ FIX: Wider Date column -->
+                <DataGridTextColumn Header="Date"
+                                    Binding="{Binding TransactionDate, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
+                                    Width="160"/>
+                <DataGridTextColumn Header="Description"
+                                    Binding="{Binding Description}"
+                                    Width="*"/>
+                <DataGridTextColumn Header="Amount"
+                                    Binding="{Binding Amount, StringFormat=\{0:C\}}"
+                                    Width="120"/>
+
+                <!-- ✅ FIX: Centered Remove button -->
+                <DataGridTemplateColumn Header="Actions" Width="120">
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate>
                       <Button Content="Remove"
-                              Command="{Binding $parent[Window].((vms:GuestDetailViewModel)DataContext).RemovePaymentCommand}"
-                              CommandParameter="{Binding}"
-                              Padding="8,4"
-                              FontSize="11"
-                              Background="#D32F2F"
-                              BorderBrush="#F44336"
-                              CornerRadius="4"/>
+                              Background="#DC3545"
+                              Foreground="White"
+                              Padding="12,6"
+                              CornerRadius="4"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              Command="{Binding $parent[DataGrid].((vm:GuestDetailViewModel)DataContext).RemovePaymentCommand}"
+                              CommandParameter="{Binding Id}"/>
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
@@ -198,34 +214,50 @@
             </DataGrid>
           </Border>
 
+          <!-- Add New Payment Section -->
           <Border Grid.Row="2"
-                  Background="#18181E"
-                  BorderBrush="#3F2F73"
+                  Background="#3B3B43"
+                  BorderBrush="#5C46A3"
                   BorderThickness="1"
                   CornerRadius="6"
-                  Padding="12">
-            <StackPanel Spacing="8">
+                  Padding="16">
+            <StackPanel Spacing="12">
               <TextBlock Text="Add New Payment"
-                         FontWeight="SemiBold"
-                         FontSize="12"
-                         Foreground="#E8E8F0"/>
-              <Grid ColumnDefinitions="*,*,*,Auto">
-                <TextBox Grid.Column="0"
-                         Watermark="Amount"
-                         Text="{Binding PaymentAmount}"/>
-                <ComboBox Grid.Column="1"
+                         FontSize="14"
+                         FontWeight="SemiBold"/>
+
+              <Grid ColumnDefinitions="*,200,Auto">
+                <ComboBox Grid.Column="0"
+                          SelectedItem="{Binding PaymentMethod}"
                           ItemsSource="{Binding PaymentMethods}"
-                          SelectedItem="{Binding PaymentMethod}"/>
-                <TextBox Grid.Column="2"
-                         Watermark="Reference (optional)"
-                         Text="{Binding PaymentReference}"/>
-                <Button Grid.Column="3"
+                          PlaceholderText="Select payment method"
+                          Background="#1E1E26"
+                          Foreground="White"
+                          BorderBrush="#5C46A3"
+                          CornerRadius="4"
+                          Padding="10,8"
+                          Height="36"
+                          Margin="0,0,12,0"/>
+
+                <TextBox Grid.Column="1"
+                         Text="{Binding PaymentAmount}"
+                         Watermark="Amount"
+                         Background="#1E1E26"
+                         Foreground="White"
+                         BorderBrush="#5C46A3"
+                         CornerRadius="4"
+                         Padding="10,8"
+                         Height="36"
+                         Margin="0,0,12,0"/>
+
+                <Button Grid.Column="2"
                         Content="Add Payment"
                         Command="{Binding AddPaymentCommand}"
-                        Padding="16,8"
-                        Background="#2E7D32"
-                        BorderBrush="#4CAF50"
-                        CornerRadius="6"/>
+                        Background="#5C46A3"
+                        Foreground="White"
+                        Padding="20,8"
+                        CornerRadius="4"
+                        Height="36"/>
               </Grid>
             </StackPanel>
           </Border>
@@ -234,61 +266,59 @@
 
       <!-- Audit Log Tab -->
       <TabItem Header="Audit Log">
-        <Grid RowDefinitions="Auto,*" Margin="12">
-
-          <TextBlock Grid.Row="0"
-                     Text="Transaction History"
-                     FontWeight="SemiBold"
-                     FontSize="14"
-                     Foreground="#E8E8F0"
-                     Margin="0,0,0,8"/>
-
-          <Border Grid.Row="1"
-                  Background="#1B1B22"
-                  BorderBrush="#3F2F73"
-                  BorderThickness="1"
-                  CornerRadius="6">
-            <DataGrid ItemsSource="{Binding AuditLog}"
-                      AutoGenerateColumns="False"
-                      HeadersVisibility="Column"
-                      GridLinesVisibility="All"
-                      CanUserSortColumns="True"
-                      CanUserResizeColumns="True"
-                      IsReadOnly="True"
-                      RowHeight="32"
-                      Background="#1B1B22">
-              <DataGrid.Columns>
-                <DataGridTextColumn Header="Time" Width="2*"
-                                    Binding="{Binding Timestamp, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}"/>
-                <DataGridTextColumn Header="Action" Width="*"
-                                    Binding="{Binding Action}"/>
-                <DataGridTextColumn Header="Description" Width="3*"
-                                    Binding="{Binding Description}"/>
-                <DataGridTextColumn Header="User" Width="*"
-                                    Binding="{Binding User}"/>
-              </DataGrid.Columns>
-            </DataGrid>
-          </Border>
-        </Grid>
+        <Border Background="#1E1E26"
+                BorderBrush="#5C46A3"
+                BorderThickness="1"
+                CornerRadius="6"
+                ClipToBounds="True"
+                Margin="0,12,0,0">
+          <DataGrid ItemsSource="{Binding AuditLog}"
+                    AutoGenerateColumns="False"
+                    HeadersVisibility="Column"
+                    GridLinesVisibility="Horizontal"
+                    IsReadOnly="True"
+                    Background="Transparent"
+                    BorderThickness="0">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="Timestamp"
+                                  Binding="{Binding Timestamp, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}"
+                                  Width="160"/>
+              <DataGridTextColumn Header="Action"
+                                  Binding="{Binding Action}"
+                                  Width="150"/>
+              <DataGridTextColumn Header="Description"
+                                  Binding="{Binding Description}"
+                                  Width="*"/>
+              <DataGridTextColumn Header="User"
+                                  Binding="{Binding User}"
+                                  Width="150"/>
+            </DataGrid.Columns>
+          </DataGrid>
+        </Border>
       </TabItem>
     </TabControl>
 
-    <!-- Footer -->
-    <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,12,0,0">
-      <TextBlock Grid.Column="0"
-                 VerticalAlignment="Center"
-                 FontSize="12"
-                 Opacity="0.7"
-                 Text="Changes are saved automatically"/>
+    <!-- ✅ FIX: Footer with proper spacing for Close button -->
+    <Grid Grid.Row="2" Margin="0,16,0,0">
+      <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+        <TextBlock Text="Changes are saved automatically"
+                   FontSize="12"
+                   Foreground="#999"
+                   Margin="0,0,0,4"/>
+      </StackPanel>
 
-      <Button Grid.Column="1"
+      <!-- ✅ FIX: Close button with proper height to prevent cutoff -->
+      <Button HorizontalAlignment="Right"
               Content="Close"
               Command="{Binding CloseCommand}"
               CommandParameter="{Binding $parent[Window]}"
+              Background="#6C757D"
+              Foreground="White"
               Padding="24,10"
-              Background="#424242"
-              BorderBrush="#616161"
-              CornerRadius="6"/>
+              CornerRadius="4"
+              FontSize="14"
+              Height="40"
+              MinWidth="100"/>
     </Grid>
   </Grid>
 </Window>

@@ -1,6 +1,5 @@
 // Modules/Folio/Services/MockFolioService.cs
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -15,9 +14,7 @@ using AppModels = KeyCard.Desktop.Models;   // FolioCharge, FolioPayment
 namespace KeyCard.Desktop.Modules.Folio.Services
 {
     /// <summary>
-    /// Mock IFolioService that tolerates varying model shapes using reflection.
-    /// - No compile-time dependency on LineItemType/FolioStatus/DateOnly, etc.
-    /// - If Charges/Payments don't exist on GuestFolio, uses a sidecar store.
+    /// Mock IFolioService with proper balance recalculation
     /// </summary>
     public class MockFolioService : IFolioService
     {
@@ -31,14 +28,6 @@ namespace KeyCard.Desktop.Modules.Folio.Services
         }
         private readonly ConditionalWeakTable<GuestFolio, Sidecar> _sidecars = new();
 
-        // Try to locate optional module types at runtime
-        private static readonly Type? FolioLineItemType =
-            Type.GetType("KeyCard.Desktop.Modules.Folio.Models.FolioLineItem, KeyCard.Desktop");
-        private static readonly Type? LineItemTypeEnum =
-            Type.GetType("KeyCard.Desktop.Modules.Folio.Models.LineItemType, KeyCard.Desktop");
-        private static readonly Type? FolioStatusEnum =
-            Type.GetType("KeyCard.Desktop.Modules.Folio.Models.FolioStatus, KeyCard.Desktop");
-
         public MockFolioService()
         {
             SeedMockData();
@@ -49,18 +38,32 @@ namespace KeyCard.Desktop.Modules.Folio.Services
         // ----------------------------
 
         public Task<List<GuestFolio>> GetAllFoliosAsync()
-            => Task.FromResult(_folios.ToList());
+        {
+            // ✅ FIX: Return clones with recalculated balances
+            var result = _folios.Select(f => CloneFolioWithBalance(f)).ToList();
+            return Task.FromResult(result);
+        }
 
         public Task<GuestFolio?> GetFolioAsync(string folioId)
-            => Task.FromResult(FindByFolioId(folioId));
+        {
+            var folio = FindByFolioId(folioId);
+            if (folio == null) return Task.FromResult<GuestFolio?>(null);
 
-        // Back-compat for older callers
+            // ✅ FIX: Return clone with recalculated balance
+            var result = CloneFolioWithBalance(folio);
+            return Task.FromResult<GuestFolio?>(result);
+        }
+
         public Task<GuestFolio?> GetFolioByIdAsync(string folioId)
             => GetFolioAsync(folioId);
 
         public Task<IReadOnlyList<GuestFolio>> GetActiveFoliosAsync()
         {
-            var active = _folios.Where(IsOpen).ToList();
+            // ✅ FIX: Return clones with recalculated balances
+            var active = _folios
+                .Where(IsOpen)
+                .Select(f => CloneFolioWithBalance(f))
+                .ToList();
             return Task.FromResult<IReadOnlyList<GuestFolio>>(active);
         }
 
@@ -85,7 +88,11 @@ namespace KeyCard.Desktop.Modules.Folio.Services
                 return fields.Any(s => !string.IsNullOrEmpty(s) && s!.ToLowerInvariant().Contains(term));
             }
 
-            var results = _folios.Where(Matches).ToList();
+            // ✅ FIX: Return clones with recalculated balances
+            var results = _folios
+                .Where(Matches)
+                .Select(f => CloneFolioWithBalance(f))
+                .ToList();
             return Task.FromResult<IReadOnlyList<GuestFolio>>(results);
         }
 
@@ -107,6 +114,10 @@ namespace KeyCard.Desktop.Modules.Folio.Services
             );
 
             AddToCharges(folio, item);
+            // ✅ Balance will be recalculated when GetActiveFoliosAsync is called
+
+            Console.WriteLine($"Added charge ${charge?.Amount} to folio {folioId}. New balance: {GetBalance(folio)}");
+
             return Task.CompletedTask;
         }
 
@@ -116,7 +127,6 @@ namespace KeyCard.Desktop.Modules.Folio.Services
             if (folio is null) return Task.CompletedTask;
 
             var method = string.IsNullOrWhiteSpace(payment?.Method) ? null : payment!.Method!;
-            // Do NOT rely on payment.Description (not present in your DTO)
             var desc = method is null ? "Payment" : $"{method} Payment";
 
             var item = CreateLineItem(
@@ -128,6 +138,10 @@ namespace KeyCard.Desktop.Modules.Folio.Services
             );
 
             AddToPayments(folio, item);
+            // ✅ Balance will be recalculated when GetActiveFoliosAsync is called
+
+            Console.WriteLine($"Added payment ${payment?.Amount} to folio {folioId}. New balance: {GetBalance(folio)}");
+
             return Task.CompletedTask;
         }
 
@@ -184,17 +198,70 @@ namespace KeyCard.Desktop.Modules.Folio.Services
             var folio = FindByFolioId(folioId);
             if (folio is null) return Task.CompletedTask;
 
-            if (FolioStatusEnum is not null)
-            {
-                var closed = EnumTryParse(FolioStatusEnum, "Closed");
-                SetProp(folio, "Status", closed ?? GetProp(folio, "Status"));
-            }
-            else
-            {
-                SetProp(folio, "Status", "Closed");
-            }
-
+            SetProp(folio, "Status", "Closed");
             return Task.CompletedTask;
+        }
+
+        // ----------------------------
+        // ✅ NEW: Clone method to create fresh objects with calculated balances
+        // ----------------------------
+
+        private GuestFolio CloneFolioWithBalance(GuestFolio source)
+        {
+            var charges = EnumerateCharges(source);
+            var payments = EnumeratePayments(source);
+
+            decimal totalCharges = charges.Sum(c => GetDecimal(c, "Amount") ?? 0m);
+            decimal totalPayments = payments.Sum(p => GetDecimal(p, "Amount") ?? 0m);
+
+            // Create new GuestFolio with calculated totals
+            return new GuestFolio
+            {
+                FolioId = source.FolioId,
+                BookingId = source.BookingId,
+                GuestName = source.GuestName,
+                RoomNumber = source.RoomNumber,
+                CheckInDate = source.CheckInDate,
+                CheckOutDate = source.CheckOutDate,
+                TotalCharges = totalCharges,      // ✅ Explicitly set
+                TotalPayments = totalPayments,    // ✅ Explicitly set
+                Status = source.Status,
+                LineItems = new List<FolioLineItem>(source.LineItems) // Clone the list
+            };
+        }
+
+        // ----------------------------
+        // Balance Recalculation (kept for compatibility)
+        // ----------------------------
+
+        private void RecalculateBalance(GuestFolio folio)
+        {
+            var charges = EnumerateCharges(folio);
+            var payments = EnumeratePayments(folio);
+
+            decimal totalCharges = charges.Sum(c => GetDecimal(c, "Amount") ?? 0m);
+            decimal totalPayments = payments.Sum(p => GetDecimal(p, "Amount") ?? 0m);
+            decimal balance = totalCharges - totalPayments;
+
+            // Try to set TotalCharges, TotalPayments if properties exist
+            SetProp(folio, "TotalCharges", totalCharges);
+            SetProp(folio, "TotalPayments", totalPayments);
+
+            // Try to set Balance if it's writable (it might be computed property)
+            bool balanceSet = SetProp(folio, "Balance", balance);
+
+            Console.WriteLine($"Recalculated folio {GetString(folio, "FolioId")}: Charges={totalCharges:C}, Payments={totalPayments:C}, Balance={balance:C}, BalanceSet={balanceSet}");
+        }
+
+        private decimal GetBalance(GuestFolio folio)
+        {
+            var balance = GetDecimal(folio, "Balance");
+            if (balance.HasValue) return balance.Value;
+
+            // Fallback calculation
+            var charges = EnumerateCharges(folio).Sum(c => GetDecimal(c, "Amount") ?? 0m);
+            var payments = EnumeratePayments(folio).Sum(p => GetDecimal(p, "Amount") ?? 0m);
+            return charges - payments;
         }
 
         // ----------------------------
@@ -222,63 +289,45 @@ namespace KeyCard.Desktop.Modules.Folio.Services
         {
             var statusObj = GetProp(f, "Status");
             if (statusObj is null) return true;
-
-            if (FolioStatusEnum is not null && statusObj.GetType() == FolioStatusEnum)
-                return string.Equals(statusObj.ToString(), "Open", StringComparison.OrdinalIgnoreCase);
-
             if (statusObj is string s)
                 return string.Equals(s, "Open", StringComparison.OrdinalIgnoreCase);
-
             return true;
         }
 
         private object CreateLineItem(string description, decimal amount, bool isPayment, string? method, DateTime when)
         {
-            var li = FolioLineItemType is not null
-                ? Activator.CreateInstance(FolioLineItemType)!
-                : new object();
-
-            SetProp(li, "Description", description);
-            SetProp(li, "Amount", amount);
-            SetProp(li, "PaymentMethod", method);
-
-            if (LineItemTypeEnum is not null)
+            var li = new FolioLineItem
             {
-                var val = EnumTryParse(LineItemTypeEnum, isPayment ? "Payment" : "Charge");
-                SetProp(li, "Type", val ?? GetProp(li, "Type"));
-            }
-            else
-            {
-                SetProp(li, "Type", isPayment ? "Payment" : "Charge");
-            }
-
-            // Set any of Date/OccurredAt/Timestamp
-            if (!SetProp(li, "Date", when))
-                if (!SetProp(li, "OccurredAt", when))
-                    SetProp(li, "Timestamp", when);
-
-            // Ensure an Id for removal
-            if (string.IsNullOrWhiteSpace(GetString(li, "Id")))
-                SetProp(li, "Id", Guid.NewGuid().ToString("N"));
+                Id = Guid.NewGuid().ToString("N"),
+                Description = description,
+                Amount = amount,
+                Type = isPayment ? "Payment" : "Charge",
+                TransactionDate = when,
+                Reference = method
+            };
 
             return li;
         }
 
         private void AddToCharges(GuestFolio f, object lineItem)
         {
-            var ilist = GetChargesIList(f);
-            if (ilist is not null) { ilist.Add(lineItem); return; }
-            GetChargesSidecar(f).Add(lineItem);
+            if (lineItem is FolioLineItem item)
+            {
+                f.LineItems.Add(item);
+                Console.WriteLine($"Added charge line item: {item.Description} ${item.Amount}");
+            }
         }
 
         private void AddToPayments(GuestFolio f, object lineItem)
         {
-            var ilist = GetPaymentsIList(f);
-            if (ilist is not null) { ilist.Add(lineItem); return; }
-            GetPaymentsSidecar(f).Add(lineItem);
+            if (lineItem is FolioLineItem item)
+            {
+                f.LineItems.Add(item);
+                Console.WriteLine($"Added payment line item: {item.Description} ${item.Amount}");
+            }
         }
 
-        private static void RemoveFromListById(IList? ilist, List<object> sidecar, string lineItemId)
+        private static void RemoveFromListById(System.Collections.IList? ilist, List<object> sidecar, string lineItemId)
         {
             if (!string.IsNullOrWhiteSpace(lineItemId))
             {
@@ -300,7 +349,7 @@ namespace KeyCard.Desktop.Modules.Folio.Services
 
         private string WriteStatementToTemp(GuestFolio folio)
         {
-            var idForFile = GetString(folio, "Id") ?? GetString(folio, "FolioId") ?? "UNKNOWN";
+            var idForFile = GetString(folio, "FolioId") ?? "UNKNOWN";
             var path = Path.Combine(Path.GetTempPath(), $"Statement_{idForFile}_{DateTime.Now:yyyyMMddHHmmss}.txt");
 
             var charges = EnumerateCharges(folio).ToList();
@@ -310,9 +359,7 @@ namespace KeyCard.Desktop.Modules.Folio.Services
 
             var totalCharges = Sum(charges);
             var totalPayments = Sum(payments);
-
-            // Prefer model Balance if readable; otherwise compute
-            var balance = GetDecimal(folio, "Balance") ?? (totalCharges - totalPayments);
+            var balance = GetBalance(folio);
 
             var lines = new List<string>
             {
@@ -324,21 +371,18 @@ namespace KeyCard.Desktop.Modules.Folio.Services
                 $"Guest Name:   {GetString(folio, "GuestName") ?? "—"}",
                 $"Room Number:  {GetString(folio, "RoomNumber") ?? "—"}",
                 $"Booking ID:   {GetString(folio, "BookingId") ?? "—"}",
-                $"Check-In:     {FormatDate(GetDate(folio, "CheckInDate"))}",
-                $"Check-Out:    {FormatDate(GetDate(folio, "CheckOutDate"))}",
                 $"Statement:    {DateTime.Now:yyyy-MM-dd HH:mm:ss}",
                 "",
                 "CHARGES:",
                 "------------------------------------"
             };
 
-            foreach (var c in charges.OrderBy(x => GetDate(x, "Date") ?? GetDate(x, "OccurredAt") ?? GetDate(x, "Timestamp") ?? DateTime.MinValue))
+            foreach (var c in charges.OrderBy(x => GetDate(x, "TransactionDate") ?? DateTime.MinValue))
             {
-                var when = GetDate(c, "Date") ?? GetDate(c, "OccurredAt") ?? GetDate(c, "Timestamp");
-                var whenStr = when?.ToString("yyyy-MM-dd") ?? "";
+                var when = GetDate(c, "TransactionDate")?.ToString("yyyy-MM-dd") ?? "";
                 var desc = GetString(c, "Description") ?? "—";
                 var amt = (GetDecimal(c, "Amount") ?? 0m).ToString("0.00");
-                lines.Add($"{whenStr}  {desc,-30} ${amt,10}");
+                lines.Add($"{when}  {desc,-30} ${amt,10}");
             }
 
             lines.AddRange(new[]
@@ -348,13 +392,12 @@ namespace KeyCard.Desktop.Modules.Folio.Services
                 "------------------------------------"
             });
 
-            foreach (var p in payments.OrderBy(x => GetDate(x, "Date") ?? GetDate(x, "OccurredAt") ?? GetDate(x, "Timestamp") ?? DateTime.MinValue))
+            foreach (var p in payments.OrderBy(x => GetDate(x, "TransactionDate") ?? DateTime.MinValue))
             {
-                var when = GetDate(p, "Date") ?? GetDate(p, "OccurredAt") ?? GetDate(p, "Timestamp");
-                var whenStr = when?.ToString("yyyy-MM-dd") ?? "";
+                var when = GetDate(p, "TransactionDate")?.ToString("yyyy-MM-dd") ?? "";
                 var desc = GetString(p, "Description") ?? "—";
                 var amt = (GetDecimal(p, "Amount") ?? 0m).ToString("0.00");
-                lines.Add($"{whenStr}  {desc,-30} ${amt,10}");
+                lines.Add($"{when}  {desc,-30} ${amt,10}");
             }
 
             lines.AddRange(new[]
@@ -367,7 +410,7 @@ namespace KeyCard.Desktop.Modules.Folio.Services
                 $"BALANCE DUE:            ${balance,10:0.00}",
                 "====================================",
                 "",
-                $"Status: {GetString(folio, "Status") ?? GetProp(folio, "Status")?.ToString() ?? "—"}",
+                $"Status: {GetString(folio, "Status") ?? "—"}",
                 "",
                 "Thank you for your stay!"
             });
@@ -397,18 +440,16 @@ namespace KeyCard.Desktop.Modules.Folio.Services
                 guestName: "John Smith",
                 room: "101",
                 booking: "BK001",
-                checkInOffsetDays: -2,
-                checkOutOffsetDays: 1,
                 status: "Open",
                 initialCharges: new[]
                 {
-                    ("Room Charge (3 nights)", 450.00m, -2),
-                    ("Mini Bar", 25.00m, -1),
-                    ("Room Service", 75.00m, 0),
+                    ("Room Charge (3 nights)", 450.00m),
+                    ("Mini Bar", 25.00m),
+                    ("Room Service", 75.00m),
                 },
                 initialPayments: new[]
                 {
-                    ("Credit Card Payment", 300.00m, -1, "Credit Card"),
+                    ("Credit Card Payment", 300.00m, "Credit Card"),
                 }
             ));
 
@@ -417,14 +458,12 @@ namespace KeyCard.Desktop.Modules.Folio.Services
                 guestName: "Jane Doe",
                 room: "202",
                 booking: "BK002",
-                checkInOffsetDays: -1,
-                checkOutOffsetDays: 2,
                 status: "Open",
                 initialCharges: new[]
                 {
-                    ("Room Charge (2 nights)", 300.00m, -1),
+                    ("Room Charge (2 nights)", 300.00m),
                 },
-                initialPayments: Array.Empty<(string, decimal, int, string?)>()
+                initialPayments: Array.Empty<(string, decimal, string?)>()
             ));
 
             _folios.Add(CreateFolio(
@@ -432,16 +471,14 @@ namespace KeyCard.Desktop.Modules.Folio.Services
                 guestName: "Bob Wilson",
                 room: "305",
                 booking: "BK003",
-                checkInOffsetDays: 0,
-                checkOutOffsetDays: 1,
                 status: "Open",
                 initialCharges: new[]
                 {
-                    ("Room Charge (1 night)", 150.00m, 0),
+                    ("Room Charge (1 night)", 150.00m),
                 },
                 initialPayments: new[]
                 {
-                    ("Cash Payment", 150.00m, 0, "Cash"),
+                    ("Cash Payment", 150.00m, "Cash"),
                 }
             ));
         }
@@ -451,43 +488,35 @@ namespace KeyCard.Desktop.Modules.Folio.Services
             string guestName,
             string room,
             string booking,
-            int checkInOffsetDays,
-            int checkOutOffsetDays,
             string status,
-            (string desc, decimal amount, int dayOffset)[] initialCharges,
-            (string desc, decimal amount, int dayOffset, string? method)[] initialPayments)
+            (string desc, decimal amount)[] initialCharges,
+            (string desc, decimal amount, string? method)[] initialPayments)
         {
-            var f = Activator.CreateInstance<GuestFolio>();
-
-            // Id/FolioId
-            if (!SetProp(f, "Id", folioId))
-                SetProp(f, "FolioId", folioId);
-
-            SetProp(f, "GuestName", guestName);
-            SetProp(f, "RoomNumber", room);
-            SetProp(f, "BookingId", booking);
-
-            var ci = DateTime.Now.AddDays(checkInOffsetDays);
-            var co = DateTime.Now.AddDays(checkOutOffsetDays);
-            SetDateFlex(f, "CheckInDate", ci);
-            SetDateFlex(f, "CheckOutDate", co);
-
-            if (FolioStatusEnum is not null)
+            var f = new GuestFolio
             {
-                var open = EnumTryParse(FolioStatusEnum, status);
-                SetProp(f, "Status", open ?? GetProp(f, "Status"));
-            }
-            else
+                FolioId = folioId,
+                GuestName = guestName,
+                RoomNumber = int.TryParse(room, out var rn) ? rn : 0,
+                BookingId = booking,
+                Status = status,
+                CheckInDate = DateOnly.FromDateTime(DateTime.Now.AddDays(-2)),
+                CheckOutDate = DateOnly.FromDateTime(DateTime.Now.AddDays(1)),
+                LineItems = new List<FolioLineItem>()
+            };
+
+            foreach (var (desc, amt) in initialCharges)
             {
-                SetProp(f, "Status", status);
+                var item = CreateLineItem(desc, amt, isPayment: false, method: null, when: DateTime.Now);
+                AddToCharges(f, item);
             }
 
-            foreach (var (desc, amt, off) in initialCharges)
-                AddToCharges(f, CreateLineItem(desc, amt, isPayment: false, method: null, when: DateTime.Now.AddDays(off)));
+            foreach (var (desc, amt, method) in initialPayments)
+            {
+                var item = CreateLineItem(desc, amt, isPayment: true, method: method, when: DateTime.Now);
+                AddToPayments(f, item);
+            }
 
-            foreach (var (desc, amt, off, method) in initialPayments)
-                AddToPayments(f, CreateLineItem(desc, amt, isPayment: true, method: method, when: DateTime.Now.AddDays(off)));
-
+            RecalculateBalance(f);
             return f;
         }
 
@@ -523,15 +552,6 @@ namespace KeyCard.Desktop.Modules.Folio.Services
                     return true;
                 }
 
-                // DateOnly support
-                if (targetType.FullName == "System.DateOnly" && value is DateTime dt)
-                {
-                    var fromDt = targetType.GetMethod("FromDateTime", BindingFlags.Public | BindingFlags.Static)!;
-                    var dateOnly = fromDt.Invoke(null, new object[] { dt });
-                    pi.SetValue(obj, dateOnly);
-                    return true;
-                }
-
                 var converted = Convert.ChangeType(value, targetType);
                 pi.SetValue(obj, converted);
                 return true;
@@ -556,55 +576,28 @@ namespace KeyCard.Desktop.Modules.Folio.Services
         {
             var v = GetProp(obj, name);
             if (v is null) return null;
-
             if (v is DateTime dt) return dt;
-
-            if (v.GetType().FullName == "System.DateOnly")
-            {
-                var t = v.GetType();
-                var y = (int)t.GetProperty("Year")!.GetValue(v)!;
-                var m = (int)t.GetProperty("Month")!.GetValue(v)!;
-                var d = (int)t.GetProperty("Day")!.GetValue(v)!;
-                return new DateTime(y, m, d, 0, 0, 0);
-            }
-
             if (DateTime.TryParse(v.ToString(), out var parsed)) return parsed;
             return null;
         }
 
-        private static bool SetDateFlex(object obj, string name, DateTime when)
-            => SetProp(obj, name, when) || SetProp(obj, name, when.Date);
+        private static System.Collections.IList? GetIList(object obj, string name)
+            => obj.GetType().GetProperty(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase)?.GetValue(obj) as System.Collections.IList;
 
-        private static string FormatDate(DateTime? dt)
-            => dt?.ToString("yyyy-MM-dd") ?? "—";
-
-        private static object? EnumTryParse(Type enumType, string value)
-        {
-            try { return Enum.Parse(enumType, value, ignoreCase: true); }
-            catch { return null; }
-        }
-
-        private static IList? GetIList(object obj, string name)
-            => obj.GetType().GetProperty(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase)?.GetValue(obj) as IList;
-
-        private IList? GetChargesIList(GuestFolio f) => GetIList(f, "Charges");
-        private IList? GetPaymentsIList(GuestFolio f) => GetIList(f, "Payments");
+        private System.Collections.IList? GetChargesIList(GuestFolio f) => f.LineItems;
+        private System.Collections.IList? GetPaymentsIList(GuestFolio f) => f.LineItems;
 
         private List<object> GetChargesSidecar(GuestFolio f) => _sidecars.GetOrCreateValue(f).Charges;
         private List<object> GetPaymentsSidecar(GuestFolio f) => _sidecars.GetOrCreateValue(f).Payments;
 
         private IEnumerable<object> EnumerateCharges(GuestFolio f)
         {
-            var il = GetChargesIList(f);
-            if (il is not null) foreach (var o in il) yield return o!;
-            else foreach (var o in GetChargesSidecar(f)) yield return o!;
+            return f.LineItems.Where(item => item.Type?.ToLower() == "charge");
         }
 
         private IEnumerable<object> EnumeratePayments(GuestFolio f)
         {
-            var il = GetPaymentsIList(f);
-            if (il is not null) foreach (var o in il) yield return o!;
-            else foreach (var o in GetPaymentsSidecar(f)) yield return o!;
+            return f.LineItems.Where(item => item.Type?.ToLower() == "payment");
         }
     }
 }

@@ -10,7 +10,7 @@
     x:DataType="vm:FolioViewModel">
 
   <!-- Reduced margin from 12 to 8 to match Dashboard -->
-  <Grid RowDefinitions="Auto,*" Margin="8">
+  <Grid RowDefinitions="Auto,*,Auto" Margin="8">
 
     <!-- Header -->
     <Border Grid.Row="0"
@@ -52,6 +52,7 @@
                 ClipToBounds="True"
                 Margin="0,0,8,0">
           <DataGrid
+              Name="FolioDataGrid"
               ItemsSource="{Binding Folios}"
               SelectedItem="{Binding SelectedFolio, Mode=TwoWay}"
               AutoGenerateColumns="False"
@@ -89,8 +90,8 @@
                             Background="#5C46A3"
                             Foreground="White"
                             HorizontalAlignment="Center"
-                            Command="{Binding $parent[DataGrid].((vm:FolioViewModel)DataContext).OpenGuestDetailCommand}"
-                            CommandParameter="{Binding FolioId}" />
+                            Click="OnDetailsButtonClick"
+                            Tag="{Binding FolioId}" />
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
@@ -226,6 +227,20 @@
 
         </StackPanel>
       </Grid>
+    </Border>
+
+    <!-- ✅ Status Message Bar -->
+    <Border Grid.Row="2"
+            Background="#1B1B22"
+            BorderBrush="#3F2F73"
+            BorderThickness="1"
+            CornerRadius="6"
+            Padding="12,8"
+            Margin="0,8,0,0">
+      <TextBlock Text="{Binding StatusMessage}"
+                 FontSize="13"
+                 Foreground="#E8E8F0"
+                 TextWrapping="Wrap"/>
     </Border>
   </Grid>
 </UserControl>

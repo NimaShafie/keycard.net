@@ -2,6 +2,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
@@ -191,7 +192,7 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
             // Use non-generic UnifiedRelayCommand with object parameter
             OpenGuestDetailCommand = new UnifiedRelayCommand(
                 async (param) => await OpenGuestDetailAsync(param as string),
-                (param) => !IsBusy && (param is string || SelectedFolio != null)
+                (param) => !IsBusy
             );
 
             _toolbar.AttachContext(
@@ -313,21 +314,8 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
                     amount,
                     description);
 
-                // Refresh the selected folio
-                var updated = await _folio.GetFolioByIdAsync(SelectedFolio.FolioId);
-                if (updated != null)
-                {
-                    var index = Folios.IndexOf(SelectedFolio);
-                    if (index >= 0)
-                    {
-                        Folios[index] = updated;
-                        SelectedFolio = updated;
-                    }
-                }
-
-                // Clear inputs
-                ChargeAmountText = string.Empty;
-                ChargeDescription = null;
+                // Refresh ALL folios to get updated balances
+                await RefreshAllFolios();
 
                 StatusMessage = $"Charge of {amount:C} posted successfully";
                 _logger.LogInformation("Charge posted successfully");
@@ -340,6 +328,15 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
             finally
             {
                 IsBusy = false;
+
+                // ✅ FIX: Clear inputs AFTER IsBusy is set to false
+                // This ensures CanPostCharge() can return true again
+                ChargeAmountText = string.Empty;
+                ChargeDescription = string.Empty;
+                OnPropertyChanged(nameof(ChargeAmountText));
+                OnPropertyChanged(nameof(ChargeDescription));
+                OnPropertyChanged(nameof(NewChargeDescription));
+                RaiseAllCanExecuteChanged();
             }
         }
 
@@ -376,20 +373,8 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
                     amount,
                     method);
 
-                // Refresh the selected folio
-                var updated = await _folio.GetFolioByIdAsync(SelectedFolio.FolioId);
-                if (updated != null)
-                {
-                    var index = Folios.IndexOf(SelectedFolio);
-                    if (index >= 0)
-                    {
-                        Folios[index] = updated;
-                        SelectedFolio = updated;
-                    }
-                }
-
-                // Clear inputs
-                PaymentAmountText = string.Empty;
+                // Refresh ALL folios to get updated balances
+                await RefreshAllFolios();
 
                 StatusMessage = $"Payment of {amount:C} applied successfully";
                 _logger.LogInformation("Payment applied successfully");
@@ -402,6 +387,12 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
             finally
             {
                 IsBusy = false;
+
+                // ✅ FIX: Clear inputs AFTER IsBusy is set to false
+                // This ensures CanApplyPayment() can return true again
+                PaymentAmountText = string.Empty;
+                OnPropertyChanged(nameof(PaymentAmountText));
+                RaiseAllCanExecuteChanged();
             }
         }
 
@@ -446,22 +437,58 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
 
         private async Task OpenGuestDetailAsync(string? folioId)
         {
+            Console.WriteLine($"[FolioViewModel] OpenGuestDetailAsync called with folioId: {folioId}");
+
             if (string.IsNullOrWhiteSpace(folioId))
             {
                 folioId = SelectedFolio?.FolioId;
+                Console.WriteLine($"[FolioViewModel] FolioId was null, using SelectedFolio: {folioId}");
             }
 
             if (!string.IsNullOrWhiteSpace(folioId))
             {
+                Console.WriteLine($"[FolioViewModel] About to invoke OpenGuestDetailRequested event for folio {folioId}");
+                Console.WriteLine($"[FolioViewModel] Event has {(OpenGuestDetailRequested == null ? "NO" : OpenGuestDetailRequested.GetInvocationList().Length.ToString())} subscriber(s)");
+
                 _logger.LogInformation("Opening guest detail for folio {FolioId}", folioId);
                 OpenGuestDetailRequested?.Invoke(this, folioId);
+
+                Console.WriteLine($"[FolioViewModel] Event invoked");
             }
             else
             {
                 StatusMessage = "Please select a folio first";
+                Console.WriteLine($"[FolioViewModel] Cannot open detail: no folio selected");
+                _logger.LogWarning("OpenGuestDetail called with no folio selected");
             }
 
             await Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Refresh all folios and maintain the current selection
+        /// </summary>
+        private async Task RefreshAllFolios()
+        {
+            var selectedFolioId = SelectedFolio?.FolioId;
+
+            // Get fresh data from service
+            var folios = await _folio.GetActiveFoliosAsync();
+
+            // Update collection
+            Folios.Clear();
+            foreach (var folio in folios)
+            {
+                Folios.Add(folio);
+            }
+
+            // Restore selection if it still exists
+            if (!string.IsNullOrWhiteSpace(selectedFolioId))
+            {
+                SelectedFolio = Folios.FirstOrDefault(f => f.FolioId == selectedFolioId);
+            }
+
+            _logger.LogInformation("Refreshed {Count} folios, balance updated", Folios.Count);
         }
 
         /// <summary>
