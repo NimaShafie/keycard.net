@@ -350,6 +350,185 @@ namespace KeyCard.Desktop.Modules.Folio.Services
         private string WriteStatementToTemp(GuestFolio folio)
         {
             var idForFile = GetString(folio, "FolioId") ?? "UNKNOWN";
+            var htmlPath = Path.Combine(Path.GetTempPath(), $"Statement_{idForFile}_{DateTime.Now:yyyyMMddHHmmss}.html");
+
+            var charges = EnumerateCharges(folio).ToList();
+            var payments = EnumeratePayments(folio).ToList();
+
+            decimal Sum(IEnumerable<object> items) => items.Sum(o => GetDecimal(o, "Amount") ?? 0m);
+
+            var totalCharges = Sum(charges);
+            var totalPayments = Sum(payments);
+            var balance = GetBalance(folio);
+
+            var html = $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <title>Hotel Statement - {idForFile}</title>
+    <style>
+        @media print {{
+            body {{ margin: 0; }}
+            .no-print {{ display: none; }}
+        }}
+        body {{
+            font-family: 'Courier New', monospace;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }}
+        .statement {{
+            background: white;
+            padding: 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }}
+        .header {{
+            text-align: center;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }}
+        .header h1 {{
+            margin: 0;
+            font-size: 20px;
+            letter-spacing: 2px;
+        }}
+        .info-section {{
+            margin-bottom: 30px;
+            line-height: 1.8;
+        }}
+        .section-title {{
+            font-weight: bold;
+            font-size: 14px;
+            margin: 20px 0 10px 0;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #333;
+        }}
+        .line-item {{
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            font-size: 12px;
+        }}
+        .line-item .date {{
+            width: 100px;
+        }}
+        .line-item .description {{
+            flex: 1;
+            padding: 0 20px;
+        }}
+        .line-item .amount {{
+            width: 120px;
+            text-align: right;
+        }}
+        .totals {{
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #333;
+        }}
+        .total-line {{
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            font-size: 13px;
+        }}
+        .total-line.balance {{
+            font-weight: bold;
+            font-size: 16px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 2px solid #333;
+        }}
+        .footer {{
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ccc;
+            font-style: italic;
+            color: #666;
+        }}
+        .print-button {{
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }}
+        .print-button:hover {{
+            background: #45a049;
+        }}
+    </style>
+</head>
+<body>
+    <button class='print-button no-print' onclick='window.print()'>Print / Save as PDF</button>
+    
+    <div class='statement'>
+        <div class='header'>
+            <h1>KEYCARD.NET HOTEL STATEMENT</h1>
+        </div>
+        
+        <div class='info-section'>
+            <div><strong>Folio Number:</strong> {idForFile}</div>
+            <div><strong>Guest Name:</strong> {GetString(folio, "GuestName") ?? "—"}</div>
+            <div><strong>Room Number:</strong> {GetString(folio, "RoomNumber") ?? "—"}</div>
+            <div><strong>Booking ID:</strong> {GetString(folio, "BookingId") ?? "—"}</div>
+            <div><strong>Statement Date:</strong> {DateTime.Now:yyyy-MM-dd HH:mm:ss}</div>
+        </div>
+        
+        <div class='section-title'>CHARGES</div>
+        {string.Join("\n", charges.OrderBy(x => GetDate(x, "TransactionDate") ?? DateTime.MinValue).Select(c => $@"
+        <div class='line-item'>
+            <div class='date'>{(GetDate(c, "TransactionDate") ?? DateTime.Now):yyyy-MM-dd}</div>
+            <div class='description'>{GetString(c, "Description") ?? "—"}</div>
+            <div class='amount'>${(GetDecimal(c, "Amount") ?? 0m):0.00}</div>
+        </div>"))}
+        
+        <div class='section-title'>PAYMENTS</div>
+        {string.Join("\n", payments.OrderBy(x => GetDate(x, "TransactionDate") ?? DateTime.MinValue).Select(p => $@"
+        <div class='line-item'>
+            <div class='date'>{(GetDate(p, "TransactionDate") ?? DateTime.Now):yyyy-MM-dd}</div>
+            <div class='description'>{GetString(p, "Description") ?? "—"}</div>
+            <div class='amount'>${(GetDecimal(p, "Amount") ?? 0m):0.00}</div>
+        </div>"))}
+        
+        <div class='totals'>
+            <div class='total-line'>
+                <div>Total Charges:</div>
+                <div>${totalCharges:0.00}</div>
+            </div>
+            <div class='total-line'>
+                <div>Total Payments:</div>
+                <div>${totalPayments:0.00}</div>
+            </div>
+            <div class='total-line balance'>
+                <div>BALANCE DUE:</div>
+                <div>${balance:0.00}</div>
+            </div>
+        </div>
+        
+        <div class='footer'>
+            <div><strong>Status:</strong> {GetString(folio, "Status") ?? "—"}</div>
+            <p>Thank you for your stay!</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+            File.WriteAllText(htmlPath, html);
+            return htmlPath;
+        }
+
+        private string WriteStatementToTempTxt(GuestFolio folio)
+        {
+            var idForFile = GetString(folio, "FolioId") ?? "UNKNOWN";
             var path = Path.Combine(Path.GetTempPath(), $"Statement_{idForFile}_{DateTime.Now:yyyyMMddHHmmss}.txt");
 
             var charges = EnumerateCharges(folio).ToList();
