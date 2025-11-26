@@ -19,7 +19,10 @@ namespace KeyCard.Desktop.ViewModels
         private readonly INavigationService _nav;
         private readonly IToolbarService _toolbar;
 
-        public HousekeepingKanbanAdapter Kanban { get; } = null!; // Initialized in constructor
+        // ✅ SINGLETON STATE: Static instance to preserve state across navigation
+        private static HousekeepingKanbanAdapter? _kanbanInstance;
+
+        public HousekeepingKanbanAdapter Kanban { get; }
 
         private string? _syncMessage;
         public string? SyncMessage
@@ -93,8 +96,23 @@ namespace KeyCard.Desktop.ViewModels
             _nav = nav ?? throw new ArgumentNullException(nameof(nav));
             _toolbar = toolbar;
 
-            // Initialize adapter and connect base actions
-            Kanban = new HousekeepingKanbanAdapter(this);
+            // ✅ Use singleton Kanban adapter to preserve state across navigation
+            string initMessage;
+            if (_kanbanInstance == null)
+            {
+                _kanbanInstance = new HousekeepingKanbanAdapter(this);
+                initMessage = "🆕 NEW Kanban instance #1 created";
+            }
+            else
+            {
+                _kanbanInstance.SetParent(this);
+                var assigned = _kanbanInstance.Pending.Concat(_kanbanInstance.InProgress).Concat(_kanbanInstance.Completed)
+                    .Count(t => t.AssignedTo != "— Unassigned —");
+                initMessage = $"♻️ REUSING Kanban | P={_kanbanInstance.Pending.Count}, IP={_kanbanInstance.InProgress.Count}, C={_kanbanInstance.Completed.Count} | {assigned} assigned";
+            }
+
+            StatusMessage = initMessage;
+            Kanban = _kanbanInstance;
 
             BackToDashboardCommand = new UnifiedRelayCommand(() => _nav.NavigateTo<DashboardViewModel>());
             RefreshCommand = new UnifiedRelayCommand(RefreshAsync, () => !IsBusy);
@@ -109,33 +127,30 @@ namespace KeyCard.Desktop.ViewModels
                 initialSearchText: Kanban?.FilterText
             );
 
-            // ✅ Only load data once on first visit
-            // Don't reload on subsequent navigations to preserve Kanban state
-            if (Rooms.Count == 0 && Tasks.Count == 0)
+            // ✅ Only load data on first visit
+            var isFirstLoad = Rooms.Count == 0 && Tasks.Count == 0;
+            if (isFirstLoad)
             {
+                StatusMessage += " | Loading initial data...";
                 _ = RefreshAsync();
             }
-            // Note: Kanban collections persist because this is a Singleton
-            // and we don't call RefreshAsync on subsequent navigations
+            else
+            {
+                StatusMessage += " | Data already loaded";
+            }
         }
 
         private async Task RefreshAsync()
         {
             if (IsBusy) return;
 
-            // ✅ CRITICAL: Don't reload if we already have data (preserve Kanban state)
-            // User can manually click Refresh button if they want to reload
-            var hasExistingData = Rooms.Count > 0 || Tasks.Count > 0;
-            if (hasExistingData)
-            {
-                StatusMessage = "Data already loaded - use Refresh button to reload";
-                return;
-            }
+            // ✅ Save the initialization message
+            var initMsg = StatusMessage;
 
             try
             {
                 IsBusy = true;
-                StatusMessage = "Loading rooms and tasks...";
+                StatusMessage = initMsg + " | Loading rooms and tasks...";
 
                 var rooms = await _service.GetRoomsAsync();
                 var tasks = await _service.GetTasksAsync();
@@ -173,8 +188,22 @@ namespace KeyCard.Desktop.ViewModels
                 }
                 else
                 {
-                    StatusMessage = $"Loaded {Rooms.Count} rooms, {Tasks.Count} tasks";
-                    Kanban.UpdateFrom(Tasks);
+                    var finalMsg = initMsg + $" | Loaded {Rooms.Count} rooms, {Tasks.Count} tasks";
+
+                    // ✅ CRITICAL: Only rebuild Kanban if it's completely empty
+                    var hasKanbanData = Kanban.Pending.Count > 0 || Kanban.InProgress.Count > 0 || Kanban.Completed.Count > 0;
+
+                    if (!hasKanbanData)
+                    {
+                        finalMsg += " | Building Kanban for first time";
+                        Kanban.UpdateFrom(Tasks);
+                    }
+                    else
+                    {
+                        finalMsg += $" | Kanban PRESERVED: P={Kanban.Pending.Count}, IP={Kanban.InProgress.Count}, C={Kanban.Completed.Count}";
+                    }
+
+                    StatusMessage = finalMsg;
                 }
 
                 // Short-lived "Synced" blip on successful refresh
@@ -271,7 +300,13 @@ namespace KeyCard.Desktop.ViewModels
                     SelectedTask = task;
 
                     StatusMessage = "Task marked as completed";
-                    Kanban.UpdateFrom(Tasks); // reflect in Kanban
+
+                    // ✅ Update Kanban to reflect the change
+                    var kanbanTask = Kanban.FindById(taskId);
+                    if (kanbanTask != null)
+                    {
+                        Kanban.MoveTo(kanbanTask, HkTaskStatus.Completed);
+                    }
                 }
                 else
                 {
@@ -341,7 +376,12 @@ namespace KeyCard.Desktop.ViewModels
             }
 
             StatusMessage = "Loaded mock data";
-            Kanban.UpdateFrom(Tasks);
+
+            // ✅ Only build Kanban if empty
+            if (Kanban.Pending.Count == 0 && Kanban.InProgress.Count == 0 && Kanban.Completed.Count == 0)
+            {
+                Kanban.UpdateFrom(Tasks);
+            }
         }
 
         private static string MapRoomStatus(string status) => status switch
@@ -385,18 +425,25 @@ namespace KeyCard.Desktop.ViewModels
         public bool? IsCompleted { get => _isCompleted; set => SetProperty(ref _isCompleted, value); }
     }
 
-    // ===== Kanban adapter (UPDATED) =====
-    // Exposes the members that HousekeepingKanbanView expects.
+    // ===== Kanban adapter (FIXED WITH PROPER STATE PRESERVATION) =====
     public sealed class HousekeepingKanbanAdapter : ViewModelBase
     {
-        private readonly HousekeepingViewModel _parent;
-        private static int _assignmentCounter; // Track total assignments made
+        private HousekeepingViewModel _parent;
+        private static int _assignmentCounter;
+        private static int _dragCounter;
 
-        public ObservableCollection<HousekeepingTask> Pending { get; } = new();
-        public ObservableCollection<HousekeepingTask> InProgress { get; } = new();
-        public ObservableCollection<HousekeepingTask> Completed { get; } = new();
+        // ✅ BULLETPROOF: Static dictionary to store assignments
+        private static readonly Dictionary<string, string> _assignments = new();
 
-        // Filter/search text
+        // ✅ CRITICAL: Make collections STATIC so they survive ViewModel recreation
+        private static ObservableCollection<HousekeepingTask>? _pendingStatic;
+        private static ObservableCollection<HousekeepingTask>? _inProgressStatic;
+        private static ObservableCollection<HousekeepingTask>? _completedStatic;
+
+        public ObservableCollection<HousekeepingTask> Pending { get; }
+        public ObservableCollection<HousekeepingTask> InProgress { get; }
+        public ObservableCollection<HousekeepingTask> Completed { get; }
+
         private string? _filterText;
         public string? FilterText
         {
@@ -405,7 +452,6 @@ namespace KeyCard.Desktop.ViewModels
             {
                 if (SetProperty(ref _filterText, value))
                 {
-                    // Refresh the projected views
                     OnPropertyChanged(nameof(PendingView));
                     OnPropertyChanged(nameof(InProgressView));
                     OnPropertyChanged(nameof(CompletedView));
@@ -413,7 +459,6 @@ namespace KeyCard.Desktop.ViewModels
             }
         }
 
-        // Projected (filtered) views used by ListBoxes
         public System.Collections.Generic.IEnumerable<HousekeepingTask> PendingView => ApplyFilter(Pending);
         public System.Collections.Generic.IEnumerable<HousekeepingTask> InProgressView => ApplyFilter(InProgress);
         public System.Collections.Generic.IEnumerable<HousekeepingTask> CompletedView => ApplyFilter(Completed);
@@ -429,7 +474,6 @@ namespace KeyCard.Desktop.ViewModels
                 (!string.IsNullOrWhiteSpace(t.AssignedTo) && t.AssignedTo!.Contains(q, StringComparison.OrdinalIgnoreCase)));
         }
 
-        // Mock attendants (shown in dropdowns)
         public ObservableCollection<string> StaffOptions { get; } = new()
         {
             "— Unassigned —",
@@ -441,14 +485,12 @@ namespace KeyCard.Desktop.ViewModels
             "F. Singh"
         };
 
-        // Optional banners/fields so bindings don't error
         public bool IsMock { get; set; } = true;
         public string? NewRoom { get; set; }
         public string? NewTitle { get; set; }
         public string? NewNotes { get; set; }
 
-        // Commands expected by the Kanban XAML
-        public ICommand RefreshCommand { get; }
+        public ICommand RefreshCommand { get; private set; }
         public ICommand AddTaskCommand { get; }
         public ICommand AssignAttendantCommand { get; }
         public ICommand DeleteTaskCommand { get; }
@@ -460,14 +502,30 @@ namespace KeyCard.Desktop.ViewModels
         {
             _parent = parent;
 
-            // ✅ DIAGNOSTIC: Track adapter creation
-            _parent.StatusMessage = $"Kanban adapter created at {DateTime.Now:HH:mm:ss.fff}";
+            // ✅ CRITICAL: Initialize from static fields or create new
+            if (_pendingStatic == null)
+            {
+                _pendingStatic = new ObservableCollection<HousekeepingTask>();
+                _inProgressStatic = new ObservableCollection<HousekeepingTask>();
+                _completedStatic = new ObservableCollection<HousekeepingTask>();
+                _parent.StatusMessage = "🆕 Kanban collections created (first time) | State will be PERMANENT";
+            }
+            else
+            {
+                _parent.StatusMessage = $"♻️ Kanban collections REUSED | P={_pendingStatic.Count}, IP={_inProgressStatic.Count}, C={_completedStatic.Count}";
+            }
+
+            // Point to the static collections
+            Pending = _pendingStatic;
+            InProgress = _inProgressStatic;
+            Completed = _completedStatic;
+
+            _parent.StatusMessage += $" | Total assignments so far: {_assignmentCounter}";
 
             RefreshCommand = parent.RefreshCommand;
 
             AddTaskCommand = new UnifiedRelayCommand(() =>
             {
-                // Basic "add" into Pending only (non-persistent placeholder)
                 _ = int.TryParse(NewRoom, out var rid);
                 var item = new HousekeepingTask
                 {
@@ -479,13 +537,12 @@ namespace KeyCard.Desktop.ViewModels
                     AssignedTo = "— Unassigned —"
                 };
                 Pending.Add(item);
+                _parent.StatusMessage = $"➕ Added new task: {item.Title} | Total pending: {Pending.Count}";
 
-                // Reset inputs
                 NewRoom = NewTitle = NewNotes = null;
                 OnPropertyChanged(nameof(NewRoom));
                 OnPropertyChanged(nameof(NewTitle));
                 OnPropertyChanged(nameof(NewNotes));
-                // Keep views fresh
                 OnPropertyChanged(nameof(PendingView));
             });
 
@@ -495,11 +552,18 @@ namespace KeyCard.Desktop.ViewModels
                 {
                     _assignmentCounter++;
 
-                    // ✅ DIAGNOSTIC: Show assignment with permanent counter
-                    _parent.StatusMessage = $"Assignment #{_assignmentCounter}: {task.AssignedTo} → {task.Title} | Collections: P={Pending.Count}, IP={InProgress.Count}, C={Completed.Count}";
+                    // ✅ Save to BOTH the object AND the static dictionary
+                    if (!string.IsNullOrWhiteSpace(task.AssignedTo) && task.AssignedTo != "— Unassigned —")
+                    {
+                        _assignments[task.Id] = task.AssignedTo;
+                        _parent.StatusMessage = $"👤 Assignment #{_assignmentCounter}: '{task.AssignedTo}' → {task.Title} | Saved to dictionary (total: {_assignments.Count})";
+                    }
+                    else
+                    {
+                        _parent.StatusMessage = $"⚠️ No staff selected for {task.Title}";
+                        return;
+                    }
 
-                    // No persistence yet; VM already two-way binds AssignedTo.
-                    // Raise change for filter projections (if filtering by attendant).
                     OnPropertyChanged(nameof(PendingView));
                     OnPropertyChanged(nameof(InProgressView));
                     OnPropertyChanged(nameof(CompletedView));
@@ -511,40 +575,81 @@ namespace KeyCard.Desktop.ViewModels
                 if (o is string id)
                 {
                     RemoveFromAll(id);
+                    _parent.StatusMessage = $"🗑️ Deleted task {id}";
                 }
                 else if (o is HousekeepingTask t)
                 {
                     RemoveFromAll(t.Id);
+                    _parent.StatusMessage = $"🗑️ Deleted task {t.Title}";
                 }
-                // refresh views
+
                 OnPropertyChanged(nameof(PendingView));
                 OnPropertyChanged(nameof(InProgressView));
                 OnPropertyChanged(nameof(CompletedView));
             });
 
-            DropOnPendingCommand = new UnifiedRelayCommand(o => MoveTo(o, HkTaskStatus.Pending));
-            DropOnInProgressCommand = new UnifiedRelayCommand(o => MoveTo(o, HkTaskStatus.InProgress));
-            DropOnCompletedCommand = new UnifiedRelayCommand(o => MoveTo(o, HkTaskStatus.Completed));
+            DropOnPendingCommand = new UnifiedRelayCommand(o =>
+            {
+                _dragCounter++;
+                _parent.StatusMessage = $"🔄 Drag #{_dragCounter}: Moving to Pending...";
+                MoveTo(o, HkTaskStatus.Pending);
+            });
+
+            DropOnInProgressCommand = new UnifiedRelayCommand(o =>
+            {
+                _dragCounter++;
+                _parent.StatusMessage = $"🔄 Drag #{_dragCounter}: Moving to InProgress...";
+                MoveTo(o, HkTaskStatus.InProgress);
+            });
+
+            DropOnCompletedCommand = new UnifiedRelayCommand(o =>
+            {
+                _dragCounter++;
+                _parent.StatusMessage = $"🔄 Drag #{_dragCounter}: Moving to Completed...";
+                MoveTo(o, HkTaskStatus.Completed);
+            });
+        }
+
+        // ✅ Allow updating parent reference when ViewModel is recreated
+        public void SetParent(HousekeepingViewModel parent)
+        {
+            _parent = parent;
+            RefreshCommand = parent.RefreshCommand;
+
+            // ✅ CRITICAL: Restore assignments from dictionary when reusing
+            RestoreAssignments();
         }
 
         public void UpdateFrom(ObservableCollection<TaskRow> tasks)
         {
-            // ✅ DIAGNOSTIC: Track what's happening
-            var isFirstLoad = Pending.Count == 0 && InProgress.Count == 0 && Completed.Count == 0;
+            var hasData = Pending.Count > 0 || InProgress.Count > 0 || Completed.Count > 0;
 
-            var diagnostic = $"UpdateFrom: Pending={Pending.Count}, InProgress={InProgress.Count}, Completed={Completed.Count} | isFirst={isFirstLoad}";
-            _parent.StatusMessage = diagnostic;
-
-            if (!isFirstLoad)
+            if (hasData)
             {
-                // Kanban already populated - preserve user's manual moves
-                _parent.StatusMessage = $"{diagnostic} | SKIPPED (preserving state)";
+                // ✅ NEVER rebuild if we already have data - this preserves ALL state
+                var assignedCount = Pending.Count(t => t.AssignedTo != "— Unassigned —") +
+                                   InProgress.Count(t => t.AssignedTo != "— Unassigned —") +
+                                   Completed.Count(t => t.AssignedTo != "— Unassigned —");
+
+                _parent.StatusMessage = $"✅ PRESERVED existing Kanban state (P={Pending.Count}, IP={InProgress.Count}, C={Completed.Count}) | {assignedCount} with assignments";
+
+                // ✅ Debug: Show what assignments we have
+                var assigned = Pending.Concat(InProgress).Concat(Completed)
+                    .Where(t => t.AssignedTo != "— Unassigned —")
+                    .Select(t => $"{t.Title}→{t.AssignedTo}")
+                    .ToList();
+
+                if (assigned.Any())
+                {
+                    _parent.StatusMessage += $" | Assignments: {string.Join(", ", assigned)}";
+                }
+
                 return;
             }
 
-            _parent.StatusMessage = $"{diagnostic} | REBUILDING";
+            // Only build on very first load
+            _parent.StatusMessage = "🔨 First load - building Kanban from Tasks...";
 
-            // First load - build Kanban from Tasks
             Pending.Clear(); InProgress.Clear(); Completed.Clear();
 
             foreach (var t in tasks)
@@ -570,6 +675,8 @@ namespace KeyCard.Desktop.ViewModels
             OnPropertyChanged(nameof(PendingView));
             OnPropertyChanged(nameof(InProgressView));
             OnPropertyChanged(nameof(CompletedView));
+
+            _parent.StatusMessage = $"✅ Kanban built: P={Pending.Count}, IP={InProgress.Count}, C={Completed.Count}";
         }
 
         public HousekeepingTask? FindById(string id)
@@ -579,10 +686,89 @@ namespace KeyCard.Desktop.ViewModels
                 ?? Completed.FirstOrDefault(x => x.Id == id);
         }
 
-        private void MoveTo(object? o, HkTaskStatus target)
+        // ✅ Public method to save assignment directly
+        public void SaveAssignment(string taskId, string staffName)
         {
-            if (o is not HousekeepingTask t) return;
+            _assignments[taskId] = staffName;
 
+            var task = FindById(taskId);
+            if (task != null)
+            {
+                task.AssignedTo = staffName;
+            }
+        }
+
+        // ✅ NEW: Restore assignments from dictionary
+        public void RestoreAssignments()
+        {
+            _parent.StatusMessage = $"🔄 Restore called | Dict={_assignments.Count}";
+
+            // ✅ Get all tasks FIRST
+            var allTasks = Pending.Concat(InProgress).Concat(Completed).ToList();
+
+            _parent.StatusMessage += $" Tasks={allTasks.Count}";
+
+            // ✅ Restore assignments BEFORE clearing collections
+            var restored = 0;
+            foreach (var task in allTasks)
+            {
+                if (_assignments.TryGetValue(task.Id, out var assignedTo))
+                {
+                    task.AssignedTo = assignedTo;
+                    restored++;
+                }
+            }
+
+            _parent.StatusMessage = $"✅ Matched {restored} | Rebuilding...";
+
+            if (restored > 0 || _assignments.Count > 0)
+            {
+                // ✅ NOW rebuild collections with assignments already set
+                Pending.Clear();
+                InProgress.Clear();
+                Completed.Clear();
+
+                // Re-add with assignments ALREADY on the objects
+                foreach (var task in allTasks)
+                {
+                    switch (task.Status)
+                    {
+                        case HkTaskStatus.Pending:
+                            Pending.Add(task);
+                            break;
+                        case HkTaskStatus.InProgress:
+                            InProgress.Add(task);
+                            break;
+                        case HkTaskStatus.Completed:
+                            Completed.Add(task);
+                            break;
+                    }
+                }
+
+                _parent.StatusMessage = $"✅ Restored {restored} | P={Pending.Count}, IP={InProgress.Count}, C={Completed.Count}";
+
+                OnPropertyChanged(nameof(Pending));
+                OnPropertyChanged(nameof(InProgress));
+                OnPropertyChanged(nameof(Completed));
+                OnPropertyChanged(nameof(PendingView));
+                OnPropertyChanged(nameof(InProgressView));
+                OnPropertyChanged(nameof(CompletedView));
+            }
+            else
+            {
+                _parent.StatusMessage = "ℹ️ Nothing to restore";
+            }
+        }
+
+        public void MoveTo(object? o, HkTaskStatus target)
+        {
+            if (o is not HousekeepingTask t)
+            {
+                _parent.StatusMessage = $"❌ MoveTo failed: object is not HousekeepingTask (is {o?.GetType().Name ?? "null"})";
+                return;
+            }
+
+            var oldStatus = t.Status;
             RemoveFromAll(t.Id);
             t.Status = target;
 
@@ -593,7 +779,6 @@ namespace KeyCard.Desktop.ViewModels
                 default: Pending.Add(t); break;
             }
 
-            // Reflect back into parent.Tasks for two-way sync:
             var row = _parent.Tasks.FirstOrDefault(x => x.Id == t.Id);
             if (row is not null)
             {
@@ -604,6 +789,8 @@ namespace KeyCard.Desktop.ViewModels
             OnPropertyChanged(nameof(PendingView));
             OnPropertyChanged(nameof(InProgressView));
             OnPropertyChanged(nameof(CompletedView));
+
+            _parent.StatusMessage = $"✅ Moved '{t.Title}' from {oldStatus} → {target} | P={Pending.Count}, IP={InProgress.Count}, C={Completed.Count}";
         }
 
         private void RemoveFromAll(string id)
@@ -619,7 +806,4 @@ namespace KeyCard.Desktop.ViewModels
             if (item is not null) list.Remove(item);
         }
     }
-
-    // ✅ Navigation lifecycle - Dashboard uses this, Housekeeping doesn't need it
-    // The Kanban is already synced because MoveTo updates both Kanban AND Tasks collections
 }

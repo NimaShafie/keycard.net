@@ -19,7 +19,7 @@
 
   <Grid RowDefinitions="Auto,*" Margin="8">
 
-    <!-- Header -->
+    <!-- Header with DEBUG STATUS -->
     <Border Grid.Row="0"
             CornerRadius="10"
             BorderBrush="#3F2F73"
@@ -33,20 +33,20 @@
                      FontWeight="SemiBold"
                      FontSize="18"
                      Foreground="#E8E8F0"/>
-          <TextBlock Text="Track room status, tasks, and Kanban workflow"
-                     FontSize="12"
-                     Opacity="0.7"
-                     Foreground="#CFCFEA"
-                     Margin="0,2,0,0"/>
+          <!-- DEBUG STATUS - RED AND VISIBLE -->
+          <TextBlock FontSize="13"
+                     FontWeight="Bold"
+                     Foreground="#FF4444"
+                     Margin="0,4,0,0"
+                     Text="{Binding StatusMessage}"/>
         </StackPanel>
 
         <TextBlock Grid.Column="1"
                    VerticalAlignment="Center"
                    FontSize="12"
-                   Foreground="#9C27B0"
-                   IsVisible="{Binding StatusMessage, Converter={StaticResource HasText}}">
-          <Run Text="{Binding StatusMessage}"/>
-        </TextBlock>
+                   Foreground="#4CAF50"
+                   FontWeight="Bold"
+                   Text="{Binding SyncMessage}"/>
       </Grid>
     </Border>
 
@@ -180,8 +180,8 @@
         </ScrollViewer>
       </TabItem>
 
-      <!-- Tab 2: Kanban Board -->
-      <TabItem Header="Kanban Board">
+      <!-- Tab 2: Kanban Board with Drag-Drop -->
+      <TabItem Header="Kanban Board" x:Name="KanbanTab">
         <ScrollViewer HorizontalScrollBarVisibility="Auto"
                       VerticalScrollBarVisibility="Auto">
           <Grid ColumnDefinitions="*,*,*" Margin="12"
@@ -189,6 +189,7 @@
 
             <!-- Pending Column -->
             <Border Grid.Column="0"
+                    x:Name="PendingColumn"
                     CornerRadius="8"
                     BorderBrush="#3F2F73"
                     BorderThickness="1"
@@ -209,11 +210,12 @@
                 </TextBlock>
 
                 <ListBox Grid.Row="2"
+                         x:Name="PendingList"
                          ItemsSource="{Binding Kanban.PendingView}"
                          Background="Transparent"
                          BorderThickness="0">
                   <ListBox.ItemTemplate>
-                    <DataTemplate>
+                    <DataTemplate x:CompileBindings="False">
                       <Border CornerRadius="6"
                               Padding="10"
                               Margin="0,0,0,8"
@@ -233,12 +235,21 @@
                                      Opacity="0.6"
                                      TextWrapping="Wrap"
                                      IsVisible="{Binding Notes, Converter={StaticResource HasText}}"/>
-                          <ComboBox
-                              ItemsSource="{Binding $parent[ListBox].((vms:HousekeepingViewModel)DataContext).Kanban.StaffOptions}"
-                              SelectedItem="{Binding AssignedTo}"
-                              FontSize="11"
-                              Width="150"
-                              HorizontalAlignment="Left"/>
+                          <StackPanel Orientation="Horizontal" Spacing="6">
+                            <ComboBox
+                                ItemsSource="{Binding $parent[ListBox].((vms:HousekeepingViewModel)DataContext).Kanban.StaffOptions}"
+                                SelectedItem="{Binding AssignedTo, Mode=TwoWay}"
+                                SelectionChanged="OnStaffAssignmentChanged"
+                                Tag="{Binding}"
+                                FontSize="11"
+                                Width="140"
+                                HorizontalAlignment="Left"/>
+                            <Button Content="Save"
+                                    FontSize="11"
+                                    Padding="8,4"
+                                    Command="{Binding $parent[ListBox].((vms:HousekeepingViewModel)DataContext).Kanban.AssignAttendantCommand}"
+                                    CommandParameter="{Binding}"/>
+                          </StackPanel>
                         </StackPanel>
                       </Border>
                     </DataTemplate>
@@ -249,6 +260,7 @@
 
             <!-- In Progress Column -->
             <Border Grid.Column="1"
+                    x:Name="InProgressColumn"
                     CornerRadius="8"
                     BorderBrush="#3F2F73"
                     BorderThickness="1"
@@ -269,11 +281,12 @@
                 </TextBlock>
 
                 <ListBox Grid.Row="2"
+                         x:Name="InProgressList"
                          ItemsSource="{Binding Kanban.InProgressView}"
                          Background="Transparent"
                          BorderThickness="0">
                   <ListBox.ItemTemplate>
-                    <DataTemplate>
+                    <DataTemplate x:CompileBindings="False">
                       <Border CornerRadius="6"
                               Padding="10"
                               Margin="0,0,0,8"
@@ -307,6 +320,7 @@
 
             <!-- Completed Column -->
             <Border Grid.Column="2"
+                    x:Name="CompletedColumn"
                     CornerRadius="8"
                     BorderBrush="#3F2F73"
                     BorderThickness="1"
@@ -327,11 +341,12 @@
                 </TextBlock>
 
                 <ListBox Grid.Row="2"
+                         x:Name="CompletedList"
                          ItemsSource="{Binding Kanban.CompletedView}"
                          Background="Transparent"
                          BorderThickness="0">
                   <ListBox.ItemTemplate>
-                    <DataTemplate>
+                    <DataTemplate x:CompileBindings="False">
                       <Border CornerRadius="6"
                               Padding="10"
                               Margin="0,0,0,8"

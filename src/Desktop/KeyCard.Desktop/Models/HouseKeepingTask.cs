@@ -1,54 +1,101 @@
 // Models/HousekeepingTask.cs
-using KeyCard.Desktop.Infrastructure;
-using KeyCard.Desktop.ViewModels;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 
 namespace KeyCard.Desktop.Models
 {
-    /// <summary>
-    /// Kanban task model with property change notifications
-    /// </summary>
-    public partial class HousekeepingTask : ViewModelBase
+    public class HousekeepingTask : INotifyPropertyChanged
     {
+        public event PropertyChangedEventHandler? PropertyChanged;
+
         private string _id = string.Empty;
         public string Id
         {
             get => _id;
-            set => SetProperty(ref _id, value);
+            set
+            {
+                if (_id != value)
+                {
+                    _id = value;
+                    OnPropertyChanged();
+                }
+            }
         }
 
         private int _roomId;
         public int RoomId
         {
             get => _roomId;
-            set => SetProperty(ref _roomId, value);
+            set
+            {
+                if (_roomId != value)
+                {
+                    _roomId = value;
+                    OnPropertyChanged();
+                }
+            }
         }
 
         private string _title = string.Empty;
         public string Title
         {
             get => _title;
-            set => SetProperty(ref _title, value);
+            set
+            {
+                if (_title != value)
+                {
+                    _title = value;
+                    OnPropertyChanged();
+                }
+            }
         }
 
         private string? _notes;
         public string? Notes
         {
             get => _notes;
-            set => SetProperty(ref _notes, value);
+            set
+            {
+                if (_notes != value)
+                {
+                    _notes = value;
+                    OnPropertyChanged();
+                }
+            }
         }
 
-        private HkTaskStatus _status = HkTaskStatus.Pending;
+        private HkTaskStatus _status;
         public HkTaskStatus Status
         {
             get => _status;
-            set => SetProperty(ref _status, value);
+            set
+            {
+                if (_status != value)
+                {
+                    _status = value;
+                    OnPropertyChanged();
+                }
+            }
         }
 
-        private string? _assignedTo;
-        public string? AssignedTo
+        private string _assignedTo = "— Unassigned —";
+        public string AssignedTo
         {
             get => _assignedTo;
-            set => SetProperty(ref _assignedTo, value);
+            set
+            {
+                if (_assignedTo != value)
+                {
+                    _assignedTo = value;
+                    OnPropertyChanged();
+                    // ✅ CRITICAL: Notify UI that this property changed!
+                }
+            }
+        }
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 }
