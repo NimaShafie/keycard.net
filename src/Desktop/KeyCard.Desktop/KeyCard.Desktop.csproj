@@ -108,6 +108,9 @@
     <AvaloniaXaml Update="Views\HousekeepingKanbanView.axaml">
       <SubType>Designer</SubType>
     </AvaloniaXaml>
+    <AvaloniaXaml Update="Views\ProfileWindow.axaml">
+      <SubType>Designer</SubType>
+    </AvaloniaXaml>
     <AvaloniaXaml Update="Views\RegistrationView.axaml">
       <SubType>Designer</SubType>
     </AvaloniaXaml>

@@ -1,4 +1,4 @@
-// /ViewModels/MainViewModel.cs
+// ViewModels/MainViewModel.cs
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -233,8 +233,25 @@ public partial class MainViewModel : ObservableObject
         // Flyout opens automatically from XAML
     }
 
+    // Open Profile as an overlay window (modal), like Settings
     [RelayCommand]
-    private void OpenProfile() => _nav.NavigateTo<ProfileViewModel>();
+    private async Task OpenProfile()
+    {
+        // Resolve dependencies for ProfileViewModel
+        var auth = _serviceProvider.GetRequiredService<IAuthService>();
+        var env = _serviceProvider.GetRequiredService<IAppEnvironment>();
+
+        // Create the modal window, pass VM as DataContext
+        var profileWindow = new ProfileWindow(new ProfileViewModel(auth, env));
+
+        // Find owner (main window) for proper modal behavior
+        var owner = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+
+        if (owner is not null)
+            await profileWindow.ShowDialog(owner);
+        else
+            profileWindow.Show(); // Fallback (shouldn't happen in desktop lifetime)
+    }
 
     // Open Settings as an overlay window (modal), instead of navigating away.
     [RelayCommand]
