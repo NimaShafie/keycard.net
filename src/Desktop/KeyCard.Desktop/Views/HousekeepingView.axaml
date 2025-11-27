@@ -3,6 +3,7 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vms="clr-namespace:KeyCard.Desktop.ViewModels"
+    xmlns:models="clr-namespace:KeyCard.Desktop.Models"
     xmlns:conv="clr-namespace:KeyCard.Desktop.Converters"
     x:Class="KeyCard.Desktop.Views.HousekeepingView"
     x:DataType="vms:HousekeepingViewModel"
@@ -19,7 +20,7 @@
 
   <Grid RowDefinitions="Auto,*" Margin="8">
 
-    <!-- Header with DEBUG STATUS -->
+    <!-- Header -->
     <Border Grid.Row="0"
             CornerRadius="10"
             BorderBrush="#3F2F73"
@@ -33,12 +34,10 @@
                      FontWeight="SemiBold"
                      FontSize="18"
                      Foreground="#E8E8F0"/>
-          <!-- DEBUG STATUS - RED AND VISIBLE -->
-          <TextBlock FontSize="13"
-                     FontWeight="Bold"
-                     Foreground="#FF4444"
-                     Margin="0,4,0,0"
-                     Text="{Binding StatusMessage}"/>
+          <TextBlock Text="Manage room status and cleaning tasks"
+                     FontSize="13"
+                     Foreground="#9090A0"
+                     Margin="0,2,0,0"/>
         </StackPanel>
 
         <TextBlock Grid.Column="1"
@@ -182,10 +181,8 @@
 
       <!-- Tab 2: Kanban Board with Drag-Drop -->
       <TabItem Header="Kanban Board" x:Name="KanbanTab">
-        <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                      VerticalScrollBarVisibility="Auto">
-          <Grid ColumnDefinitions="*,*,*" Margin="12"
-                x:DataType="vms:HousekeepingViewModel">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <Grid ColumnDefinitions="*,*,*" Margin="12" x:DataType="vms:HousekeepingViewModel">
 
             <!-- Pending Column -->
             <Border Grid.Column="0"
@@ -215,7 +212,7 @@
                          Background="Transparent"
                          BorderThickness="0">
                   <ListBox.ItemTemplate>
-                    <DataTemplate x:CompileBindings="False">
+                    <DataTemplate x:DataType="models:HousekeepingTask">
                       <Border CornerRadius="6"
                               Padding="10"
                               Margin="0,0,0,8"
@@ -235,21 +232,13 @@
                                      Opacity="0.6"
                                      TextWrapping="Wrap"
                                      IsVisible="{Binding Notes, Converter={StaticResource HasText}}"/>
-                          <StackPanel Orientation="Horizontal" Spacing="6">
-                            <ComboBox
-                                ItemsSource="{Binding $parent[ListBox].((vms:HousekeepingViewModel)DataContext).Kanban.StaffOptions}"
-                                SelectedItem="{Binding AssignedTo, Mode=TwoWay}"
-                                SelectionChanged="OnStaffAssignmentChanged"
-                                Tag="{Binding}"
-                                FontSize="11"
-                                Width="140"
-                                HorizontalAlignment="Left"/>
-                            <Button Content="Save"
-                                    FontSize="11"
-                                    Padding="8,4"
-                                    Command="{Binding $parent[ListBox].((vms:HousekeepingViewModel)DataContext).Kanban.AssignAttendantCommand}"
-                                    CommandParameter="{Binding}"/>
-                          </StackPanel>
+
+                          <ComboBox
+                              ItemsSource="{Binding $parent[UserControl].((vms:HousekeepingViewModel)DataContext).Kanban.StaffOptions}"
+                              SelectedItem="{Binding AssignedTo, Mode=TwoWay}"
+                              FontSize="11"
+                              Width="140"
+                              HorizontalAlignment="Left"/>
                         </StackPanel>
                       </Border>
                     </DataTemplate>
@@ -286,7 +275,7 @@
                          Background="Transparent"
                          BorderThickness="0">
                   <ListBox.ItemTemplate>
-                    <DataTemplate x:CompileBindings="False">
+                    <DataTemplate x:DataType="models:HousekeepingTask">
                       <Border CornerRadius="6"
                               Padding="10"
                               Margin="0,0,0,8"
@@ -346,7 +335,7 @@
                          Background="Transparent"
                          BorderThickness="0">
                   <ListBox.ItemTemplate>
-                    <DataTemplate x:CompileBindings="False">
+                    <DataTemplate x:DataType="models:HousekeepingTask">
                       <Border CornerRadius="6"
                               Padding="10"
                               Margin="0,0,0,8"
