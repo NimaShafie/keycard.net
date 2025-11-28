@@ -1,5 +1,6 @@
 // ViewModels/RegistrationViewModel.cs
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -18,10 +19,8 @@ namespace KeyCard.Desktop.ViewModels
         private string _firstName = string.Empty;
         private string _lastName = string.Empty;
         private string _username = string.Empty;
-        private string _email = string.Empty;
         private string _password = string.Empty;
         private string _confirmPassword = string.Empty;
-        private string _employeeId = string.Empty;
         private string _error = string.Empty;
         private bool _isBusy;
 
@@ -68,16 +67,6 @@ namespace KeyCard.Desktop.ViewModels
             }
         }
 
-        public string Email
-        {
-            get => _email;
-            set
-            {
-                if (SetProperty(ref _email, value))
-                    RaiseCanExecuteChanged();
-            }
-        }
-
         public string Password
         {
             get => _password;
@@ -96,12 +85,6 @@ namespace KeyCard.Desktop.ViewModels
                 if (SetProperty(ref _confirmPassword, value))
                     RaiseCanExecuteChanged();
             }
-        }
-
-        public string EmployeeId
-        {
-            get => _employeeId;
-            set => SetProperty(ref _employeeId, value);
         }
 
         public string Error
@@ -129,7 +112,6 @@ namespace KeyCard.Desktop.ViewModels
             !string.IsNullOrWhiteSpace(FirstName) &&
             !string.IsNullOrWhiteSpace(LastName) &&
             !string.IsNullOrWhiteSpace(Username) &&
-            !string.IsNullOrWhiteSpace(Email) &&
             !string.IsNullOrWhiteSpace(Password) &&
             !string.IsNullOrWhiteSpace(ConfirmPassword) &&
             Password.Length >= 8 &&
@@ -148,22 +130,31 @@ namespace KeyCard.Desktop.ViewModels
         {
             if (!CanRegister) return;
 
-            // Validate inputs
+            // Validate passwords match
             if (Password != ConfirmPassword)
             {
                 Error = "Passwords do not match.";
                 return;
             }
 
+            // Validate password length
             if (Password.Length < 8)
             {
                 Error = "Password must be at least 8 characters long.";
                 return;
             }
 
-            if (!Email.Contains("@"))
+            // Validate password complexity: 1 uppercase, 1 number, 1 special character
+            if (!HasPasswordComplexity(Password))
             {
-                Error = "Please enter a valid email address.";
+                Error = "Password must contain at least one uppercase letter, one number, and one special character.";
+                return;
+            }
+
+            // Validate username is not empty
+            if (string.IsNullOrWhiteSpace(Username))
+            {
+                Error = "Username is required.";
                 return;
             }
 
@@ -172,21 +163,22 @@ namespace KeyCard.Desktop.ViewModels
 
             try
             {
-                // ✅ CRITICAL FIX: Ensure LastName is never null or empty
-                // Backend expects LastName to build FullName
+                // Prepare cleaned inputs
                 var lastName = string.IsNullOrWhiteSpace(LastName) ? "User" : LastName.Trim();
                 var firstName = FirstName.Trim();
                 var username = Username.Trim();
-                var email = Email.Trim();
-                var employeeId = string.IsNullOrWhiteSpace(EmployeeId) ? null : EmployeeId.Trim();
+
+                // Generate a dummy email since backend expects it
+                // Using username@keycard.local for school project
+                var email = $"{username}@keycard.local";
 
                 var (success, errorMessage) = await _authService.RegisterStaffAsync(
                     username: username,
                     email: email,
                     password: Password,
                     firstName: firstName,
-                    lastName: lastName,  // ✅ Never null
-                    employeeId: employeeId,
+                    lastName: lastName,
+                    employeeId: null,  // No longer collecting employee ID
                     ct: ct
                 );
 
@@ -197,7 +189,16 @@ namespace KeyCard.Desktop.ViewModels
                 }
                 else
                 {
-                    Error = errorMessage ?? "Registration failed. Please try again.";
+                    // Check if error is about duplicate username
+                    if (errorMessage?.Contains("username", StringComparison.OrdinalIgnoreCase) == true ||
+                        errorMessage?.Contains("already exists", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        Error = "Username already exists. Please choose a different username.";
+                    }
+                    else
+                    {
+                        Error = errorMessage ?? "Registration failed. Please try again.";
+                    }
                 }
             }
             catch (Exception ex)
@@ -213,6 +214,24 @@ namespace KeyCard.Desktop.ViewModels
         private void BackToLogin()
         {
             _navigationService.NavigateTo<LoginViewModel>();
+        }
+
+        /// <summary>
+        /// Validates password complexity:
+        /// - At least one uppercase letter
+        /// - At least one number
+        /// - At least one special character
+        /// </summary>
+        private static bool HasPasswordComplexity(string password)
+        {
+            if (string.IsNullOrWhiteSpace(password))
+                return false;
+
+            bool hasUpper = password.Any(char.IsUpper);
+            bool hasDigit = password.Any(char.IsDigit);
+            bool hasSpecial = password.Any(c => !char.IsLetterOrDigit(c));
+
+            return hasUpper && hasDigit && hasSpecial;
         }
     }
 }

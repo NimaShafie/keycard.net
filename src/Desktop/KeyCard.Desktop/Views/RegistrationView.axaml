@@ -165,12 +165,6 @@
                        CornerRadius="8"/>
             </Grid>
 
-            <TextBox Watermark="Employee ID (optional)"
-                     Text="{Binding EmployeeId}"
-                     Height="42"
-                     Padding="14,0"
-                     CornerRadius="8"/>
-
             <!-- Account Information -->
             <TextBlock Text="Account Information"
                        FontSize="15"
@@ -185,20 +179,22 @@
                      Padding="14,0"
                      CornerRadius="8"/>
 
-            <TextBox Watermark="Email Address"
-                     Text="{Binding Email}"
-                     Height="42"
-                     Padding="14,0"
-                     CornerRadius="8"
-                     IsEnabled="{Binding !IsMockMode}"
-                     Opacity="{Binding IsMockMode, Converter={StaticResource MockModeOpacityConverter}}"/>
-
             <TextBox Watermark="Password (minimum 8 characters)"
                      PasswordChar="•"
                      Text="{Binding Password}"
                      Height="42"
                      Padding="14,0"
                      CornerRadius="8"/>
+
+            <!-- Password requirements info -->
+            <TextBlock FontSize="11"
+                       TextWrapping="Wrap"
+                       Opacity="0.7"
+                       Foreground="#B388FF"
+                       Margin="0,-8,0,0">
+              <Run Text="Password must contain:"/>
+              <Run Text="1 uppercase letter, 1 number, 1 special character"/>
+            </TextBlock>
 
             <TextBox Watermark="Confirm Password"
                      PasswordChar="•"
@@ -227,7 +223,7 @@
               </StackPanel>
             </Border>
 
-            <!-- Register button - FIXED: Added IsEnabled binding -->
+            <!-- Register button -->
             <Button Content="Create Account"
                     Command="{Binding RegisterCommand}"
                     IsEnabled="{Binding CanRegister}"
@@ -262,25 +258,14 @@
                          Foreground="#B388FF"/>
 
             <!-- Info text -->
-            <TextBlock Text="Note: Email address is not required in Mock mode."
+            <TextBlock Text="Note: Accounts are active as soon as you click &quot;Create Account&quot;"
                        FontSize="11"
                        TextWrapping="Wrap"
                        HorizontalAlignment="Center"
                        TextAlignment="Center"
                        Opacity="0.6"
                        Foreground="White"
-                       Margin="0,8,0,0"
-                       IsVisible="{Binding IsMockMode}"/>
-
-            <TextBlock Text="Note: New staff accounts require administrator approval before access is granted."
-                       FontSize="11"
-                       TextWrapping="Wrap"
-                       HorizontalAlignment="Center"
-                       TextAlignment="Center"
-                       Opacity="0.6"
-                       Foreground="White"
-                       Margin="0,8,0,0"
-                       IsVisible="{Binding !IsMockMode}"/>
+                       Margin="0,8,0,0"/>
           </StackPanel>
 
           <!-- Footer -->
