@@ -47,17 +47,17 @@ namespace KeyCard.Desktop.Services
 
         private bool EvaluateIsMock()
         {
-            // -------- 1) Explicit overrides (typed options) --------
-            // KeyCard:Mode = "Mock" | "Live" takes precedence over everything.
-            if (!string.IsNullOrWhiteSpace(_keyCard.Mode))
+            // -------- 1) Check UseMocks FIRST (highest priority from options) --------
+            if (_keyCard.UseMocks) return true;
+
+            // -------- 2) Check Mode from options --------
+            if (_keyCard.Mode != null)
             {
                 if (EqualsIgnoreCase(_keyCard.Mode, "Mock")) return true;
                 if (EqualsIgnoreCase(_keyCard.Mode, "Live")) return false;
             }
-            // KeyCard:UseMocks = true/false (typed)
-            if (_keyCard.UseMocks) return true;
 
-            // -------- 2) Fallbacks from raw config (covers env vars & unbound shapes) --------
+            // -------- 3) Fallbacks from raw config (covers env vars & unbound shapes) --------
             // Nested: KeyCard:UseMocks / KeyCard:Mode
             var useNested = _config["KeyCard:UseMocks"];
             var modeNested = _config["KeyCard:Mode"];
@@ -72,11 +72,11 @@ namespace KeyCard.Desktop.Services
             if (EqualsIgnoreCase(modeRoot, "Mock")) return true;
             if (EqualsIgnoreCase(modeRoot, "Live")) return false;
 
-            // -------- 3) Sensible default: Development => Mock --------
+            // -------- 4) Sensible default: Development => Mock --------
             // If nothing explicitly opted in or out, default to mocks in dev.
             if (_hostEnv.IsDevelopment()) return true;
 
-            // -------- 4) Otherwise assume Live --------
+            // -------- 5) Otherwise assume Live --------
             return false;
         }
 

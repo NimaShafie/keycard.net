@@ -101,6 +101,7 @@ namespace KeyCard.Desktop
 
                     AddJsonIfExists(cfg, "appsettings.json", optional: true, reloadOnChange: true);
                     AddJsonIfExists(cfg, $"appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: true);
+                    AddJsonIfExists(cfg, "appsettings.Local.json", optional: true, reloadOnChange: true);
 
                     if (!string.IsNullOrWhiteSpace(launchProfileTag))
                     {
@@ -112,7 +113,6 @@ namespace KeyCard.Desktop
                         WriteBreadcrumb("No profile override detected (DOTNET_LAUNCH_PROFILE/KEYCARD_MODE).");
                     }
 
-                    AddJsonIfExists(cfg, "appsettings.Local.json", optional: true, reloadOnChange: true);
                     cfg.AddEnvironmentVariables();
 
                     WriteBreadcrumb($"Config loaded for {env.EnvironmentName} — files: " +
@@ -129,6 +129,10 @@ namespace KeyCard.Desktop
                     services.Configure<ApiOptions>(ctx.Configuration.GetSection("Api"));
                     services.Configure<SignalROptions>(ctx.Configuration.GetSection("SignalR"));
                     services.Configure<RoutesOptions>(ctx.Configuration.GetSection("Api:Routes"));
+
+                    // DEBUG: Log what configuration values were loaded
+                    var keyCardSection = ctx.Configuration.GetSection("KeyCard");
+                    WriteBreadcrumb($"DEBUG KeyCard config: Mode='{keyCardSection["Mode"]}', UseMocks='{keyCardSection["UseMocks"]}'");
 
                     services.AddSingleton<IAppEnvironment, AppEnvironment>();
                     services.AddSingleton<IBookingStateService, BookingStateService>();

@@ -3,8 +3,8 @@ namespace KeyCard.Desktop.Configuration
 {
     public sealed class KeyCardOptions
     {
-        public string Mode { get; set; } = "Live";
-        public bool UseMocks { get; set; } // default(false) – no explicit initializer to satisfy CA1805
+        public string? Mode { get; set; }  // No default - let config files set it
+        public bool UseMocks { get; set; }  // default(false) – no explicit initializer to satisfy CA1805
     }
 
     public sealed class ApiOptions
