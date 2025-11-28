@@ -1,8 +1,7 @@
-// Services/Live/AuthServiceAdapter.cs
+// Services/Live/AuthServiceAdapter.cs - PRODUCTION VERSION (No Diagnostics)
 using System;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,7 +10,6 @@ namespace KeyCard.Desktop.Services.Live
 {
     /// <summary>
     /// Live adapter that calls the backend API for authentication.
-    /// Ensures all required fields are non-null before sending to backend.
     /// </summary>
     public sealed class AuthServiceAdapter : IAuthService
     {
@@ -106,46 +104,34 @@ namespace KeyCard.Desktop.Services.Live
         {
             try
             {
-                // ✅ CRITICAL FIX: Ensure LastName is never null
-                // Backend GuestSignupCommand expects LastName to be string? but
-                // AuthService.GuestSignupAsync assumes it's not null
                 var safeLastName = string.IsNullOrWhiteSpace(lastName) ? "User" : lastName.Trim();
                 var safeFirstName = string.IsNullOrWhiteSpace(firstName) ? "Guest" : firstName.Trim();
+                var safeUsername = username.Trim();
 
                 var payload = new
                 {
+                    Username = safeUsername,
                     Email = email.Trim(),
                     FirstName = safeFirstName,
-                    LastName = safeLastName,  // ✅ Never null or empty
+                    LastName = safeLastName,
                     Password = password
                 };
 
-                Console.WriteLine($"Attempting staff registration for {username} at api/Auth/guest/signup");
-                Console.WriteLine($"Payload: Email={payload.Email}, FirstName={payload.FirstName}, LastName={payload.LastName}");
-                Console.WriteLine($"Client BaseAddress: {Client.BaseAddress}");
-                Console.WriteLine($"Full URL will be: {Client.BaseAddress}api/Auth/guest/signup");
-
-                var response = await Client.PostAsJsonAsync("api/Auth/guest/signup", payload, ct);
-
-                Console.WriteLine($"Registration response: {(int)response.StatusCode} {response.ReasonPhrase}");
+                var response = await Client.PostAsJsonAsync("api/auth/staff/register", payload, ct);
 
                 if (response.IsSuccessStatusCode)
                 {
-                    Console.WriteLine("Registration successful!");
                     return (true, null);
                 }
 
-                // Try to read error message from response
+                // Try to parse error message
                 string? errorMessage = null;
                 try
                 {
-                    var errorContent = await response.Content.ReadAsStringAsync(ct);
-                    Console.WriteLine($"Error response content: {errorContent}");
-
-                    // Try to parse error message from JSON
-                    if (!string.IsNullOrWhiteSpace(errorContent))
+                    var responseBody = await response.Content.ReadAsStringAsync(ct);
+                    if (!string.IsNullOrWhiteSpace(responseBody))
                     {
-                        using var doc = JsonDocument.Parse(errorContent);
+                        using var doc = JsonDocument.Parse(responseBody);
                         if (doc.RootElement.TryGetProperty("message", out var msgElement))
                         {
                             errorMessage = msgElement.GetString();
@@ -154,9 +140,13 @@ namespace KeyCard.Desktop.Services.Live
                         {
                             errorMessage = titleElement.GetString();
                         }
+                        else if (doc.RootElement.TryGetProperty("errors", out var errorsElement))
+                        {
+                            errorMessage = errorsElement.ToString();
+                        }
                         else
                         {
-                            errorMessage = errorContent;
+                            errorMessage = responseBody;
                         }
                     }
                 }
@@ -166,14 +156,11 @@ namespace KeyCard.Desktop.Services.Live
                 }
 
                 errorMessage ??= $"Registration failed with status {(int)response.StatusCode}";
-                Console.WriteLine($"Registration failed: {errorMessage}");
                 return (false, errorMessage);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Registration exception: {ex.Message}");
-                Console.WriteLine($"Stack trace: {ex.StackTrace}");
-                return (false, $"Unable to connect to the server. Please check your connection and try again. Details: {ex.Message}");
+                return (false, $"Unable to connect to the server: {ex.Message}");
             }
         }
 
