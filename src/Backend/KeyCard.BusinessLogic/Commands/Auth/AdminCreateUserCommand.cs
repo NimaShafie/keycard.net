@@ -7,6 +7,7 @@ using MediatR;
 namespace KeyCard.BusinessLogic.Commands.Auth
 {
     public record AdminCreateUserCommand(
+        string Username,
         string FirstName,
         string? LastName,
         string Email,

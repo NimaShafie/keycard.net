@@ -3,14 +3,12 @@
     "KeyCard (Mock)": {
       "commandName": "Project",
       "environmentVariables": {
-        "DOTNET_ENVIRONMENT": "Development",
         "KEYCARD_MODE": "Mock"
       }
     },
     "KeyCard (Live)": {
       "commandName": "Project",
       "environmentVariables": {
-        "DOTNET_ENVIRONMENT": "Development",
         "KEYCARD_MODE": "Live"
       }
     }

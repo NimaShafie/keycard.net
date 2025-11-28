@@ -7,6 +7,7 @@ using KeyCard.BusinessLogic.ViewModels.Auth;
 using KeyCard.Infrastructure.Models.User;
 
 using MediatR;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -36,7 +37,7 @@ public class AuthController : ControllerBase
             var roles = await _userManager.GetRolesAsync(user);
             var authClaims = new List<Claim>
             {
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()), 
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Name, user.UserName ?? string.Empty),
                 new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
                 new Claim("FullName", user.FullName ?? string.Empty),
@@ -77,7 +78,24 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Admin: Create any user (Guest, Employee, or HouseKeeping)
+    /// Creates Employee accounts that can login to staff console
+    /// No authentication required - allows self-registration
+    /// </summary>
+    [HttpPost("staff/register")]
+    [ProducesResponseType(typeof(AuthResultViewModel), 200)]
+    public async Task<IActionResult> StaffRegister(
+        [FromBody] AdminCreateUserCommand command,
+        CancellationToken cancellationToken)
+    {
+        var staffCommand = command with { Role = "Employee" };
+
+        var result = await _mediator.Send(staffCommand, cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Admin: Create any user (Guest, Employee, HouseKeeping, or Admin)
+    /// Requires admin authorization
     /// </summary>
     [HttpPost("admin/CreateUser")]
     [Authorize(Roles = "Admin")]

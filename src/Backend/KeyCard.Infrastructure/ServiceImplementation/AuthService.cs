@@ -11,6 +11,7 @@ namespace KeyCard.Infrastructure.ServiceImplementation
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<ApplicationUserRole> _roleManager;
+
         public AuthService(UserManager<ApplicationUser> userManager,
             RoleManager<ApplicationUserRole> roleManager)
         {
@@ -20,18 +21,20 @@ namespace KeyCard.Infrastructure.ServiceImplementation
 
         public async Task<AuthResultViewModel> AdminCreateUserAsync(AdminCreateUserCommand command, CancellationToken cancellationToken)
         {
-            // Check if email already exists
-            var existing = await _userManager.FindByEmailAsync(command.Email);
-            if (existing != null)
+            var existingByUsername = await _userManager.FindByNameAsync(command.Username);
+            if (existingByUsername != null)
+                throw new InvalidOperationException("A user with this username already exists.");
+
+            var existingByEmail = await _userManager.FindByEmailAsync(command.Email);
+            if (existingByEmail != null)
                 throw new InvalidOperationException("A user with this email already exists.");
 
-            // Ensure role exists
             if (!await _roleManager.RoleExistsAsync(command.Role))
                 await _roleManager.CreateAsync(new ApplicationUserRole(command.Role));
 
             var user = new ApplicationUser
             {
-                UserName = command.Email,
+                UserName = command.Username,
                 Email = command.Email,
                 FirstName = command.FirstName,
                 LastName = command.LastName,
@@ -75,7 +78,6 @@ namespace KeyCard.Infrastructure.ServiceImplementation
             if (!result.Succeeded)
                 throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e => e.Description)));
 
-            // Ensure Guest role exists
             if (!await _roleManager.RoleExistsAsync("Guest"))
                 await _roleManager.CreateAsync(new ApplicationUserRole("Guest"));
 

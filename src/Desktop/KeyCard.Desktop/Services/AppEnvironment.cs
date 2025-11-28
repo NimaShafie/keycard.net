@@ -37,6 +37,19 @@ namespace KeyCard.Desktop.Services
             _isMock = EvaluateIsMock();
             _apiBaseUrl = ResolveApiBaseUrl();
             _bookingsHubUrl = ResolveBookingsHubUrl();
+
+            // DIAGNOSTIC LOGGING - helps debug mode issues
+#if DEBUG
+            System.Diagnostics.Debug.WriteLine("");
+            System.Diagnostics.Debug.WriteLine("╔══════════════════════════════════════════════╗");
+            System.Diagnostics.Debug.WriteLine("║       AppEnvironment Initialized             ║");
+            System.Diagnostics.Debug.WriteLine("╚══════════════════════════════════════════════╝");
+            System.Diagnostics.Debug.WriteLine($"Environment: {_hostEnv.EnvironmentName}");
+            System.Diagnostics.Debug.WriteLine($"IsMock: {_isMock}");
+            System.Diagnostics.Debug.WriteLine($"ApiBaseUrl: {_apiBaseUrl}");
+            System.Diagnostics.Debug.WriteLine($"BookingsHubUrl: {_bookingsHubUrl}");
+            System.Diagnostics.Debug.WriteLine("");
+#endif
         }
 
         public string EnvironmentName => _hostEnv.EnvironmentName;
@@ -47,12 +60,35 @@ namespace KeyCard.Desktop.Services
 
         private bool EvaluateIsMock()
         {
-            // -------- 1) Check UseMocks FIRST (highest priority from options) --------
-            if (_keyCard.UseMocks) return true;
+            // ✅ CRITICAL FIX: Check KEYCARD_MODE environment variable FIRST
+            // This is set by launchSettings.json and takes highest priority
+            var keycardModeEnv = Environment.GetEnvironmentVariable("KEYCARD_MODE");
+            if (!string.IsNullOrWhiteSpace(keycardModeEnv))
+            {
+#if DEBUG
+                System.Diagnostics.Debug.WriteLine($"KEYCARD_MODE env var: {keycardModeEnv}");
+#endif
+
+                if (EqualsIgnoreCase(keycardModeEnv, "Mock")) return true;
+                if (EqualsIgnoreCase(keycardModeEnv, "Live")) return false;
+            }
+
+            // -------- 1) Check UseMocks from options (second priority) --------
+            if (_keyCard.UseMocks)
+            {
+#if DEBUG
+                System.Diagnostics.Debug.WriteLine("UseMocks=true from KeyCardOptions");
+#endif
+                return true;
+            }
 
             // -------- 2) Check Mode from options --------
             if (_keyCard.Mode != null)
             {
+#if DEBUG
+                System.Diagnostics.Debug.WriteLine($"Mode={_keyCard.Mode} from KeyCardOptions");
+#endif
+
                 if (EqualsIgnoreCase(_keyCard.Mode, "Mock")) return true;
                 if (EqualsIgnoreCase(_keyCard.Mode, "Live")) return false;
             }
@@ -61,23 +97,61 @@ namespace KeyCard.Desktop.Services
             // Nested: KeyCard:UseMocks / KeyCard:Mode
             var useNested = _config["KeyCard:UseMocks"];
             var modeNested = _config["KeyCard:Mode"];
-            if (bool.TryParse(useNested, out var nestedFlag)) return nestedFlag;
-            if (EqualsIgnoreCase(modeNested, "Mock")) return true;
-            if (EqualsIgnoreCase(modeNested, "Live")) return false;
+            if (bool.TryParse(useNested, out var nestedFlag))
+            {
+#if DEBUG
+                System.Diagnostics.Debug.WriteLine($"KeyCard:UseMocks={nestedFlag} from config");
+#endif
+                return nestedFlag;
+            }
+            if (EqualsIgnoreCase(modeNested, "Mock"))
+            {
+#if DEBUG
+                System.Diagnostics.Debug.WriteLine("KeyCard:Mode=Mock from config");
+#endif
+                return true;
+            }
+            if (EqualsIgnoreCase(modeNested, "Live"))
+            {
+#if DEBUG
+                System.Diagnostics.Debug.WriteLine("KeyCard:Mode=Live from config");
+#endif
+                return false;
+            }
 
             // Root: UseMocks / Mode (if someone put them at the root)
             var useRoot = _config["UseMocks"];
             var modeRoot = _config["Mode"];
-            if (bool.TryParse(useRoot, out var rootFlag)) return rootFlag;
-            if (EqualsIgnoreCase(modeRoot, "Mock")) return true;
-            if (EqualsIgnoreCase(modeRoot, "Live")) return false;
+            if (bool.TryParse(useRoot, out var rootFlag))
+            {
+#if DEBUG
+                System.Diagnostics.Debug.WriteLine($"UseMocks={rootFlag} from root config");
+#endif
+                return rootFlag;
+            }
+            if (EqualsIgnoreCase(modeRoot, "Mock"))
+            {
+#if DEBUG
+                System.Diagnostics.Debug.WriteLine("Mode=Mock from root config");
+#endif
+                return true;
+            }
+            if (EqualsIgnoreCase(modeRoot, "Live"))
+            {
+#if DEBUG
+                System.Diagnostics.Debug.WriteLine("Mode=Live from root config");
+#endif
+                return false;
+            }
 
-            // -------- 4) Sensible default: Development => Mock --------
-            // If nothing explicitly opted in or out, default to mocks in dev.
-            if (_hostEnv.IsDevelopment()) return true;
+            // -------- 4) ⚠️ CHANGED: Default to LIVE instead of Mock --------
+            // This prevents the "stuck in mock mode" issue
+            // If you're in Development but didn't explicitly set Mock, assume Live
+#if DEBUG
+            System.Diagnostics.Debug.WriteLine("No mode specified - defaulting to LIVE");
+#endif
 
-            // -------- 5) Otherwise assume Live --------
-            return false;
+            return false;  // Changed from: if (_hostEnv.IsDevelopment()) return true;
         }
 
         private string ResolveApiBaseUrl()
