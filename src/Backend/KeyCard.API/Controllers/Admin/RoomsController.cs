@@ -1,3 +1,9 @@
+// ============================================================================
+// ADMIN ROOMS CONTROLLER - ROOM MANAGEMENT
+// for staff to manage rooms, check availability, update status
+// currently a bit empty but ready for more features!
+// ============================================================================
+
 using KeyCard.Api.Helper;
 using KeyCard.BusinessLogic.ViewModels.UserClaims;
 
@@ -8,6 +14,11 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace KeyCard.Api.Controllers.Admin
 {
+    /// <summary>
+    /// Room management endpoints for hotel staff
+    /// Admin, HouseKeeping, and Employee roles can access
+    /// TODO: add more endpoints like UpdateRoomStatus, GetRoomsByFloor, etc.
+    /// </summary>
     [ApiController]
     [Route("api/admin/[controller]")]
     [Authorize(Roles = "Admin,HouseKeeping,Employee")]
@@ -23,5 +34,11 @@ namespace KeyCard.Api.Controllers.Admin
             _contextAccessor = contextAccessor;
             _user = _contextAccessor.HttpContext!.User.GetUser();
         }
+        
+        // TODO: Add endpoints for:
+        // - GET all rooms with their current status
+        // - PUT room status (Vacant, Occupied, Dirty, Maintenance)
+        // - GET rooms by floor
+        // - POST mark room for maintenance
     }
 }
