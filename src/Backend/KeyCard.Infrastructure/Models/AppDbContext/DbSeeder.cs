@@ -1,10 +1,3 @@
-// ============================================================================
-// DB SEEDER - INITIAL DATA SETUP
-// populates database with sample data on first run
-// creates admin user, sample rooms, room types, amenities, test guests
-// makes it easy to start testing without manual data entry!
-// ============================================================================
-
 using KeyCard.Core.Common;
 using KeyCard.Infrastructure.Models.Entities;
 using KeyCard.Infrastructure.Models.User;
@@ -15,55 +8,35 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace KeyCard.Infrastructure.Models.AppDbContext
 {
-    /// <summary>
-    /// Database seeder - creates initial data for development and testing
-    /// Runs on every app startup but only inserts if data is missing
-    /// Safe to run multiple times - wont create duplicates!
-    /// </summary>
     public static class DbSeeder
     {
-        /// <summary>
-        /// Main entry point - seeds all data in correct order
-        /// Order matters! Hotels before rooms, rooms before bookings, etc.
-        /// </summary>
         public static async Task SeedAsync(IServiceProvider serviceProvider)
         {
-            // first: roles and admin user (needed for everything else)
             await SeedRolesAndAdminAsync(serviceProvider);
-            
-            // hotel info (name, address, contact)
             await SeedHotelsAsync(serviceProvider);
 
-            // room types (Single, Double, Suite...) then actual rooms
             await SeedRoomTypesAsync(serviceProvider);
             await SeedRoomsAsync(serviceProvider);
 
-            // amenities (WiFi, TV, etc.) and link them to room types
             await SeedAmenitiesAsync(serviceProvider);          
             await SeedRoomTypeAmenitiesAsync(serviceProvider); 
 
-            // sample users for testing
             await SeedStaffUsersAsync(serviceProvider);
             await SeedGuestUsersAsync(serviceProvider);
         }
 
-        // ==================== ROLES AND ADMIN ====================
-        
         #region Admin and Roles
         /// <summary>
-        /// Create default roles and a superadmin user
-        /// Roles: Admin, Employee, HouseKeeping, Guest
-        /// Admin account: admin / Admin@123 (change in production!!)
+        /// Seed default roles and an admin user
         /// </summary>
         public static async Task SeedRolesAndAdminAsync(IServiceProvider serviceProvider)
         {
             var roleManager = serviceProvider.GetRequiredService<RoleManager<ApplicationUserRole>>();
             var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
-            // the 4 main roles in our system
             string[] roles = { "Admin", "Employee", "HouseKeeping", "Guest" };
 
-            // create roles if they dont exist yet
+            // Create roles if they don't exist
             foreach (var role in roles)
             {
                 if (!await roleManager.RoleExistsAsync(role))
@@ -72,8 +45,7 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                 }
             }
 
-            // create the default admin account
-            // WARNING: change password in production environment!
+            // Create a default Admin
             var adminEmail = "admin@hotel.com";
             var adminUser = await userManager.FindByEmailAsync(adminEmail);
 
@@ -86,17 +58,16 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                     LastName = "Administrator",
                     Email = adminEmail,
                     FullName = "System Administrator",
-                    EmailConfirmed = true  // skip email verification
+                    EmailConfirmed = true
                 };
 
-                // Admin@123 - meets password requirements (uppercase, lowercase, number, special char)
                 var result = await userManager.CreateAsync(adminUser, "Admin@123");
 
                 if (result.Succeeded)
                 {
                     await userManager.AddToRoleAsync(adminUser, "Admin");
 
-                    // extra claim for future permission checks
+                    // Optional claim
                     await userManager.AddClaimAsync(adminUser,
                         new System.Security.Claims.Claim("Permission", "ManageSystem"));
                 }
@@ -104,18 +75,11 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
         }
         #endregion
 
-        // ==================== HOTEL INFO ====================
-        
         #region Hotel
-        /// <summary>
-        /// Create the hotel record - name, address, contact info
-        /// In production, this might be configured differently
-        /// </summary>
         private static async Task SeedHotelsAsync(IServiceProvider serviceProvider)
         {
             var context = serviceProvider.GetRequiredService<ApplicationDBContext>();
 
-            // already have a hotel? skip
             if (await context.Hotels.AnyAsync()) return;
 
             var hotel = new Hotel
@@ -127,7 +91,7 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                 ContactEmail = "info@keycardhotel.com",
                 ContactPhone = "+1 (555) 555-5555",
                 CreatedAt = DateTime.UtcNow,
-                CreatedBy = 0 // System user ID
+                CreatedBy = 0 // System
             };
 
             context.Hotels.Add(hotel);
@@ -135,13 +99,7 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
         }
         #endregion
 
-        // ==================== ROOM TYPES ====================
-        
         #region RoomTypes
-        /// <summary>
-        /// Create room type categories with different prices
-        /// Single ($80) → Double ($120) → King ($160) → Deluxe ($220) → Penthouse ($350)
-        /// </summary>
         private static async Task SeedRoomTypesAsync(IServiceProvider serviceProvider)
         {
             var context = serviceProvider.GetRequiredService<ApplicationDBContext>();
@@ -149,7 +107,6 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
 
             var hotel = await context.Hotels.FirstAsync();
 
-            // room types from budget to luxury
             var roomTypes = new[]
             {
                 new RoomType { Name = "Single Bed", Description = "Compact room with a single bed, ideal for solo travelers.", Capacity = 1, BaseRate = 80, HotelId = hotel.Id },
@@ -162,7 +119,7 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
             foreach (var type in roomTypes)
             {
                 type.CreatedAt = DateTime.UtcNow;
-                type.CreatedBy = 0;
+                type.CreatedBy = 0; // System
             }
 
             context.RoomTypes.AddRange(roomTypes);
@@ -170,14 +127,7 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
         }
         #endregion
 
-        // ==================== ACTUAL ROOMS ====================
-        
         #region Rooms
-        /// <summary>
-        /// Create actual room instances for each room type
-        /// Room numbers follow pattern: 1st floor = 100s, 2nd floor = 200s, etc.
-        /// More singles and doubles, fewer penthouses (realistic distribution)
-        /// </summary>
         private static async Task SeedRoomsAsync(IServiceProvider serviceProvider)
         {
             var context = serviceProvider.GetRequiredService<ApplicationDBContext>();
@@ -191,8 +141,6 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
 
             foreach (var type in roomTypes)
             {
-                // room numbers start at different floors based on type
-                // singles on 1st floor (100s), doubles on 2nd (200s), etc.
                 int start = type.Name switch
                 {
                     "Single Bed" => 100,
@@ -203,32 +151,30 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                     _ => 600
                 };
 
-                // how many rooms of each type
-                // lots of basic rooms, few fancy ones
                 int count = type.Name switch
                 {
-                    "Single Bed" => 10,      // 100-109
-                    "Double Bed" => 12,      // 200-211
-                    "King Size" => 8,        // 300-307
-                    "Deluxe Suite" => 5,     // 400-404
-                    "Penthouse Suite" => 2,  // 500-501
+                    "Single Bed" => 10,
+                    "Double Bed" => 12,
+                    "King Size" => 8,
+                    "Deluxe Suite" => 5,
+                    "Penthouse Suite" => 2,
                     _ => 0
                 };
 
                 for (int i = 0; i < count; i++)
                 {
                     int roomNumber = start + i;
-                    var floor = (roomNumber / 100).ToString();  // 305 → floor "3"
+                    var floor = (roomNumber / 100).ToString();
 
                     rooms.Add(new Room
                     {
                         RoomNumber = roomNumber.ToString(),
                         Floor = floor,
-                        Status = RoomStatus.Vacant,  // all rooms start as vacant
+                        Status = RoomStatus.Vacant,
                         RoomTypeId = type.Id,
                         HotelId = hotel.Id,
                         CreatedAt = DateTime.UtcNow,
-                        CreatedBy = 0
+                        CreatedBy = 0 // System
                     });
                 }
             }
@@ -238,14 +184,7 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
         }
         #endregion
 
-        // ==================== AMENITIES ====================
-        
         #region Amenities
-        /// <summary>
-        /// Create amenity definitions - the features rooms can have
-        /// WiFi, TV, coffee maker, etc.
-        /// Each has a key (for code), label (for display), and icon
-        /// </summary>
         private static async Task SeedAmenitiesAsync(IServiceProvider serviceProvider)
         {
             var context = serviceProvider.GetRequiredService<ApplicationDBContext>();
@@ -253,16 +192,11 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
 
             var amenities = new List<Amenity>
             {
-                // basic amenities most rooms have
                 new Amenity { Key = "wifi", Label = "Free WiFi", IconKey = "wifi", CreatedAt = DateTime.UtcNow, CreatedBy = 0 },
                 new Amenity { Key = "tv", Label = "Smart TV", IconKey = "tv", CreatedAt = DateTime.UtcNow, CreatedBy = 0 },
-                
-                // coffee options - basic rooms get regular, suites get espresso
-                new Amenity { Key = "coffee", Label = "Coffee Maker", IconKey = "coffee", CreatedAt = DateTime.UtcNow, CreatedBy = 0 },
-                new Amenity { Key = "espresso", Label = "Espresso Machine", IconKey = "coffee", CreatedAt = DateTime.UtcNow, CreatedBy = 0 },
-                
-                // capacity indicator
-                new Amenity { Key = "guests", Label = "Max Guests", IconKey = "users", CreatedAt = DateTime.UtcNow, CreatedBy = 0 },
+                new Amenity {Key = "coffee", Label = "Coffee Maker", IconKey = "coffee", CreatedAt = DateTime.UtcNow, CreatedBy = 0 },
+                new Amenity {Key = "espresso", Label = "Espresso Machine", IconKey = "coffee", CreatedAt = DateTime.UtcNow, CreatedBy = 0 },
+                new Amenity {Key = "guests", Label = "Max Guests", IconKey = "users", CreatedAt = DateTime.UtcNow, CreatedBy = 0 },
             };
 
             context.Amenities.AddRange(amenities);
@@ -270,14 +204,8 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
         }
         #endregion
 
-        // ==================== ROOM TYPE AMENITY LINKS ====================
-        
         #region RoomTypeAmenities
-        /// <summary>
-        /// Link amenities to room types with specific values
-        /// e.g., "King Size room has 43 inch TV"
-        /// Fancier rooms get better amenities (bigger TV, espresso instead of drip coffee)
-        /// </summary>
+
         private static async Task SeedRoomTypeAmenitiesAsync(IServiceProvider serviceProvider)
         {
             var context = serviceProvider.GetRequiredService<ApplicationDBContext>();
@@ -288,13 +216,12 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                 .Where(rt => rt.HotelId == hotel.Id)
                 .ToListAsync();
 
-            // get amenity IDs by key for easy lookup
             var amenityIds = await context.Amenities
                 .ToDictionaryAsync(a => a.Key, a => a.Id);
 
             foreach (var rt in roomTypes)
             {
-                // ===== WiFi - EVERYONE gets WiFi (its 2024!) =====
+                // All rooms: WiFi
                 context.RoomTypeAmenities.Add(new RoomTypeAmenity
                 {
                     RoomTypeId = rt.Id,
@@ -303,29 +230,28 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                     CreatedBy = 0
                 });
 
-                // ===== TV - bigger rooms get bigger TVs =====
+                // TV size by type
                 var tvInches = rt.Name switch
                 {
-                    "Single Bed" => 32,       // compact room, small TV
-                    "Double Bed" => 32,       // still modest
-                    "King Size" => 43,        // nice upgrade
-                    "Deluxe Suite" => 55,     // big screen!
-                    "Penthouse Suite" => 65,  // home theater vibes
+                    "Single Bed" => 32,
+                    "Double Bed" => 32,
+                    "King Size" => 43,
+                    "Deluxe Suite" => 55,
+                    "Penthouse Suite" => 65,
                     _ => 32
                 };
                 context.RoomTypeAmenities.Add(new RoomTypeAmenity
                 {
                     RoomTypeId = rt.Id,
                     AmenityId = amenityIds["tv"],
-                    Value = tvInches.ToString() + " inch",  // e.g., "55 inch"
+                    Value = tvInches.ToString() + " inch",
                     CreatedAt = DateTime.UtcNow,
                     CreatedBy = 0
                 });
 
-                // ===== Coffee - suites get fancy espresso, others get regular =====
+                // Coffee vs Espresso
                 if (rt.Name is "Deluxe Suite" or "Penthouse Suite")
                 {
-                    // fancy rooms get espresso machine
                     context.RoomTypeAmenities.Add(new RoomTypeAmenity
                     {
                         RoomTypeId = rt.Id,
@@ -336,7 +262,6 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                 }
                 else
                 {
-                    // regular rooms get standard coffee maker
                     context.RoomTypeAmenities.Add(new RoomTypeAmenity
                     {
                         RoomTypeId = rt.Id,
@@ -349,32 +274,25 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
 
             await context.SaveChangesAsync();
         }
+
+
         #endregion
 
-        // ==================== SAMPLE GUEST ACCOUNTS ====================
-        
         #region Guests
-        /// <summary>
-        /// Create sample guest accounts for testing
-        /// All use password "Guest@123"
-        /// These are the people who stay at the hotel
-        /// </summary>
         private static async Task SeedGuestUsersAsync(IServiceProvider serviceProvider)
         {
             var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
             var roleManager = serviceProvider.GetRequiredService<RoleManager<ApplicationUserRole>>();
 
-            // check if Guest role exists
+            // Just check if any user is already in the Guest role
             var guestRole = await roleManager.FindByNameAsync("Guest");
             if (guestRole == null)
-                return;
+                return; // Role not created yet (shouldn't happen)
 
-            // already have guests? skip
             var anyGuest = (await userManager.GetUsersInRoleAsync("Guest")).Any();
             if (anyGuest)
-                return;
+                return; // Already seeded
 
-            // sample guests with realistic-ish data
             var guests = new List<(string FirstName, string LastName, string Email, string Address, string Country)>
             {
                 ("John", "Doe", "john.doe@guest.com", "123 Demo Street", "USA"),
@@ -391,17 +309,16 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
 
                 var user = new ApplicationUser
                 {
-                    UserName = firstName + lastName,  // JohnDoe
+                    UserName = firstName + lastName,
                     Email = email,
                     FirstName = firstName,
                     LastName = firstName + " " + lastName,
-                    FullName = lastName + " " + firstName,  // "Doe John"
+                    FullName = lastName + " " + firstName,
                     Address = address,
                     Country = country,
                     EmailConfirmed = true
                 };
 
-                // Guest@123 - simple password for testing
                 var result = await userManager.CreateAsync(user, "Guest@123");
                 if (result.Succeeded)
                 {
@@ -411,23 +328,15 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
         }
         #endregion
 
-        // ==================== SAMPLE STAFF ACCOUNTS ====================
-        
         #region Staff
-        /// <summary>
-        /// Create sample staff accounts for testing
-        /// Sarah = front desk employee, David = housekeeping
-        /// All use password "Staff@123"
-        /// </summary>
         private static async Task SeedStaffUsersAsync(IServiceProvider serviceProvider)
         {
             var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
-            // sample staff members
             var staffList = new List<(string FirstName, string LastName, string Email, string Role)>
             {
-                ("Sarah", "Johnson", "sarah.johnson@hotel.com", "Employee"),    // front desk
-                ("David", "Clark", "david.clark@hotel.com", "HouseKeeping")     // cleaning staff
+                ("Sarah", "Johnson" ,"sarah.johnson@hotel.com", "Employee"),
+                ("David" , "Clark", "david.clark@hotel.com", "HouseKeeping")
             };
 
             foreach (var (firstName, lastName, email, role) in staffList)
@@ -437,7 +346,7 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
 
                 var user = new ApplicationUser
                 {
-                    UserName = email,  // staff login with email
+                    UserName = email,
                     Email = email,
                     FirstName = firstName,
                     LastName = lastName,
@@ -445,7 +354,6 @@ namespace KeyCard.Infrastructure.Models.AppDbContext
                     EmailConfirmed = true
                 };
 
-                // Staff@123 - simple password for testing
                 var result = await userManager.CreateAsync(user, "Staff@123");
                 if (result.Succeeded)
                     await userManager.AddToRoleAsync(user, role);
