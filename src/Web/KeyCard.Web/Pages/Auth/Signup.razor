@@ -2,69 +2,141 @@
 @inject IHttpClientFactory Http
 @inject NavigationManager Nav
 
-<div class="min-h-screen flex items-center justify-center bg-slate-100 px-4">
-    <div class="w-full max-w-md bg-white p-8 rounded-xl shadow">
-
-        <h1 class="text-2xl font-bold mb-6 text-center">Create Account</h1>
-
-        <div class="space-y-4">
-            <input @bind="Name"
-                   placeholder="Full name"
-                   class="w-full px-4 py-2 border rounded-lg" />
-
-            <input @bind="Email"
-                   type="email"
-                   placeholder="Email"
-                   class="w-full px-4 py-2 border rounded-lg" />
-
-            <input @bind="Password"
-                   type="password"
-                   placeholder="Password"
-                   class="w-full px-4 py-2 border rounded-lg" />
-
-            <button @onclick="SignupUser"
-                    class="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700">
-                Sign Up
-            </button>
-
-            <p class="text-center text-sm">
-                Already have an account?
-                <a href="/auth/login" class="text-blue-600 underline">Login</a>
-            </p>
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4">
+    <div class="w-full max-w-md">
+        <!-- Logo -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-amber-500 text-white text-2xl mb-4">
+                🔑
+            </div>
+            <h1 class="text-3xl font-bold text-white">KeyCard</h1>
+            <p class="text-slate-400 mt-1">Create Your Account</p>
         </div>
 
-        @if (!string.IsNullOrEmpty(ErrorMessage))
-        {
-            <div class="mt-4 text-red-500 text-center">@ErrorMessage</div>
-        }
+        <!-- Signup Card -->
+        <div class="bg-white/10 backdrop-blur-lg p-8 rounded-3xl border border-white/20 shadow-2xl">
+            <h2 class="text-xl font-semibold text-white mb-6 text-center">Get Started</h2>
+
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm text-slate-300 mb-1">First Name</label>
+                        <input @bind="FirstName"
+                               placeholder="John"
+                               class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-300 mb-1">Last Name</label>
+                        <input @bind="LastName"
+                               placeholder="Doe"
+                               class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm text-slate-300 mb-1">Email</label>
+                    <input @bind="Email"
+                           type="email"
+                           placeholder="your@email.com"
+                           class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
+                </div>
+
+                <div>
+                    <label class="block text-sm text-slate-300 mb-1">Password</label>
+                    <input @bind="Password"
+                           type="password"
+                           placeholder="••••••••"
+                           class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
+                    <p class="text-xs text-slate-500 mt-1">Min 6 characters with uppercase, number & symbol</p>
+                </div>
+
+                <button @onclick="SignupUser"
+                        disabled="@IsLoading"
+                        class="w-full bg-amber-500 text-slate-900 font-semibold py-3 rounded-xl hover:bg-amber-400 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                    @if (IsLoading)
+                    {
+                        <span>Creating Account...</span>
+                    }
+                    else
+                    {
+                        <span>Create Account</span>
+                    }
+                </button>
+
+                <p class="text-center text-sm text-slate-400">
+                    Already have an account?
+                    <a href="/auth/login" class="text-amber-400 hover:text-amber-300 underline">Sign in</a>
+                </p>
+            </div>
+
+            @if (!string.IsNullOrEmpty(SuccessMessage))
+            {
+                <div class="mt-4 p-3 bg-emerald-500/20 border border-emerald-500/50 rounded-xl text-emerald-300 text-sm text-center">
+                    @SuccessMessage
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <div class="mt-4 p-3 bg-red-500/20 border border-red-500/50 rounded-xl text-red-300 text-sm text-center">
+                    @ErrorMessage
+                </div>
+            }
+        </div>
+
+        <p class="text-center text-xs text-slate-500 mt-6">
+            © 2025 KeyCard Hotel Management
+        </p>
     </div>
 </div>
 
 @code {
-    private string Name { get; set; }
-    private string Email { get; set; }
-    private string Password { get; set; }
-    private string ErrorMessage { get; set; }
+    private string FirstName { get; set; } = "";
+    private string LastName { get; set; } = "";
+    private string Email { get; set; } = "";
+    private string Password { get; set; } = "";
+    private string? ErrorMessage { get; set; }
+    private string? SuccessMessage { get; set; }
+    private bool IsLoading { get; set; }
 
     private async Task SignupUser()
     {
-        var client = Http.CreateClient("api");
+        ErrorMessage = null;
+        SuccessMessage = null;
+        IsLoading = true;
 
-        var body = new
+        try
         {
-            fullName = Name,
-            email = Email,
-            password = Password
-        };
+            var client = Http.CreateClient("api");
 
-        var response = await client.PostAsJsonAsync("/api/Auth/guest/signup", body);
+            var body = new
+            {
+                firstName = FirstName,
+                lastName = LastName,
+                email = Email,
+                password = Password
+            };
 
-        if (!response.IsSuccessStatusCode)
-        {
-            ErrorMessage = "Signup failed.";
-            return;
+            var response = await client.PostAsJsonAsync("/api/Auth/guest/signup", body);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                ErrorMessage = "Signup failed. Please check your details.";
+                return;
+            }
+
+            SuccessMessage = "Account created! Redirecting to login...";
+            await Task.Delay(1500);
+            Nav.NavigateTo("/auth/login");
         }
-
-        Nav.NavigateTo("/auth/login");
+        catch (Exception)
+        {
+            ErrorMessage = "Unable to connect to server. Please try again.";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 }

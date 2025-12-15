@@ -34,6 +34,33 @@ namespace KeyCard.Api.Controllers.Guest
         }
 
         /// <summary>
+        /// Create a new booking. Works with or without login.
+        /// If not logged in, provide guestEmail, guestFirstName, guestLastName.
+        /// </summary>
+        [HttpPost]
+        [AllowAnonymous]
+        public async Task<IActionResult> CreateBooking([FromBody] CreateGuestBookingCommand command, CancellationToken cancellationToken)
+        {
+            // Get user info if authenticated, otherwise null
+            var user = User.Identity?.IsAuthenticated == true ? User.GetUser() : null;
+            
+            var commandWithUser = new CreateGuestBookingCommand(
+                command.RoomTypeId,
+                command.CheckInDate,
+                command.CheckOutDate,
+                command.Adults,
+                command.Children,
+                command.IsPrepaid,
+                command.GuestEmail,
+                command.GuestFirstName,
+                command.GuestLastName
+            ) { User = user };
+            
+            var result = await _mediator.Send(commandWithUser, cancellationToken);
+            return Ok(result);
+        }
+
+        /// <summary>
         /// Lookup booking by confirmation code or email (pre-login, kiosk use).
         /// </summary>
         [AllowAnonymous]
@@ -46,13 +73,25 @@ namespace KeyCard.Api.Controllers.Guest
         }
 
         /// <summary>
-        /// Check in the currently authenticated guest’s booking.
+        /// Check in the currently authenticated guest's booking.
         /// </summary>
         [Authorize(Roles = "Guest")]
         [HttpPost("{bookingId:int}/checkin")]
         public async Task<IActionResult> GuestCheckIn(int bookingId, CancellationToken cancellationToken)
         {
             var command = new GuestCheckInCommand(bookingId, User.GetUserId()) { User = User.GetUser()};
+            var result = await _mediator.Send(command, cancellationToken);
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Check out the currently authenticated guest's booking.
+        /// </summary>
+        [Authorize(Roles = "Guest")]
+        [HttpPost("{bookingId:int}/checkout")]
+        public async Task<IActionResult> GuestCheckOut(int bookingId, CancellationToken cancellationToken)
+        {
+            var command = new GuestCheckOutCommand(bookingId, User.GetUserId()) { User = User.GetUser() };
             var result = await _mediator.Send(command, cancellationToken);
             return Ok(result);
         }

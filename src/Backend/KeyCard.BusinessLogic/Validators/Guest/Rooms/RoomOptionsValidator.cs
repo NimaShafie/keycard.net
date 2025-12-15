@@ -14,8 +14,8 @@ namespace KeyCard.BusinessLogic.Validators.Guest.Rooms
     {
         public RoomOptionsValidator()
         {
-            // Today in UTC
-            var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+            // Use local date to avoid timezone issues - allow same day bookings
+            var today = DateOnly.FromDateTime(DateTime.Today);
              
             RuleFor(x => x.CheckIn)
               .Must(ci => ci >= today)

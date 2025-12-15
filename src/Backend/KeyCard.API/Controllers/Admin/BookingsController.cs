@@ -26,6 +26,8 @@ public class BookingsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "FrontDesk,Admin,Guest")]
+
     public async Task<ActionResult<BookingViewModel>> CreateBooking([FromBody] CreateBookingCommand request)
     {
         request.User = _user;
@@ -33,7 +35,7 @@ public class BookingsController : ControllerBase
         return Ok(result);
     }
 
-    // GET /api/v1/bookings/{id}
+    // GET /api/bookings/{id}
     [HttpGet("{id:int}")]
     public async Task<ActionResult<BookingViewModel>> GetBookingById(int id)
     {

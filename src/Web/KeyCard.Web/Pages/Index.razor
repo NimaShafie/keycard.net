@@ -1,9 +1,74 @@
 @page "/"
 @inject NavigationManager Nav
 
+<div class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center px-4">
+    <div class="w-full max-w-lg">
+        <!-- Logo & Welcome -->
+        <div class="text-center mb-10">
+            <div class="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-amber-500 text-white text-4xl mb-6 shadow-lg shadow-amber-500/30">
+                🔑
+            </div>
+            <h1 class="text-4xl font-bold text-white mb-2">KeyCard</h1>
+            <p class="text-slate-400 text-lg">Hotel Guest Portal</p>
+        </div>
+
+        <!-- Options Cards -->
+        <div class="space-y-4">
+            <!-- Lookup Booking -->
+            <button @onclick="GoToLookup"
+                    class="w-full bg-white/10 backdrop-blur-lg p-6 rounded-2xl border border-white/20 hover:bg-white/20 transition text-left group">
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 rounded-xl bg-amber-500 flex items-center justify-center text-2xl group-hover:scale-110 transition">
+                        🔍
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold text-white">Find My Booking</h3>
+                        <p class="text-slate-400 text-sm">Look up with confirmation code</p>
+                    </div>
+                    <span class="text-slate-400 group-hover:text-white transition">→</span>
+                </div>
+            </button>
+
+            <!-- New Booking -->
+            <button @onclick="GoToNewBooking"
+                    class="w-full bg-white/10 backdrop-blur-lg p-6 rounded-2xl border border-white/20 hover:bg-white/20 transition text-left group">
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 rounded-xl bg-emerald-500 flex items-center justify-center text-2xl group-hover:scale-110 transition">
+                        📅
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold text-white">Make a Reservation</h3>
+                        <p class="text-slate-400 text-sm">Book your perfect room</p>
+                    </div>
+                    <span class="text-slate-400 group-hover:text-white transition">→</span>
+                </div>
+            </button>
+
+            <!-- Login for Existing Users -->
+            <button @onclick="GoToLogin"
+                    class="w-full bg-white/10 backdrop-blur-lg p-6 rounded-2xl border border-white/20 hover:bg-white/20 transition text-left group">
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 rounded-xl bg-blue-500 flex items-center justify-center text-2xl group-hover:scale-110 transition">
+                        👤
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold text-white">Sign In</h3>
+                        <p class="text-slate-400 text-sm">Access your account & bookings</p>
+                    </div>
+                    <span class="text-slate-400 group-hover:text-white transition">→</span>
+                </div>
+            </button>
+        </div>
+
+        <!-- Footer -->
+        <p class="text-center text-xs text-slate-500 mt-10">
+            © 2025 KeyCard Hotel Management. All rights reserved.
+        </p>
+    </div>
+</div>
+
 @code {
-  protected override void OnInitialized()
-  {
-    Nav.NavigateTo("/auth/login", true);
-  }
+    private void GoToLookup() => Nav.NavigateTo("/booking/lookup");
+    private void GoToNewBooking() => Nav.NavigateTo("/dates");
+    private void GoToLogin() => Nav.NavigateTo("/auth/login");
 }

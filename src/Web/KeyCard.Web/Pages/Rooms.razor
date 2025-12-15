@@ -1,225 +1,354 @@
 @page "/rooms"
 @inject NavigationManager Nav
+@inject IHttpClientFactory Http
+@inject KeyCard.Web.Services.BookingStateService BookingState
+@inject KeyCard.Web.Services.AuthStateService AuthState
 
-<div class="min-h-screen bg-slate-50 flex justify-center px-4 py-10">
-    <div class="w-full max-w-4xl mx-auto">
-        <!-- Top header -->
-        <div class="flex flex-col items-center mb-8">
-            <div class="flex items-center justify-center h-12 w-12 rounded-full bg-slate-900 text-white mb-4">
-                🏨
+<div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-10 px-4">
+    <div class="max-w-4xl mx-auto">
+        <!-- Progress Steps -->
+        <div class="flex items-center justify-center gap-2 mb-8">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center text-sm">✓</div>
+                <span class="text-sm text-slate-500">Dates</span>
             </div>
-            <h1 class="text-2xl font-bold mb-1">Book Your Stay</h1>
-            <p class="text-sm text-slate-500">Choose your perfect room</p>
+            <div class="w-8 h-px bg-slate-300"></div>
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center text-sm font-semibold">2</div>
+                <span class="text-sm font-medium text-slate-700">Room</span>
+            </div>
+            <div class="w-8 h-px bg-slate-300"></div>
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center text-sm">3</div>
+                <span class="text-sm text-slate-400">Payment</span>
+            </div>
         </div>
 
-        <!-- Main card -->
-        <div class="bg-white rounded-3xl shadow-lg border border-slate-100 p-6 sm:p-8">
-            <div class="mb-6">
-                <h2 class="text-lg font-semibold mb-1">Choose Your Room</h2>
-                <p class="text-sm text-slate-500">
-                    Select from our available room types
-                </p>
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-amber-500 text-white text-xl mb-3">
+                🛏️
             </div>
+            <h1 class="text-2xl font-bold text-slate-900">Choose Your Room</h1>
+            <p class="text-slate-500 text-sm mt-1">
+                @BookingState.Nights night@(BookingState.Nights > 1 ? "s" : "") • @TotalGuests guest@(TotalGuests > 1 ? "s" : "")
+            </p>
+        </div>
 
+        <!-- Loading State -->
+        @if (IsLoading)
+        {
+            <div class="flex items-center justify-center py-20">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <div class="bg-white rounded-3xl shadow-lg p-10 text-center">
+                <div class="text-4xl mb-4">⚠️</div>
+                <h3 class="text-lg font-semibold text-slate-700">Error Loading Rooms</h3>
+                <p class="text-slate-500 mt-2">@ErrorMessage</p>
+                <button class="mt-6 px-6 py-2 bg-amber-500 text-white rounded-xl hover:bg-amber-600"
+                        @onclick="LoadRooms">
+                    Try Again
+                </button>
+            </div>
+        }
+        else if (RoomOptions.Count == 0)
+        {
+            <div class="bg-white rounded-3xl shadow-lg p-10 text-center">
+                <div class="text-4xl mb-4">😕</div>
+                <h3 class="text-lg font-semibold text-slate-700">No Rooms Available</h3>
+                <p class="text-slate-500 mt-2">Sorry, no rooms are available for your selected dates.</p>
+                <button class="mt-6 px-6 py-2 bg-amber-500 text-white rounded-xl hover:bg-amber-600"
+                        @onclick="@(() => Nav.NavigateTo("/dates"))">
+                    Change Dates
+                </button>
+            </div>
+        }
+        else
+        {
+            <!-- Room Type Cards -->
             <div class="space-y-4">
-                <!-- Regular Room -->
-                <button type="button"
-                        class="@GetCardClasses("Regular Room")"
-                        @onclick="SelectRegular">
+                @foreach (var roomType in RoomOptions)
+                {
+                    <button type="button"
+                            class="@GetCardClasses(roomType.RoomTypeId)"
+                            @onclick="@(() => SelectRoomType(roomType))">
+                        <div class="flex gap-5">
+                            <!-- Room Image -->
+                            <div class="w-44 h-32 rounded-2xl bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center text-4xl flex-shrink-0">
+                                @GetRoomEmoji(roomType.Name)
+                            </div>
 
-                  <div class="flex gap-4 items-stretch">
-                    <img src="images/regular.png"
-                         alt="Regular Room"
-                         class="w-40 h-28 rounded-xl object-cover"/>
-
-                    <div class="flex-1 flex justify-between gap-4">
-                      <div class="flex flex-col justify-between">
-                        <div>
-                          <h3 class="text-base font-semibold text-slate-900">Regular Room</h3>
-                          <p class="text-sm text-slate-500">
-                            Comfortable room with modern amenities
-                          </p>
-                        </div>
-
-                        <div class="flex flex-wrap gap-3 text-xs text-slate-600">
-                          <span class="flex items-center gap-1">📶 Free WiFi</span>
-                          <span class="flex items-center gap-1">☕ Coffee Maker</span>
-                          <span class="flex items-center gap-1">📺 32" TV</span>
-                          <span class="flex items-center gap-1">👥 Up to 2 Guests</span>
-                        </div>
-                      </div>
-
-                      <div class="flex flex-col items-end justify-between text-right text-sm">
-                        <div>
-                          <p class="text-lg font-semibold text-slate-900">$130</p>
-                          <p class="text-xs text-slate-500">per night</p>
-                        </div>
-                        <p class="text-xs text-slate-500">
-                          1 night<br/>
-                          <span class="font-medium text-slate-900">Total: $130</span>
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </button>
-
-                <!-- King Room -->
-                <button type="button"
-                        class="@GetCardClasses("King Room")"
-                        @onclick="SelectKing">
-                  <div class="flex gap-4 items-stretch">
-
-                    <img src="images/king.png"
-                         alt="King Room"
-                         class="w-40 h-28 rounded-xl object-cover"/>
-
-                    <div class="flex-1 flex justify-between gap-4">
-                      <div class="flex flex-col justify-between">
-                        <div>
-                          <p class="inline-block text-[10px] px-2 py-1 rounded-full bg-slate-900 text-white mb-1">
-                            Most Popular
-                          </p>
-                          <h3 class="text-base font-semibold text-slate-900">King Room</h3>
-                          <p class="text-sm text-slate-500">
-                            Spacious room with king-size bed and premium amenities
-                          </p>
-                        </div>
-
-                        <div class="flex flex-wrap gap-3 text-xs text-slate-600">
-                          <span class="flex items-center gap-1">📶 Free WiFi</span>
-                          <span class="flex items-center gap-1">☕ Espresso Machine</span>
-                          <span class="flex items-center gap-1">📺 43" Smart TV</span>
-                          <span class="flex items-center gap-1">👥 Up to 2 Guests</span>
-                        </div>
-                      </div>
-
-                      <div class="flex flex-col items-end justify-between text-right text-sm">
-                        <div>
-                          <p class="text-lg font-semibold text-slate-900">$200</p>
-                          <p class="text-xs text-slate-500">per night</p>
-                        </div>
-                        <p class="text-xs text-slate-500">
-                          1 night<br/>
-                          <span class="font-medium text-slate-900">Total: $200</span>
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </button>
-
-                <!-- Luxury Suite -->
-                <button type="button"
-                        class="@GetCardClasses("Luxury Suite")"
-                        @onclick="SelectSuite">
-                    <div class="flex gap-4 items-stretch">
-                      <img src="images/suite.png"
-                           alt="Luxury Suite"
-                           class="w-40 h-28 rounded-xl object-cover"/>
-
-                        <div class="flex-1 flex justify-between gap-4">
-                            <div class="flex flex-col justify-between">
+                            <!-- Room Info -->
+                            <div class="flex-1 flex flex-col justify-between text-left">
                                 <div>
-                                    <h3 class="text-base font-semibold text-slate-900">Luxury Suite</h3>
-                                    <p class="text-sm text-slate-500">
-                                        Luxurious suite with separate living area and premium finishes
-                                    </p>
+                                    <div class="flex items-center gap-2 mb-1">
+                                        @if (roomType.IsMostPopular)
+                                        {
+                                            <span class="text-xs px-2 py-0.5 rounded-full bg-amber-500 text-white">Most Popular</span>
+                                        }
+                                        <h3 class="text-lg font-semibold text-slate-900">@roomType.Name</h3>
+                                    </div>
+                                    <p class="text-sm text-slate-500">@roomType.Description</p>
+                                    <p class="text-xs text-slate-400 mt-1">Max @roomType.MaxGuests guests</p>
                                 </div>
 
-                                <div class="flex flex-wrap gap-3 text-xs text-slate-600">
-                                    <span class="flex items-center gap-1">📶 Free WiFi</span>
-                                    <span class="flex items-center gap-1">🏡 3BR Family Suite</span>
-                                    <span class="flex items-center gap-1">📺 55" Smart TV</span>
-                                    <span class="flex items-center gap-1">👥 Up to 4 Guests</span>
+                                <div class="flex flex-wrap gap-2 mt-2">
+                                    @foreach (var amenity in roomType.Amenities.Take(4))
+                                    {
+                                        <span class="text-xs px-2 py-1 rounded-lg bg-slate-100 text-slate-600">
+                                            @GetAmenityIcon(amenity.Key) @amenity.Label
+                                        </span>
+                                    }
+                                    @if (roomType.Amenities.Count > 4)
+                                    {
+                                        <span class="text-xs px-2 py-1 rounded-lg bg-slate-100 text-slate-500">
+                                            +@(roomType.Amenities.Count - 4) more
+                                        </span>
+                                    }
                                 </div>
                             </div>
 
-                            <div class="flex flex-col items-end justify-between text-right text-sm">
-                                <div>
-                                    <p class="text-lg font-semibold text-slate-900">$350</p>
-                                    <p class="text-xs text-slate-500">per night</p>
-                                </div>
-                                <p class="text-xs text-slate-500">
-                                    1 night<br />
-                                    <span class="font-medium text-slate-900">Total: $350</span>
+                            <!-- Price -->
+                            <div class="text-right flex-shrink-0">
+                                <p class="text-2xl font-bold text-slate-900">$@roomType.PricePerNight.ToString("0")</p>
+                                <p class="text-xs text-slate-500">per night</p>
+                                <p class="text-sm font-medium text-amber-600 mt-2">
+                                    Total: $@roomType.Total.ToString("0")
                                 </p>
                             </div>
                         </div>
-                    </div>
-                </button>
+                    </button>
+                }
             </div>
+        }
 
-            <!-- Bottom actions -->
-            <div class="mt-8 flex justify-between items-center">
-                <button type="button"
-                        class="px-6 py-2 text-sm rounded-full border border-slate-200 text-slate-700 hover:bg-slate-50"
-                        @onclick="GoBack">
-                    Back
-                </button>
+        <!-- Bottom Actions -->
+        <div class="mt-8 flex justify-between items-center">
+            <button type="button"
+                    class="px-8 py-3 rounded-xl border border-slate-200 text-slate-700 font-medium hover:bg-white transition"
+                    @onclick="GoBack">
+                Back
+            </button>
 
-                <button type="button"
-                        class="@ContinueButtonClasses"
-                        @onclick="Continue">
-                    Continue
-                </button>
-            </div>
+            <button type="button"
+                    class="@ContinueButtonClasses"
+                    disabled="@(!HasSelection)"
+                    @onclick="Continue">
+                Continue to Payment
+            </button>
         </div>
 
-        <p class="mt-6 text-center text-xs text-slate-400">
-            © 2025 Keycard Management. All rights reserved.
+        <p class="text-center text-xs text-slate-400 mt-6">
+            © 2025 KeyCard Hotel Management
         </p>
     </div>
 </div>
 
 @code {
-    private string? _selectedRoom;
-    private int _selectedPrice;
+    private List<RoomTypeOption> RoomOptions { get; set; } = new();
+    private int? SelectedRoomTypeId { get; set; }
+    private bool IsLoading { get; set; } = true;
+    private string? ErrorMessage { get; set; }
 
-    private bool HasSelection => !string.IsNullOrEmpty(_selectedRoom);
+    private bool HasSelection => SelectedRoomTypeId.HasValue;
+    private int TotalGuests => BookingState.Adults + BookingState.Children;
 
-    private void SelectRoom(string roomName, int price)
+    protected override async Task OnInitializedAsync()
     {
-        _selectedRoom = roomName;
-        _selectedPrice = price;
-    }
-
-    private void SelectRegular() => SelectRoom("Regular Room", 129);
-    private void SelectKing()    => SelectRoom("King Room", 189);
-    private void SelectSuite()   => SelectRoom("Luxury Suite", 299);
-
-    private string GetCardClasses(string roomName)
-    {
-        var baseClasses =
-            "w-full text-left bg-white border rounded-2xl px-4 py-4 sm:px-5 sm:py-5 transition " +
-            "hover:border-slate-400";
-
-        if (_selectedRoom == roomName)
+        // Redirect if no dates selected
+        if (!BookingState.CheckInDate.HasValue || !BookingState.CheckOutDate.HasValue)
         {
-            return baseClasses + " border-slate-900 ring-2 ring-slate-900/40";
+            Nav.NavigateTo("/dates");
+            return;
         }
 
-        return baseClasses + " border-slate-200";
+        await LoadRooms();
+    }
+
+    private async Task LoadRooms()
+    {
+        IsLoading = true;
+        ErrorMessage = null;
+
+        try
+        {
+            var client = Http.CreateClient("api");
+
+            // Format dates as yyyy-MM-dd for the API
+            var checkIn = BookingState.CheckInDate!.Value.ToString("yyyy-MM-dd");
+            var checkOut = BookingState.CheckOutDate!.Value.ToString("yyyy-MM-dd");
+            var guests = TotalGuests;
+
+            var url = $"/api/guest/rooms/options?checkIn={checkIn}&checkOut={checkOut}&guests={guests}&rooms=1&currency=USD";
+
+            var response = await client.GetAsync(url);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var apiResponse = await response.Content.ReadFromJsonAsync<ApiResponse<RoomOptionsResult>>();
+                if (apiResponse?.Result?.Options != null)
+                {
+                    RoomOptions = apiResponse.Result.Options.Select(rt => new RoomTypeOption
+                    {
+                        RoomTypeId = rt.RoomTypeId,
+                        Name = rt.Name,
+                        Description = rt.Description,
+                        PricePerNight = rt.PricePerNight,
+                        IsMostPopular = rt.IsMostPopular,
+                        MaxGuests = rt.MaxGuests,
+                        Total = rt.Total,
+                        Amenities = rt.Amenities?.Select(a => new AmenityOption
+                        {
+                            Key = a.Key,
+                            Label = a.Label,
+                            Description = a.Description,
+                            IconKey = a.IconKey
+                        }).ToList() ?? new List<AmenityOption>()
+                    }).ToList();
+                }
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                ErrorMessage = $"Failed to load rooms (Status: {response.StatusCode})";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Unable to connect to server: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void SelectRoomType(RoomTypeOption roomType)
+    {
+        SelectedRoomTypeId = roomType.RoomTypeId;
+        // Store in booking state - using RoomTypeId as RoomId for now
+        BookingState.SelectedRoomId = roomType.RoomTypeId;
+        BookingState.SelectedRoomNumber = "TBD"; // Will be assigned at check-in
+        BookingState.SelectedRoomType = roomType.Name;
+        BookingState.PricePerNight = roomType.PricePerNight;
+        BookingState.TotalAmount = roomType.Total;
+    }
+
+    private string GetCardClasses(int roomTypeId)
+    {
+        var baseClasses = "w-full bg-white rounded-2xl p-5 border-2 transition hover:shadow-lg ";
+        return SelectedRoomTypeId == roomTypeId
+            ? baseClasses + "border-amber-500 ring-2 ring-amber-500/30"
+            : baseClasses + "border-transparent shadow-md hover:border-slate-200";
     }
 
     private string ContinueButtonClasses =>
-        "px-8 py-2 text-sm rounded-full font-medium " +
+        "px-8 py-3 rounded-xl font-semibold transition " +
         (HasSelection
-            ? "bg-slate-900 text-white hover:bg-black"
-            : "bg-slate-200 text-slate-500 cursor-not-allowed");
+            ? "bg-amber-500 text-white hover:bg-amber-600"
+            : "bg-slate-200 text-slate-400 cursor-not-allowed");
 
-    private void GoBack()
+    private string GetRoomEmoji(string roomType) => roomType.ToLower() switch
     {
-        Nav.NavigateTo("/dates");
-    }
+        var t when t.Contains("suite") => "🏰",
+        var t when t.Contains("king") => "👑",
+        var t when t.Contains("deluxe") => "✨",
+        var t when t.Contains("family") => "👨‍👩‍👧‍👦",
+        var t when t.Contains("executive") => "💼",
+        _ => "🛏️"
+    };
+
+    private string GetAmenityIcon(string key) => key?.ToLower() switch
+    {
+        "wifi" => "📶",
+        "tv" => "📺",
+        "coffee" => "☕",
+        "minibar" => "🍷",
+        "ac" or "aircon" => "❄️",
+        "view" => "🌅",
+        "pool" => "🏊",
+        "gym" => "🏋️",
+        "spa" => "💆",
+        "parking" => "🅿️",
+        "breakfast" => "🍳",
+        _ => "✓"
+    };
+
+    private void GoBack() => Nav.NavigateTo("/dates");
 
     private void Continue()
     {
-        if (!HasSelection)
-            return;
+        if (HasSelection)
+            Nav.NavigateTo("/payment");
+    }
 
-        var url =
-            $"/payment?room={Uri.EscapeDataString(_selectedRoom!)}" +
-            $"&price={_selectedPrice}";
+    // DTOs matching the backend API response (wrapped in ApiResponse)
+    private class ApiResponse<T>
+    {
+        public string Message { get; set; } = "";
+        public T? Result { get; set; }
+        public int StatusCode { get; set; }
+        public string Version { get; set; } = "";
+    }
 
-        Nav.NavigateTo(url);
+    private class RoomOptionsResult
+    {
+        public SearchContext? Search { get; set; }
+        public List<RoomTypeDto>? Options { get; set; }
+    }
+
+    private class SearchContext
+    {
+        public string CheckIn { get; set; } = "";
+        public string CheckOut { get; set; } = "";
+        public int Nights { get; set; }
+        public int Guests { get; set; }
+        public int Rooms { get; set; }
+        public string Currency { get; set; } = "USD";
+    }
+
+    private class RoomTypeDto
+    {
+        public int RoomTypeId { get; set; }
+        public string Name { get; set; } = "";
+        public string Description { get; set; } = "";
+        public decimal PricePerNight { get; set; }
+        public bool IsMostPopular { get; set; }
+        public int MaxGuests { get; set; }
+        public decimal Total { get; set; }
+        public List<AmenityDto>? Amenities { get; set; }
+    }
+
+    private class AmenityDto
+    {
+        public string Key { get; set; } = "";
+        public string Label { get; set; } = "";
+        public string? Description { get; set; }
+        public string? IconKey { get; set; }
+        public string? Value { get; set; }
+    }
+
+    // Local view models
+    private class RoomTypeOption
+    {
+        public int RoomTypeId { get; set; }
+        public string Name { get; set; } = "";
+        public string Description { get; set; } = "";
+        public decimal PricePerNight { get; set; }
+        public bool IsMostPopular { get; set; }
+        public int MaxGuests { get; set; }
+        public decimal Total { get; set; }
+        public List<AmenityOption> Amenities { get; set; } = new();
+    }
+
+    private class AmenityOption
+    {
+        public string Key { get; set; } = "";
+        public string Label { get; set; } = "";
+        public string? Description { get; set; }
+        public string? IconKey { get; set; }
     }
 }

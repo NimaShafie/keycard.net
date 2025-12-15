@@ -1,99 +1,140 @@
 @page "/confirmation"
-@using Microsoft.AspNetCore.WebUtilities
 @inject NavigationManager Nav
+@inject KeyCard.Web.Services.BookingStateService BookingState
+@inject KeyCard.Web.Services.AuthStateService AuthState
 
-<div class="min-h-screen bg-slate-50 flex justify-center px-4 py-10">
-    <div class="w-full max-w-xl mx-auto">
-        <!-- Header -->
-        <div class="flex flex-col items-center mb-8">
-            <div class="flex items-center justify-center h-12 w-12 rounded-full bg-emerald-500 text-white mb-4">
+<div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-10 px-4">
+    <div class="max-w-lg mx-auto">
+        <!-- Success Animation -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-500 text-white text-4xl mb-4 animate-bounce">
                 ✓
             </div>
-            <h1 class="text-2xl font-bold mb-1">Book Your Stay</h1>
-            <p class="text-sm text-slate-500">Your booking is confirmed</p>
+            <h1 class="text-3xl font-bold text-slate-900">Booking Confirmed!</h1>
+            <p class="text-slate-500 mt-2">Your reservation has been successfully created</p>
         </div>
 
-        <!-- Card -->
-        <div class="bg-white rounded-3xl shadow-lg border border-slate-100 p-8">
-            <h2 class="text-lg font-semibold mb-4">Booking Confirmed!</h2>
-            <p class="text-sm text-slate-500 mb-6">
-                Your reservation has been successfully created.
-            </p>
-
-            <!-- Confirmation Code -->
-            <div class="mb-6 bg-slate-50 rounded-2xl p-4 text-center">
-                <p class="text-xs text-slate-500 mb-1">Confirmation Code</p>
-                <p class="text-2xl font-mono font-semibold tracking-[0.25em]">
-                    @ConfirmationCode
+        <!-- Confirmation Card -->
+        <div class="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
+            <!-- Confirmation Code Banner -->
+            <div class="bg-gradient-to-r from-amber-500 to-amber-600 p-6 text-center">
+                <p class="text-amber-100 text-sm mb-1">Confirmation Code</p>
+                <p class="text-3xl font-mono font-bold text-white tracking-widest">
+                    @BookingState.ConfirmationCode
                 </p>
-                <p class="text-xs text-slate-400 mt-2">
-                    Use this code to check in at the kiosk
-                </p>
+                <p class="text-amber-100 text-xs mt-2">Save this code for check-in</p>
             </div>
 
-            <!-- Details -->
-            <div class="mb-6 text-sm">
-                <h3 class="font-semibold mb-3">Booking Details</h3>
-                <div class="space-y-1 text-slate-600">
-                    <div class="flex justify-between">
-                        <span>Room Type</span>
-                        <span>@RoomTypeDisplay</span>
+            <!-- Booking Details -->
+            <div class="p-6">
+                <h3 class="font-semibold text-slate-700 mb-4 flex items-center gap-2">
+                    <span>📋</span> Booking Details
+                </h3>
+
+                <div class="space-y-3 text-sm">
+                    <div class="flex justify-between py-2 border-b border-slate-100">
+                        <span class="text-slate-500">Room Type</span>
+                        <span class="font-medium text-slate-900">@BookingState.SelectedRoomType</span>
                     </div>
-                    <div class="flex justify-between">
-                        <span>Total Paid</span>
-                        <span class="font-semibold">$@Price</span>
+                    <div class="flex justify-between py-2 border-b border-slate-100">
+                        <span class="text-slate-500">Room Number</span>
+                        <span class="font-medium text-slate-900">@BookingState.SelectedRoomNumber</span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-slate-100">
+                        <span class="text-slate-500">Check-in</span>
+                        <span class="font-medium text-slate-900">@BookingState.CheckInDate?.ToString("ddd, MMM dd, yyyy")</span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-slate-100">
+                        <span class="text-slate-500">Check-out</span>
+                        <span class="font-medium text-slate-900">@BookingState.CheckOutDate?.ToString("ddd, MMM dd, yyyy")</span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-slate-100">
+                        <span class="text-slate-500">Duration</span>
+                        <span class="font-medium text-slate-900">@BookingState.Nights night@(BookingState.Nights > 1 ? "s" : "")</span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-slate-100">
+                        <span class="text-slate-500">Guests</span>
+                        <span class="font-medium text-slate-900">
+                            @BookingState.Adults adult@(BookingState.Adults > 1 ? "s" : "")@(BookingState.Children > 0 ? $", {BookingState.Children} child" + (BookingState.Children > 1 ? "ren" : "") : "")
+                        </span>
+                    </div>
+                    <div class="flex justify-between py-3 bg-amber-50 -mx-6 px-6 mt-4">
+                        <span class="font-semibold text-slate-700">Total Paid</span>
+                        <span class="font-bold text-xl text-amber-600">$@BookingState.TotalAmount.ToString("0.00")</span>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="space-y-3 mt-6">
+                    <button @onclick="ViewMyBookings"
+                            class="w-full py-3 rounded-xl bg-slate-900 text-white font-semibold hover:bg-slate-800 transition flex items-center justify-center gap-2">
+                        📋 View My Bookings
+                    </button>
+                    <button class="w-full py-3 rounded-xl border border-slate-200 text-slate-700 font-medium hover:bg-slate-50 transition flex items-center justify-center gap-2">
+                        📧 Email Confirmation
+                    </button>
+                    <button @onclick="MakeAnotherBooking"
+                            class="w-full py-3 rounded-xl border border-slate-200 text-slate-700 font-medium hover:bg-slate-50 transition">
+                        Make Another Booking
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Banner -->
+        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-2xl p-4">
+            <div class="flex gap-3">
+                <span class="text-2xl">ℹ️</span>
+                <div class="text-sm">
+                    <p class="font-medium text-blue-800">Check-in Information</p>
+                    <p class="text-blue-600 mt-1">
+                        Check-in starts at 3:00 PM on @BookingState.CheckInDate?.ToString("MMM dd"). 
+                        Present your confirmation code at the front desk or use our self-service kiosk.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Self Check-in Reminder -->
+        @if (BookingState.CheckInDate?.Date == DateTime.Today)
+        {
+            <div class="mt-4 bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
+                <div class="flex gap-3">
+                    <span class="text-2xl">🔑</span>
+                    <div class="text-sm">
+                        <p class="font-medium text-emerald-800">Ready for Check-in!</p>
+                        <p class="text-emerald-600 mt-1">
+                            Your check-in date is today! You can check in from your dashboard to receive your digital room key.
+                        </p>
                     </div>
                 </div>
             </div>
+        }
 
-            <!-- Actions -->
-            <div class="space-y-3">
-                <button
-                    class="w-full py-2 text-sm rounded-full bg-slate-900 text-white hover:bg-black">
-                    Email Confirmation
-                </button>
-                <button
-                    class="w-full py-2 text-sm rounded-full border border-slate-200 hover:bg-slate-50">
-                    Download Receipt
-                </button>
-                <button
-                    class="w-full py-2 text-sm rounded-full border border-slate-200 text-slate-700 hover:bg-slate-50"
-                    @onclick="MakeAnotherBooking">
-                    Make Another Booking
-                </button>
-            </div>
-        </div>
-
-        <p class="mt-6 text-center text-xs text-slate-400">
-            A confirmation email has been sent to your email address (mock).
+        <p class="text-center text-xs text-slate-400 mt-6">
+            A confirmation email has been sent to your email address.
         </p>
     </div>
 </div>
 
 @code {
-    private string ConfirmationCode = "------";
-    private string? RoomType;
-    private int Price;
-
-    private string RoomTypeDisplay => string.IsNullOrEmpty(RoomType) ? "Not available" : RoomType;
-
     protected override void OnInitialized()
     {
-        var uri = Nav.ToAbsoluteUri(Nav.Uri);
-        var query = QueryHelpers.ParseQuery(uri.Query);
+        // Redirect if no confirmation code
+        if (string.IsNullOrEmpty(BookingState.ConfirmationCode))
+        {
+            Nav.NavigateTo("/dates");
+        }
+    }
 
-        if (query.TryGetValue("code", out var code))
-            ConfirmationCode = code!;
-
-        if (query.TryGetValue("room", out var room))
-            RoomType = room!;
-
-        if (query.TryGetValue("price", out var priceStr) && int.TryParse(priceStr, out var p))
-            Price = p;
+    private void ViewMyBookings()
+    {
+        Nav.NavigateTo("/dashboard");
     }
 
     private void MakeAnotherBooking()
     {
+        BookingState.Reset();
         Nav.NavigateTo("/dates");
     }
 }

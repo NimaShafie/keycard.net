@@ -1,151 +1,252 @@
 @page "/payment"
-@using Microsoft.AspNetCore.WebUtilities
 @inject NavigationManager Nav
+@inject IHttpClientFactory Http
+@inject KeyCard.Web.Services.BookingStateService BookingState
+@inject KeyCard.Web.Services.AuthStateService AuthState
 
-<div class="min-h-screen bg-slate-50 flex justify-center px-4 py-10">
-    <div class="w-full max-w-xl mx-auto">
-        <!-- Header -->
-        <div class="flex flex-col items-center mb-8">
-            <div class="flex items-center justify-center h-12 w-12 rounded-full bg-slate-900 text-white mb-4">
-                💳
+<div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-10 px-4">
+    <div class="max-w-lg mx-auto">
+        <!-- Progress Steps -->
+        <div class="flex items-center justify-center gap-2 mb-8">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center text-sm">✓</div>
+                <span class="text-sm text-slate-500">Dates</span>
             </div>
-            <h1 class="text-2xl font-bold mb-1">Book Your Stay</h1>
-            <p class="text-sm text-slate-500">Complete your payment</p>
+            <div class="w-8 h-px bg-slate-300"></div>
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center text-sm">✓</div>
+                <span class="text-sm text-slate-500">Room</span>
+            </div>
+            <div class="w-8 h-px bg-slate-300"></div>
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center text-sm font-semibold">3</div>
+                <span class="text-sm font-medium text-slate-700">Payment</span>
+            </div>
         </div>
 
-        <!-- Card -->
-        <div class="bg-white rounded-3xl shadow-lg border border-slate-100 p-8">
-            <h2 class="text-lg font-semibold mb-1">Payment</h2>
-            <p class="text-sm text-slate-500 mb-6">
-                Secure payment for your booking
-            </p>
-
-            <!-- Summary -->
-            <div class="mb-6 text-sm bg-slate-50 rounded-2xl p-4">
-                <div class="flex justify-between mb-1">
-                    <span class="text-slate-500">Room Type</span>
-                    <span class="font-medium">@RoomTypeDisplay</span>
+        <!-- Main Card -->
+        <div class="bg-white rounded-3xl shadow-xl border border-slate-100 p-8">
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-amber-500 text-white text-xl mb-3">
+                    💳
                 </div>
-                <div class="flex justify-between">
-                    <span class="text-slate-500">Total Amount</span>
-                    <span class="font-semibold">$@Price</span>
+                <h1 class="text-2xl font-bold text-slate-900">Complete Your Booking</h1>
+                <p class="text-slate-500 text-sm mt-1">Enter your details and payment info</p>
+            </div>
+
+            <!-- Booking Summary -->
+            <div class="bg-slate-50 rounded-2xl p-5 mb-6">
+                <h3 class="font-semibold text-slate-700 mb-3">Booking Summary</h3>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-slate-500">Room Type</span>
+                        <span class="font-medium">@BookingState.SelectedRoomType</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-500">Check-in</span>
+                        <span class="font-medium">@BookingState.CheckInDate?.ToString("MMM dd, yyyy")</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-500">Check-out</span>
+                        <span class="font-medium">@BookingState.CheckOutDate?.ToString("MMM dd, yyyy")</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-500">Duration</span>
+                        <span class="font-medium">@BookingState.Nights night@(BookingState.Nights > 1 ? "s" : "")</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-500">Guests</span>
+                        <span class="font-medium">@BookingState.Adults adult@(BookingState.Adults > 1 ? "s" : "")@(BookingState.Children > 0 ? $", {BookingState.Children} child" + (BookingState.Children > 1 ? "ren" : "") : "")</span>
+                    </div>
+                    <hr class="my-3 border-slate-200" />
+                    <div class="flex justify-between">
+                        <span class="text-slate-500">Price per night</span>
+                        <span>$@BookingState.PricePerNight.ToString("0.00")</span>
+                    </div>
+                    <div class="flex justify-between text-lg font-bold text-slate-900">
+                        <span>Total</span>
+                        <span class="text-amber-600">$@BookingState.TotalAmount.ToString("0.00")</span>
+                    </div>
                 </div>
             </div>
 
-            <!-- Form -->
+            <!-- Guest Information (only show if not logged in) -->
+            @if (!AuthState.IsAuthenticated)
+            {
+                <div class="mb-6">
+                    <h3 class="font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                        <span>👤</span> Guest Information
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">First Name</label>
+                                <input @bind="GuestFirstName"
+                                       placeholder="John"
+                                       class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Last Name</label>
+                                <input @bind="GuestLastName"
+                                       placeholder="Smith"
+                                       class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Email Address</label>
+                            <input @bind="GuestEmail"
+                                   type="email"
+                                   placeholder="john.smith@email.com"
+                                   class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
+                            <p class="text-xs text-slate-500 mt-1">We'll send your confirmation to this email</p>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="mb-6 bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+                    <div class="flex items-center gap-3">
+                        <span class="text-xl">✓</span>
+                        <div>
+                            <p class="font-medium text-emerald-800">Logged in as</p>
+                            <p class="text-sm text-emerald-700">@AuthState.Email</p>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Payment Form -->
             <div class="space-y-4">
+                <h3 class="font-semibold text-slate-700 flex items-center gap-2">
+                    <span>💳</span> Payment Details
+                </h3>
+
                 <div>
-                    <label class="block text-xs font-medium text-slate-600 mb-1">
-                        Card Number
-                    </label>
-                    <input
-                        @bind="CardNumber"
-                        class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
-                        placeholder="1234 5678 9012 3456" />
+                    <label class="block text-sm font-medium text-slate-700 mb-2">Card Number</label>
+                    <input @bind="CardNumber"
+                           placeholder="1234 5678 9012 3456"
+                           class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
                 </div>
 
-                <div class="flex gap-3">
-                    <div class="flex-1">
-                        <label class="block text-xs font-medium text-slate-600 mb-1">
-                            Expiry Date
-                        </label>
-                        <input
-                            @bind="Expiry"
-                            class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
-                            placeholder="MM/YY" />
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Expiry</label>
+                        <input @bind="Expiry"
+                               placeholder="MM/YY"
+                               class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
                     </div>
-
-                    <div class="w-24">
-                        <label class="block text-xs font-medium text-slate-600 mb-1">
-                            CVV
-                        </label>
-                        <input
-                            @bind="Cvv"
-                            class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
-                            placeholder="123" />
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">CVV</label>
+                        <input @bind="Cvv"
+                               type="password"
+                               placeholder="123"
+                               maxlength="4"
+                               class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-medium text-slate-600 mb-1">
-                        Cardholder Name
-                    </label>
-                    <input
-                        @bind="CardholderName"
-                        class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
-                        placeholder="John Smith" />
+                    <label class="block text-sm font-medium text-slate-700 mb-2">Cardholder Name</label>
+                    <input @bind="CardholderName"
+                           placeholder="John Smith"
+                           class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
                 </div>
 
-                <p class="text-xs text-slate-500 flex items-center gap-1">
-                    🔒 Your payment information is encrypted and secure
-                </p>
+                <div class="flex items-center gap-2 text-sm text-slate-500">
+                    <span class="text-emerald-500">🔒</span>
+                    <span>Your payment is secured with 256-bit encryption</span>
+                </div>
 
                 @if (!string.IsNullOrEmpty(ErrorMessage))
                 {
-                    <p class="text-xs text-red-500">@ErrorMessage</p>
+                    <div class="bg-red-50 border border-red-200 rounded-xl p-3 text-red-600 text-sm text-center">
+                        @ErrorMessage
+                    </div>
                 }
             </div>
 
             <!-- Buttons -->
-            <div class="mt-8 flex justify-between items-center">
-                <button
-                    type="button"
-                    class="px-6 py-2 text-sm rounded-full border border-slate-200 text-slate-700 hover:bg-slate-50"
-                    @onclick="GoBack">
+            <div class="flex gap-4 mt-8">
+                <button type="button"
+                        class="flex-1 py-3 rounded-xl border border-slate-200 text-slate-700 font-medium hover:bg-slate-50 transition"
+                        @onclick="GoBack">
                     Back
                 </button>
-
-            <button
-                type="button"
-                class="px-8 py-2 text-sm rounded-full font-medium bg-slate-900 text-white hover:bg-black"
-                @onclick="CompleteBooking">
-                Complete Booking
-            </button>
+                <button type="button"
+                        disabled="@IsProcessing"
+                        class="flex-1 py-3 rounded-xl bg-amber-500 text-white font-semibold hover:bg-amber-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        @onclick="CompleteBooking">
+                    @if (IsProcessing)
+                    {
+                        <span>Processing...</span>
+                    }
+                    else
+                    {
+                        <span>Pay $@BookingState.TotalAmount.ToString("0.00")</span>
+                    }
+                </button>
             </div>
         </div>
 
-        <p class="mt-6 text-center text-xs text-slate-400">
-            © 2025 Keycard Management. All rights reserved.
+        <p class="text-center text-xs text-slate-400 mt-6">
+            © 2025 KeyCard Hotel Management
         </p>
     </div>
 </div>
 
 @code {
-    private string? RoomType;
-    private int Price;
-    private string CardNumber = "";
-    private string Expiry = "";
-    private string Cvv = "";
-    private string CardholderName = "";
-    private string ErrorMessage = "";
-
-    private string RoomTypeDisplay => string.IsNullOrEmpty(RoomType) ? "Not selected" : RoomType;
+    // Guest info
+    private string GuestFirstName { get; set; } = "";
+    private string GuestLastName { get; set; } = "";
+    private string GuestEmail { get; set; } = "";
+    
+    // Payment info
+    private string CardNumber { get; set; } = "";
+    private string Expiry { get; set; } = "";
+    private string Cvv { get; set; } = "";
+    private string CardholderName { get; set; } = "";
+    
+    private string? ErrorMessage { get; set; }
+    private bool IsProcessing { get; set; }
 
     protected override void OnInitialized()
     {
-        // read ?room=King%20Room&price=189 from URL
-        var uri = Nav.ToAbsoluteUri(Nav.Uri);
-        var query = QueryHelpers.ParseQuery(uri.Query);
-
-        if (query.TryGetValue("room", out var room))
+        // Redirect if no room selected
+        if (!BookingState.SelectedRoomId.HasValue)
         {
-            RoomType = room!;
+            Nav.NavigateTo("/rooms");
         }
-
-        if (query.TryGetValue("price", out var priceStr) && int.TryParse(priceStr, out var p))
+        
+        // Pre-fill email if logged in
+        if (AuthState.IsAuthenticated && !string.IsNullOrEmpty(AuthState.Email))
         {
-            Price = p;
+            GuestEmail = AuthState.Email;
         }
     }
 
-    private void GoBack()
-    {
-        Nav.NavigateTo("/rooms");
-    }
+    private void GoBack() => Nav.NavigateTo("/rooms");
 
-    private void CompleteBooking()
+    private async Task CompleteBooking()
     {
-        // super simple validation for now
+        ErrorMessage = null;
+
+        // Validate guest info (required if not logged in)
+        if (!AuthState.IsAuthenticated)
+        {
+            if (string.IsNullOrWhiteSpace(GuestEmail))
+            {
+                ErrorMessage = "Please enter your email address.";
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(GuestFirstName))
+            {
+                ErrorMessage = "Please enter your first name.";
+                return;
+            }
+        }
+
+        // Validate payment form
         if (string.IsNullOrWhiteSpace(CardNumber) ||
             string.IsNullOrWhiteSpace(Expiry) ||
             string.IsNullOrWhiteSpace(Cvv) ||
@@ -155,16 +256,94 @@
             return;
         }
 
-        ErrorMessage = "";
+        IsProcessing = true;
 
-        // fake confirmation code for now
-        var code = $"RY{Random.Shared.Next(10000, 99999)}";
+        try
+        {
+            var client = Http.CreateClient("api");
+            
+            // Add auth header if logged in
+            if (AuthState.IsAuthenticated)
+            {
+                client.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AuthState.Token);
+            }
 
-        var url =
-            $"/confirmation?code={Uri.EscapeDataString(code)}" +
-            $"&room={Uri.EscapeDataString(RoomType ?? string.Empty)}" +
-            $"&price={Price}";
+            // Create booking via API
+            var bookingRequest = new
+            {
+                roomTypeId = BookingState.SelectedRoomId,
+                checkInDate = BookingState.CheckInDate,
+                checkOutDate = BookingState.CheckOutDate,
+                adults = BookingState.Adults,
+                children = BookingState.Children,
+                isPrepaid = true,
+                guestEmail = AuthState.IsAuthenticated ? null : GuestEmail,
+                guestFirstName = AuthState.IsAuthenticated ? null : GuestFirstName,
+                guestLastName = AuthState.IsAuthenticated ? null : GuestLastName
+            };
 
-        Nav.NavigateTo(url);
+            var response = await client.PostAsJsonAsync("/api/guest/bookings", bookingRequest);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var apiResponse = await response.Content.ReadFromJsonAsync<ApiResponse<BookingResponse>>();
+                var result = apiResponse?.Result;
+                if (result != null)
+                {
+                    // Update booking state with actual confirmation
+                    BookingState.ConfirmationCode = result.ConfirmationCode;
+                    BookingState.BookingId = result.Id;
+                    BookingState.SelectedRoomNumber = result.RoomNumber;
+                    BookingState.TotalAmount = result.TotalAmount;
+
+                    Nav.NavigateTo("/confirmation");
+                }
+                else
+                {
+                    ErrorMessage = "Booking created but response was empty.";
+                }
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                {
+                    ErrorMessage = "Unable to create booking. The room may no longer be available.";
+                }
+                else
+                {
+                    ErrorMessage = $"Booking failed. Please try again.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            IsProcessing = false;
+        }
+    }
+
+    private class ApiResponse<T>
+    {
+        public string Message { get; set; } = "";
+        public T? Result { get; set; }
+        public int StatusCode { get; set; }
+    }
+
+    private class BookingResponse
+    {
+        public int Id { get; set; }
+        public string ConfirmationCode { get; set; } = "";
+        public DateTime CheckInDate { get; set; }
+        public DateTime CheckOutDate { get; set; }
+        public int Status { get; set; }  // Enum comes as int: 0=Reserved, 1=CheckedIn, 2=CheckedOut, 3=Cancelled
+        public string GuestName { get; set; } = "";
+        public string RoomNumber { get; set; } = "";
+        public decimal TotalAmount { get; set; }
     }
 }
