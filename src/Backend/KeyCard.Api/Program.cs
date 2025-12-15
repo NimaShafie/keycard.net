@@ -49,7 +49,16 @@ var sqliteRelative = builder.Configuration["Database:SqlitePath"] ?? "App_Data/k
 string sqliteFullPath = GetOrCreateSqlitePath(builder.Environment.ContentRootPath, sqliteRelative);
 
 // Decide provider
-bool useSqlServer = true;
+bool useSqlServer = false;
+if (!string.Equals(providerSetting, "Sqlite", StringComparison.OrdinalIgnoreCase))
+{
+    useSqlServer = await TryEnsureSqlServerAvailable(sqlCs);
+    if (!useSqlServer && OperatingSystem.IsWindows())
+    {
+        TryStartLocalDbInstance("MSSQLLocalDB");
+        useSqlServer = await TryEnsureSqlServerAvailable(sqlCs);
+    }
+}
 
 // Register DbContext
 builder.Services.AddDbContext<ApplicationDBContext>(opts =>
