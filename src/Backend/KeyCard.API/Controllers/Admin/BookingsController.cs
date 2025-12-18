@@ -26,7 +26,7 @@ public class BookingsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "FrontDesk,Admin,Guest")]
+    [Authorize(Roles = "FrontDesk,Admin")]
 
     public async Task<ActionResult<BookingViewModel>> CreateBooking([FromBody] CreateBookingCommand request)
     {
