@@ -1,182 +1,212 @@
-# Keycard.NET
-Cross-platform hotel management system built in C#/.NET. Includes a staff desktop app, guest web portal, and real-time backend for bookings, housekeeping, and digital keys.
+# KeyCard.NET
 
-A C#/.NET 8–based hotel management platform that combines:
-- **Staff desktop app** (front desk + housekeeping) built with **Avalonia** (Windows/macOS/Linux).
-- **Guest web/kiosk** built with **Blazor Server**.
-- **ASP.NET Core** backend (REST + **SignalR**), **EF Core** with **PostgreSQL**, **Redis** for cache/backplane, and **Hangfire** for background jobs.
-- Fully **containerized** (Docker/Compose) for on-prem (Proxmox VM) or local laptops.
+<p align="center">
 
-> **Windows required** (per course), but desktop + server also run on macOS/Linux.
+  <!-- .NET Version -->
+  <img alt=".NET 8" src="https://img.shields.io/badge/.NET-8.0-blueviolet?style=for-the-badge&logo=dotnet" />
 
----
+  <!-- CI Status -->
+  <a href="https://github.com/NimaShafie/keycard.net/actions/workflows/ci.yml">
+    <img alt="CI" src="https://img.shields.io/github/actions/workflow/status/NimaShafie/keycard.net/ci.yml?style=for-the-badge&logo=github&label=CI" />
+  </a>
 
-## Prereqs
-- **.NET 8 SDK**
-- **Windows** (course target). macOS/Linux also work for API/Web/Desktop.
-- **No SQL Server install required** – dev uses **LocalDB** via `dotnet user-secrets`.
+  <!-- License -->
+  <img alt="License" src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" />
 
-If you haven’t already, set the LocalDB connection string once (Windows PowerShell):
+  <!-- Project Type -->
+  <img alt="Avalonia" src="https://img.shields.io/badge/Desktop-Avalonia-0064A5?style=for-the-badge&logo=avalonia" />
+  <img alt="Blazor Server" src="https://img.shields.io/badge/Web-Blazor_Server-512BD4?style=for-the-badge&logo=blazor" />
+  <img alt="SQLite" src="https://img.shields.io/badge/Database-SQLite-044F88?style=for-the-badge&logo=sqlite" />
 
-```powershell
-cd <repo-root>
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=(localdb)\MSSQLLocalDB;Database=KeyCardDb;Trusted_Connection=True;MultipleActiveResultSets=True;Encrypt=False" --project src/Backend/KeyCard.Api
-```
-Run EF migrations (first time only):
-```powershell
-dotnet ef database update --project src/Backend/KeyCard.Infrastructure --startup-project src/Backend/KeyCard.Api
-```
+</p>
 
----
+Cross-platform hotel management system built in C#/.NET.\
+Includes a staff desktop app, guest web portal, and real-time backend
+for bookings, housekeeping, and digital keys.
+
+A .NET 8--based hotel platform with:
+
+-   **Staff desktop app** (front desk + housekeeping) built with
+    Avalonia (Windows/macOS/Linux).
+-   **Guest web/kiosk** built with Blazor Server.
+-   **Backend API** using ASP.NET Core, EF Core, and
+    Identity, with SignalR for live updates.
+
+The desktop and backend also run on Windows/macOS/Linux.
+
+------------------------------------------------------------------------
+
+## Current Status / What's Changed
+
+Compared to the original project plan:
+
+-   The development database now uses SQLite (file-based) instead of
+    LocalDB.
+-   The desktop app supports Mock and Live modes via
+    configuration (no separate exe).
+-   The repo is organized as a .NET monorepo with three solution
+    files.
+-   Docker, Nginx, and compose files are no longer part of the standard
+    setup.
+-   GitHub workflows are minimal/optional and not required to run or
+    develop the app locally.
+
+------------------------------------------------------------------------
+
+## Prerequisites
+
+-   .NET 8 SDK
+-   Windows (primary target)
+-   (Optional) macOS/Linux for backend & desktop development
+
+The backend uses a SQLite database file under:
+
+    src/Backend/KeyCard.Api/App_Data/keycard_dev.db
+
+If the schema becomes out of sync, delete the DB file and let EF
+recreate it, or reapply migrations.
+
+------------------------------------------------------------------------
+
+## Database Migrations (Backend)
+
+Apply migrations:
+
+    dotnet ef database update --project src/Backend/KeyCard.Infrastructure --startup-project src/Backend/KeyCard.Api
+
+Reset DB:
+
+1.  Stop backend\
+2.  Delete: `src/Backend/KeyCard.Api/App_Data/keycard_dev.db`\
+3.  Re-run migrations or run API once to recreate
+
+------------------------------------------------------------------------
 
 ## How to Run
 
-### 🧩 Using Visual Studio
-Visual Studio automatically detects root-level launch configurations from `launch.vs.json`.
+### Visual Studio
 
-Available **Startup Items** (green play dropdown):
-1. **KeyCard Backend** – Runs only the backend API (http://localhost:8080)
-2. **KeyCard Desktop** – Runs only the Avalonia desktop client
-3. **KeyCard Web** – Runs only the Blazor Server web portal (http://localhost:8081)
-4. **KeyCard Backend + Desktop** – Runs both API and Desktop
-5. **KeyCard Backend + Web** – Runs both API and Web
-6. **KeyCard Backend + Desktop + Web** – Runs all three together
+Open the root solution or area-specific solution:
 
-> These use PowerShell scripts in `/run` (e.g., `run/api.ps1`, `run/api-desktop.ps1`, etc.).  
-> No project `appsettings` or `launchSettings.json` are modified.
+-   `KeyCard.Backend.sln`
+-   `KeyCard.Desktop.sln`
+-   `KeyCard.Web.sln`
 
-If scripts don’t launch the first time, enable PowerShell script execution:
-```powershell
-Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
-```
+Select the desired run profile:
 
----
+-   Backend API
+-   Web Portal
+-   Desktop
+-   Backend + Web
+-   Backend + Desktop
+-   Full stack
 
-### 🧩 Using Visual Studio Code
-VS Code uses `.vscode/launch.json` and `.vscode/tasks.json`. The repo already includes predefined debug configurations:
+Ports are shown in the startup logs.
 
-**Available launch options:**
-- **KeyCard Backend** → http://localhost:8080 (Swagger at `/swagger`)
-- **KeyCard Desktop** → Avalonia client connected to http://localhost:8080
-- **KeyCard Web** → http://localhost:8081
-- **KeyCard Backend + Desktop**
-- **KeyCard Backend + Web**
-- **KeyCard Backend + Desktop + Web**
+------------------------------------------------------------------------
 
-> The first time, allow Windows Firewall access for ports 8080/8081.
+### Visual Studio Code
 
-**To start:**
-1. Open the repo in VS Code.  
-2. Go to **Run and Debug** (`Ctrl+Shift+D`).  
-3. Pick the configuration (e.g., *KeyCard Backend + Desktop*) and click **▶ Run**.
+Use built-in `.vscode/launch.json`:
 
----
+1.  Open repo in VS Code\
+2.  Go to **Run & Debug**\
+3.  Choose configuration (Backend, Web, Desktop, or combinations)
 
-### 🧩 Using any IDE or Command Line
-You can run the same scripts manually from the `/run` directory:
+------------------------------------------------------------------------
 
-```powershell
-# 1. Run only the backend API
-pwsh run/api.ps1
+### Command Line
 
-# 2. Run only the desktop client
-pwsh run/desktop.ps1
+    dotnet run --project src/Backend/KeyCard.Api/KeyCard.Api.csproj
+    dotnet run --project src/Web/KeyCard.Web/KeyCard.Web.csproj
+    dotnet run --project src/Desktop/KeyCard.Desktop/KeyCard.Desktop.csproj
 
-# 3. Run only the web app
-pwsh run/web.ps1
+Backend should run first when using Web or Desktop.
 
-# 4. Run backend + desktop
-pwsh run/api-desktop.ps1
+------------------------------------------------------------------------
 
-# 5. Run backend + web
-pwsh run/api-web.ps1
+## Desktop App Modes (Mock vs Live)
 
-# 6. Run backend + desktop + web
-pwsh run/api-desktop-web.ps1
-```
+The desktop app supports modes via config:
 
-All scripts automatically configure URLs and environment variables.
+### Mock Mode
 
----
+    KeyCard:Mode = "Mock"
 
-## Features (Initial Scope)
-- Bookings & availability search
-- Check-in / Check-out workflows
-- Room lifecycle & housekeeping Kanban (Vacant → Occupied → Dirty → Cleaning → Inspected → Vacant)
-- Real-time updates (SignalR)
-- Guest self-check-in & **digital key** (QR/JWT)
-- PDF invoices (QuestPDF)
+### Live Mode
 
-**Stretch Goals:** demand pricing, multi-property, photo uploads, mock OTA feed.
+    KeyCard:Mode = "Live"
+    KeyCard:ApiBaseUrl = "https://localhost:7224"
 
----
+Example:
+
+    $env:KeyCard__Mode = "Live"
+    $env:KeyCard__ApiBaseUrl = "https://localhost:7224"
+    dotnet run --project src/Desktop/KeyCard.Desktop
+
+------------------------------------------------------------------------
+
+## Features (Current Scope)
+
+-   Guest bookings & availability search
+-   Check-in / Check-out workflows
+-   Room lifecycle tracking (Vacant → Occupied → Dirty → Cleaning →
+    Inspected → Vacant)
+-   Real-time updates (SignalR)
+-   Guest self-check-in + digital key (QR)
+-   PDF invoices
+
+------------------------------------------------------------------------
 
 ## Tech Stack
-- **Language/Runtime:** C# / .NET 8
-- **Desktop:** Avalonia (MVVM)
-- **Web:** Blazor Server (Razor Components)
-- **Server:** ASP.NET Core + EF Core + Identity + SignalR + Hangfire
-- **DB:** LocalDB (dev) or PostgreSQL (prod)
-- **Infra:** Redis, Nginx (TLS), Docker/Compose
-- **Testing:** xUnit, FluentAssertions
-- **Reports:** QuestPDF
 
----
+-   **Language:** C# / .NET 8
+-   **Desktop:** Avalonia (MVVM)
+-   **Web:** Blazor Server
+-   **Backend:** ASP.NET Core, EF Core, Identity, SignalR
+-   **Database:** SQLite
+-   **Testing:** xUnit, FluentAssertions
+
+------------------------------------------------------------------------
 
 ## Repository Layout
-```
-keycard.net/
-├─ docs/
-│  └─ architecture.md
-├─ src/
-│  ├─ Backend/                          ← Dhruv (Backend Lead)
-│  │  ├─ KeyCard.Api/                   # ASP.NET Core API + SignalR + Auth
-│  │  ├─ KeyCard.Application/           # CQRS/validators/domain services
-│  │  ├─ KeyCard.Domain/                # Entities, VOs, domain events
-│  │  ├─ KeyCard.Infrastructure/        # EF Core, providers, migrations
-│  │  └─ KeyCard.Contracts/             # DTOs + Swagger/OpenAPI config
-│  │
-│  ├─ Desktop/                          ← Nima (Desktop Lead)
-│  │  └─ KeyCard.Desktop/               # Avalonia + MVVM client
-│  │
-│  └─ Web/                              ← Aastha (Web/Kiosk Lead)
-│     └─ KeyCard.Web/                   # Blazor Server
-│
-├─ tests/
-│  ├─ Backend.UnitTests/
-│  ├─ Backend.IntegrationTests/
-│  ├─ Desktop.UITests/
-│  └─ Web.E2E/
-├─ build/                               # Dockerfiles (api, web)
-├─ ops/                                 # compose, nginx, scripts
-├─ run/                                 # PowerShell launch scripts
-└─ keycard.net.sln
-```
 
----
+    keycard.net/
+    ├─ docs/
+    │  └─ architecture.md
+    ├─ src/
+    │  ├─ Backend/
+    │  │  ├─ KeyCard.Api/
+    │  │  ├─ KeyCard.BusinessLogic/
+    │  │  ├─ KeyCard.Core/
+    │  │  ├─ KeyCard.Domain/
+    │  │  └─ KeyCard.Infrastructure/
+    │  ├─ Desktop/
+    │  │  └─ KeyCard.Desktop/
+    │  └─ Web/
+    │     └─ KeyCard.Web/
+    ├─ tests/
+    ├─ run/
+    └─ keycard.net.sln
 
-## Optional: Docker Dev Stack
-```powershell
-cd ops
-docker compose -f compose.dev.yml up -d --build
-```
-- API → http://localhost:8080  
-- Web → http://localhost:8081  
-- Desktop connects automatically to the same base URL.
+------------------------------------------------------------------------
 
----
+## Troubleshooting
 
-## Desktop App Modes
-**Mock mode (test data):**
-```powershell
-$env:DOTNET_ENVIRONMENT='Development'
-$env:KeyCard__UseMocks='true'
-dotnet run --project src/Desktop/KeyCard.Desktop/KeyCard.Desktop.csproj
-```
+### "Error loading bookings"
 
-**Live mode (real backend):**
-```powershell
-$env:DOTNET_ENVIRONMENT='Production'
-$env:KeyCard__UseMocks='false'
-dotnet run --project src/Desktop/KeyCard.Desktop/KeyCard.Desktop.csproj
-```
+Likely SQLite schema mismatch.\
+Fix:
+
+1.  Delete `keycard_dev.db`\
+2.  Run migrations or restart backend
+
+### Port conflicts
+
+Update ports in `launchSettings.json`.
+
+### Desktop Mock Mode not switching
+
+Verify `KeyCard:Mode` environment variable or appsettings entry.
+
+------------------------------------------------------------------------
