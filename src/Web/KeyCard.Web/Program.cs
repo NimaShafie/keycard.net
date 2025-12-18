@@ -1,4 +1,5 @@
 using KeyCard.Web.Data;
+using KeyCard.Web.Services;
 
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -9,10 +10,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddSingleton<WeatherForecastService>();
+
+// Register state services (scoped per circuit/connection)
+builder.Services.AddScoped<AuthStateService>();
+builder.Services.AddScoped<BookingStateService>();
+
 // Register HttpClient factory + a named client for the API
 builder.Services.AddHttpClient("api", client =>
 {
-    client.BaseAddress = new Uri("https://localhost:8080"); // 👈 CHANGE to your backend port
+    client.BaseAddress = new Uri("https://localhost:7224");
 });
 
 

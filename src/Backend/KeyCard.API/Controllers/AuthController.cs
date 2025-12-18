@@ -34,12 +34,18 @@ namespace KeyCard.Api.Controllers
         }
 
         /// <summary>
-        /// Staff/Admin login
+        /// Staff/Admin login - accepts username or email
         /// </summary>
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginCommand request)
         {
+            // Try to find user by username first, then by email
             var user = await _userManager.FindByNameAsync(request.Username);
+            if (user == null)
+            {
+                user = await _userManager.FindByEmailAsync(request.Username);
+            }
+            
             if (user != null && await _userManager.CheckPasswordAsync(user, request.Password))
             {
                 var roles = await _userManager.GetRolesAsync(user);

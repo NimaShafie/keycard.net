@@ -1,0 +1,408 @@
+@page "/booking/{BookingId:int}"
+@inject NavigationManager Nav
+@inject IHttpClientFactory Http
+@inject KeyCard.Web.Services.AuthStateService AuthState
+@inject IJSRuntime JS
+
+<div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-10 px-4">
+    <div class="max-w-lg mx-auto">
+        <!-- Back Button -->
+        <button @onclick="GoBack" class="text-slate-500 hover:text-slate-700 mb-6 inline-flex items-center gap-2">
+            ← Back to Bookings
+        </button>
+
+        @if (IsLoading)
+        {
+            <div class="flex items-center justify-center py-20">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <div class="bg-white rounded-3xl shadow-lg p-10 text-center">
+                <div class="text-4xl mb-4">⚠️</div>
+                <h3 class="text-lg font-semibold text-slate-700">Error</h3>
+                <p class="text-slate-500 mt-2">@ErrorMessage</p>
+            </div>
+        }
+        else if (Booking != null)
+        {
+            <!-- Status Card -->
+            <div class="bg-white rounded-3xl shadow-xl overflow-hidden">
+                <!-- Status Banner -->
+                <div class="@GetStatusBannerClass(Booking.StatusName) p-6 text-center">
+                    <div class="text-4xl mb-2">@GetStatusIcon(Booking.StatusName)</div>
+                    <p class="text-sm opacity-80">Booking Status</p>
+                    <p class="text-2xl font-bold">@GetStatusLabel(Booking.StatusName)</p>
+                </div>
+
+                <!-- Confirmation Code -->
+                <div class="p-6 border-b border-slate-100">
+                    <div class="text-center">
+                        <p class="text-xs text-slate-500 mb-1">Confirmation Code</p>
+                        <p class="text-3xl font-mono font-bold text-slate-900 tracking-widest">@Booking.ConfirmationCode</p>
+                    </div>
+                </div>
+
+                <!-- Details -->
+                <div class="p-6">
+                    <h3 class="font-semibold text-slate-700 mb-4">Booking Details</h3>
+                    <div class="space-y-3 text-sm">
+                        <div class="flex justify-between py-2 border-b border-slate-100">
+                            <span class="text-slate-500">Guest</span>
+                            <span class="font-medium">@Booking.GuestName</span>
+                        </div>
+                        <div class="flex justify-between py-2 border-b border-slate-100">
+                            <span class="text-slate-500">Room</span>
+                            <span class="font-medium">@Booking.RoomNumber</span>
+                        </div>
+                        <div class="flex justify-between py-2 border-b border-slate-100">
+                            <span class="text-slate-500">Check-in</span>
+                            <span class="font-medium">@Booking.CheckInDate.ToString("ddd, MMM dd, yyyy")</span>
+                        </div>
+                        <div class="flex justify-between py-2 border-b border-slate-100">
+                            <span class="text-slate-500">Check-out</span>
+                            <span class="font-medium">@Booking.CheckOutDate.ToString("ddd, MMM dd, yyyy")</span>
+                        </div>
+                        <div class="flex justify-between py-2 border-b border-slate-100">
+                            <span class="text-slate-500">Duration</span>
+                            <span class="font-medium">@GetNights() nights</span>
+                        </div>
+                        <div class="flex justify-between py-3 bg-amber-50 -mx-6 px-6 rounded-xl mt-4">
+                            <span class="font-semibold text-slate-700">Total Amount</span>
+                            <span class="font-bold text-xl text-amber-600">$@Booking.TotalAmount.ToString("0.00")</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Digital Key Section -->
+                @if (Booking.StatusName == "CheckedIn" && Booking.DigitalKey != null)
+                {
+                    <div class="p-6 border-t border-slate-100">
+                        <h3 class="font-semibold text-slate-700 mb-4 flex items-center gap-2">
+                            <span class="text-xl">🔑</span> Digital Room Key
+                        </h3>
+                        <div class="flex justify-center">
+                            <div class="bg-white border-2 border-amber-400 rounded-xl p-3 shadow-lg">
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=@Uri.EscapeDataString(Booking.DigitalKey.Token)" 
+                                     alt="Digital Key QR Code" 
+                                     class="w-44 h-44" />
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500 text-center mt-3">
+                            Scan QR at room door
+                        </p>
+                    </div>
+                }
+
+                <!-- Actions -->
+                <div class="p-6 border-t border-slate-100 space-y-3">
+                    @if (Booking.StatusName == "Reserved" && Booking.CheckInDate.Date <= DateTime.Today)
+                    {
+                        <button @onclick="CheckIn"
+                                disabled="@IsProcessing"
+                                class="w-full py-3 bg-emerald-500 text-white font-semibold rounded-xl hover:bg-emerald-600 transition disabled:opacity-50">
+                            @if (IsProcessing)
+                            {
+                                <span>Processing...</span>
+                            }
+                            else
+                            {
+                                <span>✓ Check In Now</span>
+                            }
+                        </button>
+                    }
+
+                    @if (Booking.StatusName == "CheckedIn")
+                    {
+                        <button @onclick="CheckOut"
+                                disabled="@IsProcessing"
+                                class="w-full py-3 bg-rose-500 text-white font-semibold rounded-xl hover:bg-rose-600 transition disabled:opacity-50">
+                            @if (IsProcessing)
+                            {
+                                <span>Processing...</span>
+                            }
+                            else
+                            {
+                                <span>🚪 Check Out</span>
+                            }
+                        </button>
+                    }
+
+                    @if (Booking.StatusName == "CheckedOut")
+                    {
+                        <button @onclick="DownloadInvoice"
+                                class="w-full py-3 bg-slate-900 text-white font-semibold rounded-xl hover:bg-slate-800 transition flex items-center justify-center gap-2">
+                            📄 Download Invoice
+                        </button>
+                    }
+
+                    <button @onclick="GoBack"
+                            class="w-full py-3 border border-slate-200 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition">
+                        Back to My Bookings
+                    </button>
+                </div>
+            </div>
+
+            <!-- Help Info -->
+            <div class="mt-6 bg-blue-50 border border-blue-200 rounded-2xl p-4">
+                <div class="flex gap-3">
+                    <span class="text-2xl">ℹ️</span>
+                    <div class="text-sm">
+                        <p class="font-medium text-blue-800">Need Assistance?</p>
+                        <p class="text-blue-600 mt-1">
+                            Contact the front desk or call our 24/7 support line for help with your booking.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int BookingId { get; set; }
+
+    private BookingDto? Booking { get; set; }
+    private bool IsLoading { get; set; } = true;
+    private bool IsProcessing { get; set; }
+    private string? ErrorMessage { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthState.IsAuthenticated)
+        {
+            Nav.NavigateTo("/auth/login");
+            return;
+        }
+
+        await LoadBooking();
+    }
+
+    private async Task LoadBooking()
+    {
+        IsLoading = true;
+        ErrorMessage = null;
+
+        try
+        {
+            var client = Http.CreateClient("api");
+            client.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AuthState.Token);
+
+            // First get status to check access
+            var statusResponse = await client.GetAsync($"/api/guest/bookings/{BookingId}/status");
+
+            if (statusResponse.IsSuccessStatusCode)
+            {
+                // Get all bookings and find this one (since there's no direct get-by-id for guest)
+                var allResponse = await client.GetAsync("/api/guest/bookings");
+                if (allResponse.IsSuccessStatusCode)
+                {
+                    var apiResponse = await allResponse.Content.ReadFromJsonAsync<ApiResponse<List<BookingDto>>>();
+                    var bookings = apiResponse?.Result;
+                    Booking = bookings?.FirstOrDefault(b => b.Id == BookingId);
+                    if (Booking == null)
+                    {
+                        ErrorMessage = "Booking not found.";
+                    }
+                }
+            }
+            else if (statusResponse.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                ErrorMessage = "Booking not found.";
+            }
+            else if (statusResponse.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                AuthState.Clear();
+                Nav.NavigateTo("/auth/login");
+            }
+            else
+            {
+                ErrorMessage = "Unable to load booking details.";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task CheckIn()
+    {
+        IsProcessing = true;
+        ErrorMessage = null;
+
+        try
+        {
+            var client = Http.CreateClient("api");
+            client.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AuthState.Token);
+
+            var response = await client.PostAsync($"/api/guest/bookings/{BookingId}/checkin", null);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var apiResponse = await response.Content.ReadFromJsonAsync<ApiResponse<BookingDto>>();
+                Booking = apiResponse?.Result;
+            }
+            else
+            {
+                ErrorMessage = "Check-in failed. Please visit the front desk.";
+            }
+        }
+        catch
+        {
+            ErrorMessage = "Unable to process check-in.";
+        }
+        finally
+        {
+            IsProcessing = false;
+        }
+    }
+
+    private async Task CheckOut()
+    {
+        IsProcessing = true;
+        ErrorMessage = null;
+
+        try
+        {
+            var client = Http.CreateClient("api");
+            client.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AuthState.Token);
+
+            var response = await client.PostAsync($"/api/guest/bookings/{BookingId}/checkout", null);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var apiResponse = await response.Content.ReadFromJsonAsync<ApiResponse<BookingDto>>();
+                Booking = apiResponse?.Result;
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                ErrorMessage = "Check-out failed. Please visit the front desk.";
+            }
+        }
+        catch
+        {
+            ErrorMessage = "Unable to process check-out.";
+        }
+        finally
+        {
+            IsProcessing = false;
+        }
+    }
+
+    private async Task DownloadInvoice()
+    {
+        IsProcessing = true;
+        try
+        {
+            var client = Http.CreateClient("api");
+            client.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AuthState.Token);
+
+            var response = await client.GetAsync($"/api/guest/bookings/{BookingId}/invoice");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var pdfBytes = await response.Content.ReadAsByteArrayAsync();
+                var base64 = Convert.ToBase64String(pdfBytes);
+                var fileName = $"Invoice-{Booking?.ConfirmationCode ?? BookingId.ToString()}.pdf";
+                
+                await JS.InvokeVoidAsync("downloadFile", base64, fileName, "application/pdf");
+            }
+            else
+            {
+                ErrorMessage = "Failed to download invoice.";
+            }
+        }
+        catch
+        {
+            ErrorMessage = "Unable to download invoice.";
+        }
+        finally
+        {
+            IsProcessing = false;
+        }
+    }
+
+    private void GoBack() => Nav.NavigateTo("/dashboard");
+
+    private int GetNights() => Booking != null
+        ? (Booking.CheckOutDate.Date - Booking.CheckInDate.Date).Days
+        : 0;
+
+    private string GetStatusBannerClass(string status) => status switch
+    {
+        "Reserved" => "bg-gradient-to-r from-blue-500 to-blue-600 text-white",
+        "CheckedIn" => "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white",
+        "CheckedOut" => "bg-gradient-to-r from-slate-500 to-slate-600 text-white",
+        "Cancelled" => "bg-gradient-to-r from-red-500 to-red-600 text-white",
+        _ => "bg-gradient-to-r from-slate-500 to-slate-600 text-white"
+    };
+
+    private string GetStatusIcon(string status) => status switch
+    {
+        "Reserved" => "📅",
+        "CheckedIn" => "🏨",
+        "CheckedOut" => "✅",
+        "Cancelled" => "❌",
+        _ => "📋"
+    };
+
+    private string GetStatusLabel(string status) => status switch
+    {
+        "Reserved" => "Reserved",
+        "CheckedIn" => "Checked In",
+        "CheckedOut" => "Completed",
+        "Cancelled" => "Cancelled",
+        _ => status
+    };
+
+    private class ApiResponse<T>
+    {
+        public string Message { get; set; } = "";
+        public T? Result { get; set; }
+        public int StatusCode { get; set; }
+    }
+
+    private class BookingDto
+    {
+        public int Id { get; set; }
+        public string ConfirmationCode { get; set; } = "";
+        public DateTime CheckInDate { get; set; }
+        public DateTime CheckOutDate { get; set; }
+        public int Status { get; set; }  // Enum: 0=Reserved, 1=CheckedIn, 2=CheckedOut, 3=Cancelled
+        public string GuestName { get; set; } = "";
+        public string RoomNumber { get; set; } = "";
+        public decimal TotalAmount { get; set; }
+        public DigitalKeyDto? DigitalKey { get; set; }
+        
+        public string StatusName => Status switch
+        {
+            0 => "Reserved",
+            1 => "CheckedIn",
+            2 => "CheckedOut",
+            3 => "Cancelled",
+            _ => "Unknown"
+        };
+    }
+
+    private class DigitalKeyDto
+    {
+        public int Id { get; set; }
+        public string Token { get; set; } = "";
+        public DateTime IssuedAt { get; set; }
+        public DateTime ExpiresAt { get; set; }
+        public bool IsRevoked { get; set; }
+    }
+}
+

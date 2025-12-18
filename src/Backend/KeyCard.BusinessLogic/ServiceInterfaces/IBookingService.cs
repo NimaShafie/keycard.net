@@ -9,6 +9,9 @@ namespace KeyCard.BusinessLogic.ServiceInterfaces
 
         //admin
         Task<BookingViewModel> CreateBookingAsync(CreateBookingCommand command, CancellationToken cancellationToken);
+        
+        //guest booking
+        Task<BookingViewModel> CreateGuestBookingAsync(CreateGuestBookingCommand command, CancellationToken cancellationToken);
         Task<BookingViewModel> GetBookingByIdAsync(GetBookingByIdCommand command, CancellationToken cancellationToken);
         Task<List<BookingViewModel>> GetAllBookingsAsync(GetAllBookingsCommand command, CancellationToken cancellationToken);
         Task<bool> CancelBookingAsync(CancelBookingCommand command, CancellationToken cancellationToken);
@@ -19,6 +22,7 @@ namespace KeyCard.BusinessLogic.ServiceInterfaces
         Task<List<BookingViewModel>> GetBookingsByGuestIdAsync(GetMyBookingsCommand command, CancellationToken cancellationToken);
         Task<string> GetBookingStatusByIdAsync(GetBookingStatusByIdCommand command, CancellationToken cancellationToken);
         Task<BookingViewModel> GuestCheckInAsync(GuestCheckInCommand command, CancellationToken cancellationToken);
+        Task<BookingViewModel> GuestCheckOutAsync(GuestCheckOutCommand command, CancellationToken cancellationToken);
         Task<BookingViewModel> LookUpBookingAsync(LookupBookingCommand command, CancellationToken cancellationToken);   
     }
 }

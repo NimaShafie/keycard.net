@@ -1,67 +1,170 @@
 ﻿@page "/auth/login"
 @inject IHttpClientFactory Http
 @inject NavigationManager Nav
+@inject KeyCard.Web.Services.AuthStateService AuthState
+@inject KeyCard.Web.Services.BookingStateService BookingState
 
-<div class="min-h-screen flex items-center justify-center bg-slate-100 px-4">
-  <div class="w-full max-w-md bg-white p-8 rounded-xl shadow">
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4">
+    <div class="w-full max-w-md">
+        <!-- Logo -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-amber-500 text-white text-2xl mb-4">
+                🔑
+            </div>
+            <h1 class="text-3xl font-bold text-white">KeyCard</h1>
+            <p class="text-slate-400 mt-1">Hotel Management System</p>
+        </div>
 
-    <h1 class="text-2xl font-bold mb-6 text-center">Login</h1>
+        <!-- Login Card -->
+        <div class="bg-white/10 backdrop-blur-lg p-8 rounded-3xl border border-white/20 shadow-2xl">
+            <h2 class="text-xl font-semibold text-white mb-6 text-center">Welcome Back</h2>
 
-    <div class="space-y-4">
-      <input @bind="Email"
-             type="email"
-             placeholder="Email"
-             class="w-full px-4 py-2 border rounded-lg" />
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm text-slate-300 mb-1">Email</label>
+                    <input @bind="Email"
+                           type="email"
+                           placeholder="your@email.com"
+                           class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
+                </div>
 
-      <input @bind="Password"
-             type="password"
-             placeholder="Password"
-             class="w-full px-4 py-2 border rounded-lg" />
+                <div>
+                    <label class="block text-sm text-slate-300 mb-1">Password</label>
+                    <input @bind="Password"
+                           type="password"
+                           placeholder="••••••••"
+                           class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
+                </div>
 
-      <button @onclick="LoginUser"
-              class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
-        Login
-      </button>
+                <button @onclick="LoginUser"
+                        disabled="@IsLoading"
+                        class="w-full bg-amber-500 text-slate-900 font-semibold py-3 rounded-xl hover:bg-amber-400 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                    @if (IsLoading)
+                    {
+                        <span>Signing in...</span>
+                    }
+                    else
+                    {
+                        <span>Sign In</span>
+                    }
+                </button>
 
-      <p class="text-center text-sm">
-        No account?
-        <a href="/auth/signup" class="text-blue-600 underline">Sign up</a>
-      </p>
+                <p class="text-center text-sm text-slate-400">
+                    Don't have an account?
+                    <a href="/auth/signup" class="text-amber-400 hover:text-amber-300 underline">Create one</a>
+                </p>
+            </div>
+
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <div class="mt-4 p-3 bg-red-500/20 border border-red-500/50 rounded-xl text-red-300 text-sm text-center">
+                    @ErrorMessage
+                </div>
+            }
+        </div>
+
+        <p class="text-center text-xs text-slate-500 mt-6">
+            © 2025 KeyCard Hotel Management
+        </p>
     </div>
-
-    @if (!string.IsNullOrEmpty(ErrorMessage))
-    {
-      <div class="mt-4 text-red-500 text-center">@ErrorMessage</div>
-    }
-  </div>
 </div>
 
 @code {
+    private string Email { get; set; } = "";
+    private string Password { get; set; } = "";
+    private string? ErrorMessage { get; set; }
+    private bool IsLoading { get; set; }
 
-  private string Email { get; set; }
-  private string Password { get; set; }
-  private string ErrorMessage { get; set; }
-
-  private async Task LoginUser()
-  {
-    var client = Http.CreateClient("api");
-
-    var body = new
+    protected override void OnInitialized()
     {
-      email = Email,
-      password = Password
-    };
-
-    var response = await client.PostAsJsonAsync("/api/Auth/login", body);
-
-    if (!response.IsSuccessStatusCode)
-    {
-      ErrorMessage = "Invalid login.";
-      return;
+        // Don't reset booking state - user might be logging in mid-booking
     }
 
-    // TODO: Store token if your backend returns it
+    private async Task LoginUser()
+    {
+        ErrorMessage = null;
+        IsLoading = true;
 
-    Nav.NavigateTo("/dates");
-  }
+        try
+        {
+            var client = Http.CreateClient("api");
+
+            // Backend expects username for login (which is the email for guests)
+            var body = new
+            {
+                username = Email,
+                password = Password
+            };
+
+            var response = await client.PostAsJsonAsync("/api/Auth/login", body);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                ErrorMessage = "Invalid email or password.";
+                return;
+            }
+
+            // Try to parse response - might be wrapped in ApiResponse or direct
+            var responseContent = await response.Content.ReadAsStringAsync();
+            string? token = null;
+            
+            try
+            {
+                // First try: wrapped in ApiResponse
+                var apiResponse = System.Text.Json.JsonSerializer.Deserialize<ApiResponse<LoginResult>>(responseContent, 
+                    new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                token = apiResponse?.Result?.Token;
+            }
+            catch
+            {
+                // Second try: direct response
+                try
+                {
+                    var directResponse = System.Text.Json.JsonSerializer.Deserialize<LoginResult>(responseContent,
+                        new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    token = directResponse?.Token;
+                }
+                catch { }
+            }
+
+            if (!string.IsNullOrEmpty(token))
+            {
+                // Store auth state
+                AuthState.SetAuth(token, 0, "", Email, "Guest");
+                
+                // Set flag and let UI update, then navigate
+                IsLoading = false;
+                StateHasChanged();
+                
+                // Navigate after a small delay to ensure state is saved
+                await Task.Delay(100);
+                
+                Nav.NavigateTo("/dashboard", forceLoad: false);
+                return;
+            }
+            else
+            {
+                ErrorMessage = $"Login failed. Could not extract token.";
+                IsLoading = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error: {ex.Message}";
+            IsLoading = false;
+        }
+    }
+
+    private class ApiResponse<T>
+    {
+        public string Message { get; set; } = "";
+        public T? Result { get; set; }
+        public int StatusCode { get; set; }
+    }
+
+    private class LoginResult
+    {
+        public string Token { get; set; } = "";
+        public DateTime Expiration { get; set; }
+    }
 }

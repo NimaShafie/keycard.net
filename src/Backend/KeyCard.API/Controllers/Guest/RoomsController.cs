@@ -18,7 +18,7 @@ namespace KeyCard.Api.Controllers.Guest
             _mediator = mediator;
         }
 
-        [HttpGet("room-options")]
+        [HttpGet("options")]
         [ProducesResponseType(typeof(RoomOptionsViewModel), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetRoomOptions(
             [FromQuery] DateOnly checkIn,

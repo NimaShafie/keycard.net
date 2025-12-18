@@ -1,0 +1,260 @@
+@page "/booking/lookup"
+@inject NavigationManager Nav
+@inject IHttpClientFactory Http
+
+<div class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center px-4">
+    <div class="w-full max-w-md">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <button @onclick="GoBack" class="text-slate-400 hover:text-white mb-4 inline-flex items-center gap-2">
+                ← Back to Home
+            </button>
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-amber-500 text-white text-2xl mb-4">
+                🔍
+            </div>
+            <h1 class="text-3xl font-bold text-white">Find Your Booking</h1>
+            <p class="text-slate-400 mt-2">Enter your confirmation code and email</p>
+        </div>
+
+        <!-- Lookup Form -->
+        <div class="bg-white/10 backdrop-blur-lg p-8 rounded-3xl border border-white/20">
+            <div class="space-y-5">
+                <div>
+                    <label class="block text-sm text-slate-300 mb-2">Confirmation Code</label>
+                    <input @bind="ConfirmationCode"
+                           placeholder="e.g. KCN-123456"
+                           class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent uppercase tracking-wider" />
+                </div>
+
+                <div>
+                    <label class="block text-sm text-slate-300 mb-2">Email Address</label>
+                    <input @bind="Email"
+                           type="email"
+                           placeholder="your@email.com"
+                           class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
+                </div>
+
+                <button @onclick="LookupBooking"
+                        disabled="@IsLoading"
+                        class="w-full bg-amber-500 text-slate-900 font-semibold py-3 rounded-xl hover:bg-amber-400 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                    @if (IsLoading)
+                    {
+                        <span>Searching...</span>
+                    }
+                    else
+                    {
+                        <span>Find Booking</span>
+                    }
+                </button>
+            </div>
+
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <div class="mt-4 p-3 bg-red-500/20 border border-red-500/50 rounded-xl text-red-300 text-sm text-center">
+                    @ErrorMessage
+                </div>
+            }
+        </div>
+
+        <!-- Found Booking Card -->
+        @if (FoundBooking != null)
+        {
+            <div class="mt-6 bg-white rounded-3xl shadow-xl overflow-hidden animate-fadeIn">
+                <!-- Status Banner -->
+                <div class="@GetStatusBannerClass(FoundBooking.StatusName) p-4 text-center">
+                    <p class="text-sm opacity-80">Booking Status</p>
+                    <p class="text-xl font-bold">@FoundBooking.StatusName</p>
+                </div>
+
+                <div class="p-6">
+                    <div class="text-center mb-4">
+                        <p class="text-xs text-slate-500">Confirmation Code</p>
+                        <p class="text-2xl font-mono font-bold text-slate-900 tracking-wider">@FoundBooking.ConfirmationCode</p>
+                    </div>
+
+                    <div class="space-y-3 text-sm">
+                        <div class="flex justify-between py-2 border-b border-slate-100">
+                            <span class="text-slate-500">Guest</span>
+                            <span class="font-medium">@FoundBooking.GuestName</span>
+                        </div>
+                        <div class="flex justify-between py-2 border-b border-slate-100">
+                            <span class="text-slate-500">Room</span>
+                            <span class="font-medium">@FoundBooking.RoomNumber</span>
+                        </div>
+                        <div class="flex justify-between py-2 border-b border-slate-100">
+                            <span class="text-slate-500">Check-in</span>
+                            <span class="font-medium">@FoundBooking.CheckInDate.ToString("ddd, MMM dd, yyyy")</span>
+                        </div>
+                        <div class="flex justify-between py-2 border-b border-slate-100">
+                            <span class="text-slate-500">Check-out</span>
+                            <span class="font-medium">@FoundBooking.CheckOutDate.ToString("ddd, MMM dd, yyyy")</span>
+                        </div>
+                        <div class="flex justify-between py-2">
+                            <span class="text-slate-500">Total</span>
+                            <span class="font-bold text-lg text-amber-600">$@FoundBooking.TotalAmount.ToString("0.00")</span>
+                        </div>
+                    </div>
+
+                    <!-- Actions based on status -->
+                    <div class="mt-6 space-y-3">
+                        @if (FoundBooking.StatusName == "Reserved")
+                        {
+                            <p class="text-center text-sm text-slate-500 mb-2">
+                                Ready to check in? Sign in to your account first.
+                            </p>
+                            <button @onclick="GoToLoginWithBooking"
+                                    class="w-full py-3 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 transition">
+                                Sign In to Check In
+                            </button>
+                        }
+                        else if (FoundBooking.StatusName == "CheckedIn" && FoundBooking.DigitalKey != null)
+                        {
+                            <div class="flex flex-col items-center">
+                                <p class="text-sm text-slate-600 mb-3">🔑 Digital Room Key</p>
+                                <div class="bg-white border-2 border-amber-400 rounded-xl p-3 shadow-lg">
+                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=@Uri.EscapeDataString(FoundBooking.DigitalKey.Token)" 
+                                         alt="Digital Key QR Code" 
+                                         class="w-36 h-36" />
+                                </div>
+                                <p class="text-xs text-slate-500 mt-3">Scan QR at room door</p>
+                            </div>
+                        }
+                        else if (FoundBooking.StatusName == "CheckedOut")
+                        {
+                            <div class="bg-slate-100 rounded-xl p-4 text-center">
+                                <p class="text-slate-600">✅ Stay completed. Thank you for choosing us!</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <p class="text-center text-xs text-slate-500 mt-6">
+            Need help? Contact the front desk.
+        </p>
+    </div>
+</div>
+
+<style>
+    .animate-fadeIn {
+        animation: fadeIn 0.3s ease-out;
+    }
+    @@keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+
+@code {
+    private string ConfirmationCode { get; set; } = "";
+    private string Email { get; set; } = "";
+    private string? ErrorMessage { get; set; }
+    private bool IsLoading { get; set; }
+    private BookingDto? FoundBooking { get; set; }
+
+    private async Task LookupBooking()
+    {
+        ErrorMessage = null;
+        FoundBooking = null;
+
+        if (string.IsNullOrWhiteSpace(ConfirmationCode) || string.IsNullOrWhiteSpace(Email))
+        {
+            ErrorMessage = "Please enter both confirmation code and email.";
+            return;
+        }
+
+        IsLoading = true;
+
+        try
+        {
+            var client = Http.CreateClient("api");
+            var url = $"/api/guest/bookings/lookup?code={Uri.EscapeDataString(ConfirmationCode)}&email={Uri.EscapeDataString(Email)}";
+
+            var response = await client.GetAsync(url);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var apiResponse = await response.Content.ReadFromJsonAsync<ApiResponse<BookingDto>>();
+                FoundBooking = apiResponse?.Result;
+                
+                if (FoundBooking == null)
+                {
+                    ErrorMessage = "No booking found with this confirmation code and email.";
+                }
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                ErrorMessage = "No booking found with this confirmation code and email.";
+            }
+            else
+            {
+                ErrorMessage = "Unable to find booking. Please check your details.";
+            }
+        }
+        catch (Exception)
+        {
+            ErrorMessage = "Unable to connect to server. Please try again.";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private string GetStatusBannerClass(string status) => status switch
+    {
+        "Reserved" => "bg-blue-500 text-white",
+        "CheckedIn" => "bg-emerald-500 text-white",
+        "CheckedOut" => "bg-slate-500 text-white",
+        "Cancelled" => "bg-red-500 text-white",
+        _ => "bg-slate-500 text-white"
+    };
+
+    private void GoBack() => Nav.NavigateTo("/");
+
+    private void GoToLoginWithBooking()
+    {
+        // Could pass booking ID via query params if needed
+        Nav.NavigateTo("/auth/login");
+    }
+
+    private class ApiResponse<T>
+    {
+        public string Message { get; set; } = "";
+        public T? Result { get; set; }
+        public int StatusCode { get; set; }
+    }
+
+    private class BookingDto
+    {
+        public int Id { get; set; }
+        public string ConfirmationCode { get; set; } = "";
+        public DateTime CheckInDate { get; set; }
+        public DateTime CheckOutDate { get; set; }
+        public int Status { get; set; }  // Enum: 0=Reserved, 1=CheckedIn, 2=CheckedOut, 3=Cancelled
+        public string GuestName { get; set; } = "";
+        public string RoomNumber { get; set; } = "";
+        public decimal TotalAmount { get; set; }
+        public DigitalKeyDto? DigitalKey { get; set; }
+        
+        public string StatusName => Status switch
+        {
+            0 => "Reserved",
+            1 => "CheckedIn",
+            2 => "CheckedOut",
+            3 => "Cancelled",
+            _ => "Unknown"
+        };
+    }
+
+    private class DigitalKeyDto
+    {
+        public int Id { get; set; }
+        public string Token { get; set; } = "";
+        public DateTime IssuedAt { get; set; }
+        public DateTime ExpiresAt { get; set; }
+        public bool IsRevoked { get; set; }
+    }
+}
+
