@@ -63,13 +63,18 @@ namespace KeyCard.Desktop.Services
         {
             var booking = AllBookings.FirstOrDefault(b =>
                 b.Id.ToString() == bookingId ||
-                b.BookingId.ToString() == bookingId ||
                 b.ConfirmationCode == bookingId);
 
             if (booking != null)
             {
+                // Parse string status to enum
+                if (!Enum.TryParse<BookingStatus>(newStatus, ignoreCase: true, out var statusEnum))
+                {
+                    statusEnum = BookingStatus.Reserved;
+                }
+
                 // Since Booking is a record with init-only properties, create a new instance
-                var updated = booking with { Status = newStatus };
+                var updated = booking with { StatusEnum = statusEnum };
 
                 var index = AllBookings.IndexOf(booking);
                 if (index >= 0)
@@ -119,7 +124,7 @@ namespace KeyCard.Desktop.Services
                     if (booking != null)
                     {
                         // Since Booking is a record with init-only properties, create a new instance
-                        var updated = booking with { RoomNumber = roomNumber };
+                        var updated = booking with { RoomNumber = roomNumber.ToString() };
 
                         var index = AllBookings.IndexOf(booking);
                         if (index >= 0)
@@ -147,16 +152,15 @@ namespace KeyCard.Desktop.Services
         {
             return AllBookings.FirstOrDefault(b =>
                 b.ConfirmationCode == code ||
-                b.BookingId.ToString() == code ||
                 b.Id.ToString() == code);
         }
 
         private void RefreshTodayArrivals()
         {
-            var today = DateOnly.FromDateTime(DateTime.Today);
+            var today = DateTime.Today.Date;
 
             TodayArrivals.Clear();
-            foreach (var booking in AllBookings.Where(b => b.CheckInDate == today))
+            foreach (var booking in AllBookings.Where(b => b.CheckInDate.Date == today))
             {
                 TodayArrivals.Add(booking);
             }

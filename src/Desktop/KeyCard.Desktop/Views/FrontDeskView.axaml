@@ -98,20 +98,13 @@
                                     Binding="{Binding ConfirmationCode}"
                                     SortMemberPath="ConfirmationCode"/>
 
-                <DataGridTextColumn Header="First Name" Width="*"
-                                    Binding="{Binding GuestFirstName}"
-                                    SortMemberPath="GuestFirstName"/>
-                <DataGridTextColumn Header="Last Name" Width="*"
-                                    Binding="{Binding GuestLastName}"
-                                    SortMemberPath="GuestLastName"/>
+                <DataGridTextColumn Header="Guest Name" Width="2*"
+                                    Binding="{Binding GuestName}"
+                                    SortMemberPath="GuestName"/>
 
                 <DataGridTextColumn Header="Room" Width="*"
                                     Binding="{Binding RoomNumber}"
                                     SortMemberPath="RoomNumber"/>
-
-                <DataGridTextColumn Header="Room Type" Width="*"
-                                    Binding="{Binding RoomType}"
-                                    SortMemberPath="RoomType"/>
 
                 <DataGridTextColumn Header="Check-In" Width="*"
                                     Binding="{Binding CheckIn}"
@@ -225,25 +218,14 @@
                            Foreground="#E8E8F0"
                            Margin="0,0,0,4"/>
 
-                <!-- First Name -->
+                <!-- Guest Name -->
                 <StackPanel Spacing="4">
-                  <TextBlock Text="First Name"
+                  <TextBlock Text="Guest Name"
                              FontSize="12"
                              Opacity="0.8"
                              Foreground="#CFCFEA"/>
-                  <TextBox Text="{Binding EditFirstName}"
-                           Watermark="Enter first name"
-                           IsEnabled="{Binding !IsBusy}"/>
-                </StackPanel>
-
-                <!-- Last Name -->
-                <StackPanel Spacing="4">
-                  <TextBlock Text="Last Name"
-                             FontSize="12"
-                             Opacity="0.8"
-                             Foreground="#CFCFEA"/>
-                  <TextBox Text="{Binding EditLastName}"
-                           Watermark="Enter last name"
+                  <TextBox Text="{Binding EditGuestName}"
+                           Watermark="Enter guest name"
                            IsEnabled="{Binding !IsBusy}"/>
                 </StackPanel>
 
@@ -267,19 +249,6 @@
                           HorizontalContentAlignment="Center"
                           CornerRadius="6"
                           Padding="8,6"/>
-                </StackPanel>
-
-                <!-- Room Type -->
-                <StackPanel Spacing="4">
-                  <TextBlock Text="Room Type"
-                             FontSize="12"
-                             Opacity="0.8"
-                             Foreground="#CFCFEA"/>
-                  <ComboBox ItemsSource="{Binding RoomTypes}"
-                            SelectedItem="{Binding EditRoomType}"
-                            PlaceholderText="Select room type"
-                            IsEnabled="{Binding !IsBusy}"
-                            HorizontalAlignment="Stretch"/>
                 </StackPanel>
 
                 <!-- Check-In Date -->

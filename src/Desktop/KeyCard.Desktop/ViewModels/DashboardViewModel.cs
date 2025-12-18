@@ -163,9 +163,9 @@ namespace KeyCard.Desktop.ViewModels
 
         private static bool MatchesFilter(Booking booking, string term)
         {
-            return booking.BookingId.ToString().Contains(term, StringComparison.OrdinalIgnoreCase)
+            return booking.Id.ToString().Contains(term, StringComparison.OrdinalIgnoreCase)
                 || booking.GuestName.Contains(term, StringComparison.OrdinalIgnoreCase)
-                || booking.RoomNumber.ToString(CultureInfo.InvariantCulture).Contains(term, StringComparison.OrdinalIgnoreCase)
+                || booking.RoomNumber.Contains(term, StringComparison.OrdinalIgnoreCase)
                 || booking.ConfirmationCode.Contains(term, StringComparison.OrdinalIgnoreCase);
         }
 

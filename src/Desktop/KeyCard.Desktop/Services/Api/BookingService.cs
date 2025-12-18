@@ -22,9 +22,9 @@ public sealed class BookingService : IBookingService
 
     public async Task<IReadOnlyList<Booking>> GetTodayArrivalsAsync(CancellationToken ct = default)
     {
-        var today = DateOnly.FromDateTime(System.DateTime.Today);
+        var today = System.DateTime.Today.Date;
         var all = await ListAsync(ct);
-        return all.Where(b => b.CheckInDate == today).ToList();
+        return all.Where(b => b.CheckInDate.Date == today).ToList();
     }
 
     public Task<Booking?> FindBookingByCodeAsync(string code, CancellationToken ct = default)

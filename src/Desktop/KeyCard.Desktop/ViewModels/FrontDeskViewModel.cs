@@ -32,19 +32,15 @@ namespace KeyCard.Desktop.ViewModels
                     // Populate edit fields when a booking is selected
                     if (_selected != null)
                     {
-                        EditFirstName = _selected.GuestFirstName;
-                        EditLastName = _selected.GuestLastName;
-                        EditRoomType = _selected.RoomType;
-                        // Convert DateOnly to DateTime for the date pickers
-                        EditCheckInDate = _selected.CheckInDate.ToDateTime(TimeOnly.MinValue);
-                        EditCheckOutDate = _selected.CheckOutDate.ToDateTime(TimeOnly.MinValue);
+                        EditGuestName = _selected.GuestName;
+                        // Use DateTime directly from model
+                        EditCheckInDate = _selected.CheckInDate;
+                        EditCheckOutDate = _selected.CheckOutDate;
                         ValidationError = null;
                     }
                     else
                     {
-                        EditFirstName = null;
-                        EditLastName = null;
-                        EditRoomType = null;
+                        EditGuestName = null;
                         EditCheckInDate = null;
                         EditCheckOutDate = null;
                         ValidationError = null;
@@ -104,41 +100,13 @@ namespace KeyCard.Desktop.ViewModels
         }
 
         // Editable fields for the selected booking
-        private string? _editFirstName;
-        public string? EditFirstName
+        private string? _editGuestName;
+        public string? EditGuestName
         {
-            get => _editFirstName;
+            get => _editGuestName;
             set
             {
-                if (SetProperty(ref _editFirstName, value))
-                {
-                    ValidationError = null;
-                    (SaveChangesCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
-                }
-            }
-        }
-
-        private string? _editLastName;
-        public string? EditLastName
-        {
-            get => _editLastName;
-            set
-            {
-                if (SetProperty(ref _editLastName, value))
-                {
-                    ValidationError = null;
-                    (SaveChangesCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
-                }
-            }
-        }
-
-        private string? _editRoomType;
-        public string? EditRoomType
-        {
-            get => _editRoomType;
-            set
-            {
-                if (SetProperty(ref _editRoomType, value))
+                if (SetProperty(ref _editGuestName, value))
                 {
                     ValidationError = null;
                     (SaveChangesCommand as UnifiedRelayCommand)?.RaiseCanExecuteChanged();
@@ -180,14 +148,6 @@ namespace KeyCard.Desktop.ViewModels
             get => _validationError;
             set => SetProperty(ref _validationError, value);
         }
-
-        // Available room types from backend
-        public ObservableCollection<string> RoomTypes { get; } = new()
-        {
-            "Regular Room",
-            "King Room",
-            "Luxury Room"
-        };
 
         private bool _isBusy;
         public bool IsBusy
@@ -287,8 +247,8 @@ namespace KeyCard.Desktop.ViewModels
                 await _bookingState.RefreshAsync();
 
                 // Calculate departures locally
-                var today = DateOnly.FromDateTime(DateTime.Today);
-                var departures = _bookingState.AllBookings.Where(b => b.CheckOutDate == today).ToList();
+                var today = DateTime.Today.Date;
+                var departures = _bookingState.AllBookings.Where(b => b.CheckOutDate.Date == today).ToList();
 
                 _allDepartures.Clear();
                 foreach (var d in departures) _allDepartures.Add(d);
@@ -365,11 +325,11 @@ namespace KeyCard.Desktop.ViewModels
 
             foreach (var b in all)
             {
-                if (b.BookingId == target.BookingId) continue;
+                if (b.Id == target.Id) continue;
                 if (b.Status.Equals("CheckedOut", StringComparison.OrdinalIgnoreCase)) continue;
-                if (b.RoomNumber != roomNumber) continue;
+                if (b.RoomNumberInt != roomNumber) continue;
 
-                if (Overlaps(target.CheckInDate, target.CheckOutDate, b.CheckInDate, b.CheckOutDate))
+                if (Overlaps(target.CheckIn, target.CheckOut, b.CheckIn, b.CheckOut))
                     return false;
             }
             return true;
@@ -424,7 +384,7 @@ namespace KeyCard.Desktop.ViewModels
             // 2) Local conflict detection
             if (!IsRoomAvailableFor(Selected, roomNumber))
             {
-                AssignRoomError = $"Room {roomNumber} is already occupied for {Selected.CheckInDate:MM/dd}–{Selected.CheckOutDate:MM/dd}.";
+                AssignRoomError = $"Room {roomNumber} is already occupied for {Selected.CheckIn:MM/dd}–{Selected.CheckOut:MM/dd}.";
                 StatusMessage = AssignRoomError;
                 return;
             }
@@ -577,27 +537,17 @@ namespace KeyCard.Desktop.ViewModels
         {
             if (IsBusy || Selected == null) return false;
 
-            // Convert DateTime? to DateOnly for comparison
-            DateOnly? editCheckInDateOnly = EditCheckInDate.HasValue
-                ? DateOnly.FromDateTime(EditCheckInDate.Value)
-                : null;
-            DateOnly? editCheckOutDateOnly = EditCheckOutDate.HasValue
-                ? DateOnly.FromDateTime(EditCheckOutDate.Value)
-                : null;
-
             // Check if any field has changed
             bool hasChanges =
-                EditFirstName != Selected.GuestFirstName ||
-                EditLastName != Selected.GuestLastName ||
-                EditRoomType != Selected.RoomType ||
-                editCheckInDateOnly != Selected.CheckInDate ||
-                editCheckOutDateOnly != Selected.CheckOutDate;
+                EditGuestName != Selected.GuestName ||
+                (EditCheckInDate.HasValue && EditCheckInDate.Value.Date != Selected.CheckInDate.Date) ||
+                (EditCheckOutDate.HasValue && EditCheckOutDate.Value.Date != Selected.CheckOutDate.Date);
 
             // Check if there are validation errors
             bool isValid = string.IsNullOrEmpty(ValidationError);
 
-            // Must have at least first or last name
-            bool hasName = !string.IsNullOrWhiteSpace(EditFirstName) || !string.IsNullOrWhiteSpace(EditLastName);
+            // Must have a guest name
+            bool hasName = !string.IsNullOrWhiteSpace(EditGuestName);
 
             // Must have valid dates
             bool hasDates = EditCheckInDate.HasValue && EditCheckOutDate.HasValue;
@@ -616,14 +566,12 @@ namespace KeyCard.Desktop.ViewModels
 
                 var confirmationCode = Selected.ConfirmationCode;
 
-                // Create updated booking with new values (convert DateTime back to DateOnly)
+                // Create updated booking with new values
                 var updatedBooking = Selected with
                 {
-                    GuestFirstName = EditFirstName?.Trim() ?? "",
-                    GuestLastName = EditLastName?.Trim() ?? "",
-                    RoomType = EditRoomType ?? "Regular Room",
-                    CheckInDate = DateOnly.FromDateTime(EditCheckInDate.Value),
-                    CheckOutDate = DateOnly.FromDateTime(EditCheckOutDate.Value)
+                    GuestName = EditGuestName?.Trim() ?? "",
+                    CheckInDate = EditCheckInDate.Value,
+                    CheckOutDate = EditCheckOutDate.Value
                 };
 
                 // In mock mode, directly update the shared collection
@@ -665,7 +613,7 @@ namespace KeyCard.Desktop.ViewModels
                 }
 
                 // Also update departures if needed
-                if (updatedBooking.CheckOutDate == DateOnly.FromDateTime(DateTime.Today))
+                if (updatedBooking.CheckOutDate.Date == DateTime.Today.Date)
                 {
                     var indexInDepartures = -1;
                     for (int i = 0; i < _allDepartures.Count; i++)
@@ -741,9 +689,9 @@ namespace KeyCard.Desktop.ViewModels
 
         private static bool MatchesFilter(Booking b, string term)
         {
-            return b.BookingId.ToString().Contains(term, StringComparison.OrdinalIgnoreCase)
+            return b.Id.ToString().Contains(term, StringComparison.OrdinalIgnoreCase)
                 || b.GuestName.Contains(term, StringComparison.OrdinalIgnoreCase)
-                || b.RoomNumber.ToString(CultureInfo.InvariantCulture).Contains(term, StringComparison.OrdinalIgnoreCase)
+                || b.RoomNumber.Contains(term, StringComparison.OrdinalIgnoreCase)
                 || b.ConfirmationCode.Contains(term, StringComparison.OrdinalIgnoreCase);
         }
     }
