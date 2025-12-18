@@ -8,13 +8,14 @@ internal static class BookingMapping
 {
     public static Booking ToModel(this BookingDto d) => new Booking
     {
-        Id = d.Id,
-        BookingId = d.Id, // FrontDesk expects this name
+        Id = (int)d.Id.GetHashCode(), // Convert Guid to int for compatibility
         ConfirmationCode = d.ConfirmationCode,
-        GuestLastName = d.GuestLastName,
-        RoomNumber = d.RoomNumber,
-        CheckInDate = d.CheckInDate,
-        CheckOutDate = d.CheckOutDate,
-        Status = d.Status
+        GuestName = d.GuestLastName, // Backend uses GuestName
+        RoomNumber = d.RoomNumber.ToString(),
+        CheckInDate = d.CheckInDate.ToDateTime(TimeOnly.MinValue),
+        CheckOutDate = d.CheckOutDate.ToDateTime(TimeOnly.MinValue),
+        StatusEnum = Enum.TryParse<BookingStatus>(d.Status, ignoreCase: true, out var status) 
+            ? status 
+            : BookingStatus.Reserved
     };
 }

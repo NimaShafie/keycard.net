@@ -12,7 +12,7 @@ namespace KeyCard.Api.Controllers.Admin;
 
 [ApiController]
 [Route("api/admin/[controller]")]
-[Authorize(Roles = "FrontDesk,Admin")]
+//[Authorize(Roles = "FrontDesk,Admin")]
 public class BookingsController : ControllerBase
 {
     private readonly IMediator _mediator;

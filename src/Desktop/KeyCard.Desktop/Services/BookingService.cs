@@ -1,10 +1,5 @@
 // Services/BookingService.cs
-using System;
-using System.Net.Http;
 using System.Net.Http.Json;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Collections.Generic;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -41,8 +36,19 @@ public sealed class BookingService : IBookingService
     {
         try
         {
-            var list = await Client.GetFromJsonAsync<List<Booking>>("api/admin/bookings", cancellationToken: ct);
-            return (IReadOnlyList<Booking>)(list ?? new List<Booking>());
+            // Call the GetAllBookings endpoint to get all bookings
+            var bookings = await Client.GetFromJsonAsync<List<Booking>>(
+                "api/admin/Bookings/GetAllBookings", 
+                cancellationToken: ct);
+            
+            if (bookings == null || bookings.Count == 0)
+            {
+                _logger.LogInformation("No bookings returned from API");
+                return Array.Empty<Booking>();
+            }
+
+            _logger.LogInformation("Loaded {Count} bookings from API", bookings.Count);
+            return bookings;
         }
         catch (Exception ex)
         {
@@ -74,12 +80,23 @@ public sealed class BookingService : IBookingService
     {
         try
         {
-            var list = await Client.GetFromJsonAsync<List<Booking>>("api/admin/bookings/today-arrivals", cancellationToken: ct);
-            return (IReadOnlyList<Booking>)(list ?? new List<Booking>());
+            // Call GetAllBookings with today's date filter
+            var today = DateTime.Today.ToString("yyyy-MM-dd");
+            var url = $"api/admin/Bookings/GetAllBookings?fromDate={today}&toDate={today}";
+            
+            var bookings = await Client.GetFromJsonAsync<List<Booking>>(url, cancellationToken: ct);
+            
+            if (bookings == null || bookings.Count == 0)
+            {
+                return Array.Empty<Booking>();
+            }
+
+            _logger.LogInformation("Loaded {Count} today's arrivals from API", bookings.Count);
+            return bookings;
         }
         catch (Exception ex)
         {
-            _logger.LogInformation(ex, "GetTodayArrivalsAsync not implemented on API; returning empty.");
+            _logger.LogWarning(ex, "GetTodayArrivalsAsync failed; returning empty.");
             return Array.Empty<Booking>();
         }
     }

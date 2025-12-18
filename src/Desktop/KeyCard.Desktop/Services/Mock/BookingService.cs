@@ -17,28 +17,28 @@ public sealed class BookingService : IBookingService
     // CA1859: return Booking[] instead of IReadOnlyList<Booking>
     private static Booking[] CreateSeed()
     {
-        var today = DateOnly.FromDateTime(DateTime.Today);
+        var today = DateTime.Today;
         return new[]
         {
             new Booking
             {
-                Id = Guid.NewGuid(),
+                Id = 1,
                 ConfirmationCode = "ABC123",
-                GuestLastName = "Shafie",
-                RoomNumber = 101,
+                GuestName = "Shafie Ahmed",
+                RoomNumber = "101",
                 CheckInDate = today,
                 CheckOutDate = today.AddDays(2),
-                Status = "Reserved"
+                StatusEnum = BookingStatus.Reserved
             },
             new Booking
             {
-                Id = Guid.NewGuid(),
+                Id = 2,
                 ConfirmationCode = "ZZZ999",
-                GuestLastName = "Joshi",
-                RoomNumber = 202,
+                GuestName = "Raj Joshi",
+                RoomNumber = "202",
                 CheckInDate = today,
                 CheckOutDate = today.AddDays(3),
-                Status = "Reserved"
+                StatusEnum = BookingStatus.Reserved
             },
         };
     }
@@ -53,8 +53,8 @@ public sealed class BookingService : IBookingService
 
     public Task<IReadOnlyList<Booking>> GetTodayArrivalsAsync(CancellationToken ct = default)
     {
-        var today = DateOnly.FromDateTime(DateTime.Today);
-        var arrivals = _data.Where(b => b.CheckInDate == today).ToArray(); // array is fine; returned as IReadOnlyList
+        var today = DateTime.Today.Date;
+        var arrivals = _data.Where(b => b.CheckInDate.Date == today).ToArray();
         return Task.FromResult<IReadOnlyList<Booking>>(arrivals);
     }
 
