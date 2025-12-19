@@ -29,12 +29,12 @@ namespace KeyCard.Api.Helper
             public static UserClaimsViewModel GetUser(this ClaimsPrincipal user)
             {
                 return new UserClaimsViewModel (
-                    //user.GetUserId(),
-                    //user.GetUserEmail(),
-                    //user.GetUserRole()
-                    1,
-                    "admin@hotel.com",
-                    "admin"
+                    user.GetUserId(),
+                    user.GetUserEmail(),
+                    user.GetUserRole()
+                    //1,
+                    //"admin@hotel.com",
+                    //"admin"
                 );
             }
         }
