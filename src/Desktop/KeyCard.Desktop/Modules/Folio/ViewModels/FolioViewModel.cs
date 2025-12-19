@@ -290,9 +290,26 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
             }
         }
 
+        /// <summary>
+        /// Helper: figure out which folio to target.
+        /// Prefers the explicitly selected folio, but will fall back to the first folio
+        /// if none is selected (so the Add Charge button can still enable).
+        /// </summary>
+        private GuestFolio? GetTargetFolio()
+        {
+            if (SelectedFolio is not null)
+                return SelectedFolio;
+
+            if (Folios.Count > 0)
+                return Folios[0];
+
+            return null;
+        }
+
         private async Task PostChargeAsync()
         {
-            if (SelectedFolio == null)
+            var targetFolio = GetTargetFolio();
+            if (targetFolio == null)
             {
                 StatusMessage = "Please select a folio first";
                 return;
@@ -307,10 +324,10 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
                 var description = ChargeDescription ?? "Miscellaneous Charge";
 
                 _logger.LogInformation("Posting charge: {Amount} - {Description} to folio {FolioId}",
-                    amount, description, SelectedFolio.FolioId);
+                    amount, description, targetFolio.FolioId);
 
                 await _folio.PostChargeAsync(
-                    SelectedFolio.FolioId,
+                    targetFolio.FolioId,
                     amount,
                     description);
 
@@ -329,8 +346,7 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
             {
                 IsBusy = false;
 
-                // ✅ FIX: Clear inputs AFTER IsBusy is set to false
-                // This ensures CanPostCharge() can return true again
+                // Clear inputs AFTER IsBusy is set to false
                 ChargeAmountText = string.Empty;
                 ChargeDescription = string.Empty;
                 OnPropertyChanged(nameof(ChargeAmountText));
@@ -343,15 +359,18 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
         private bool CanPostCharge()
         {
             var amount = ParseDecimal(ChargeAmountText);
+            var hasFolio = GetTargetFolio() is not null;
+
             return !IsBusy &&
-                   SelectedFolio is not null &&
+                   hasFolio &&
                    amount > 0 &&
                    !string.IsNullOrWhiteSpace(ChargeDescription);
         }
 
         private async Task ApplyPaymentAsync()
         {
-            if (SelectedFolio is null)
+            var targetFolio = GetTargetFolio();
+            if (targetFolio is null)
             {
                 StatusMessage = "Please select a folio first";
                 return;
@@ -366,10 +385,10 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
                 var method = PaymentMethod ?? "Cash";
 
                 _logger.LogInformation("Applying payment: {Amount} via {Method} to folio {FolioId}",
-                    amount, method, SelectedFolio.FolioId);
+                    amount, method, targetFolio.FolioId);
 
                 await _folio.ApplyPaymentAsync(
-                    SelectedFolio.FolioId,
+                    targetFolio.FolioId,
                     amount,
                     method);
 
@@ -388,8 +407,7 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
             {
                 IsBusy = false;
 
-                // ✅ FIX: Clear inputs AFTER IsBusy is set to false
-                // This ensures CanApplyPayment() can return true again
+                // Clear inputs AFTER IsBusy is set to false
                 PaymentAmountText = string.Empty;
                 OnPropertyChanged(nameof(PaymentAmountText));
                 RaiseAllCanExecuteChanged();
@@ -399,8 +417,10 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
         private bool CanApplyPayment()
         {
             var amount = ParseDecimal(PaymentAmountText);
+            var hasFolio = GetTargetFolio() is not null;
+
             return !IsBusy &&
-                   SelectedFolio is not null &&
+                   hasFolio &&
                    amount > 0 &&
                    !string.IsNullOrWhiteSpace(PaymentMethod);
         }

@@ -88,7 +88,6 @@ namespace KeyCard.Desktop.Models
                 {
                     _assignedTo = value;
                     OnPropertyChanged();
-                    // ✅ CRITICAL: Notify UI that this property changed!
                 }
             }
         }

@@ -60,7 +60,7 @@ namespace KeyCard.Desktop.ViewModels
         // Mock mode indicator for UI
         public bool IsMockMode => _env?.IsMock ?? true;
 
-        // ✅ Use the shared collection from BookingStateService
+        // Use the shared collection from BookingStateService
         public ObservableCollection<Booking> Arrivals => _bookingState.TodayArrivals;
 
         public ObservableCollection<Booking> FilteredArrivals { get; } = new();
@@ -109,7 +109,7 @@ namespace KeyCard.Desktop.ViewModels
                 );
             }
 
-            // ✅ Only refresh if data hasn't been loaded yet
+            // Only refresh if data hasn't been loaded yet
             if (_bookingState.AllBookings.Count == 0)
             {
                 _ = RefreshAsync();
@@ -129,7 +129,7 @@ namespace KeyCard.Desktop.ViewModels
             {
                 IsRefreshing = true;
 
-                // ✅ Refresh the shared state - all views update automatically
+                // Refresh the shared state - all views update automatically
                 await _bookingState.RefreshAsync();
 
                 ApplyFilter();
@@ -169,7 +169,7 @@ namespace KeyCard.Desktop.ViewModels
                 || booking.ConfirmationCode.Contains(term, StringComparison.OrdinalIgnoreCase);
         }
 
-        // ✅ Refresh display when navigating back to Dashboard
+        // Refresh display when navigating back to Dashboard
         public void OnNavigatedTo()
         {
             // Reapply filter to show latest booking changes from FrontDesk

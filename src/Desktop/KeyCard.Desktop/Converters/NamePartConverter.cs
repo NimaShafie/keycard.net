@@ -34,7 +34,6 @@ namespace KeyCard.Desktop.Converters
 
         public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
-            // ✅ FIX: Return Binding.DoNothing instead of throwing
             // Two-way binding isn't supported for name parts
             return Avalonia.Data.BindingOperations.DoNothing;
         }

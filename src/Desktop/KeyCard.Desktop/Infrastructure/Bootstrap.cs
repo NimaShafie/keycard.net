@@ -18,7 +18,7 @@ using Polly.Extensions.Http;
 
 namespace KeyCard.Desktop.Infrastructure
 {
-    // ✅ GLOBAL static storage for ViewModels - survives app restarts
+    // GLOBAL static storage for ViewModels - survives app restarts
     internal static class ViewModelCache
     {
         public static HousekeepingViewModel? HousekeepingInstance { get; set; }
@@ -140,7 +140,7 @@ namespace KeyCard.Desktop.Infrastructure
             services.AddSingleton<IToolbarService, ToolbarService>();
             services.AddSingleton<IErrorHandlingService, ErrorHandlingService>();
 
-            // ✅ ViewModels with GLOBAL static caching
+            // ViewModels with GLOBAL static caching
             services.AddSingleton<MainViewModel>();
             services.AddSingleton<LoginViewModel>();
 

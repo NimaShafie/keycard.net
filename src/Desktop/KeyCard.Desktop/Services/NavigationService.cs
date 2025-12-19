@@ -38,17 +38,17 @@ namespace KeyCard.Desktop.Services
             TVm? vm = null;
             Exception? last = null;
 
-            // ✅ DIAGNOSTIC: Track which method succeeded
+            // Track which method succeeded
             string resolutionMethod = "UNKNOWN";
             int instanceHash = 0;
 
-            // ✅ Call OnNavigatedFrom on the current VM
+            // Call OnNavigatedFrom on the current VM
             if (shell.Current is INavigationAware currentNav)
             {
                 currentNav.OnNavigatedFrom();
             }
 
-            // ✅ DIAGNOSTIC: Log navigation attempt
+            // DIAGNOSTIC: Log navigation attempt
             Debug.WriteLine($"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             Debug.WriteLine($"[NavigationService] Navigating to {typeof(TVm).Name}");
 
@@ -140,7 +140,7 @@ namespace KeyCard.Desktop.Services
             Debug.WriteLine($"[NavigationService] Resolution: {resolutionMethod}, Hash: {instanceHash}");
             Debug.WriteLine($"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
-            // ✅ VISIBLE DIAGNOSTIC: Set status message if it's HousekeepingViewModel
+            // Set status message if it's HousekeepingViewModel
             if (vm is HousekeepingViewModel hkVm)
             {
                 var msg = $"Nav: {resolutionMethod} | Hash: {instanceHash}";
@@ -151,7 +151,7 @@ namespace KeyCard.Desktop.Services
             {
                 shell.Current = vm;
 
-                // ✅ Call OnNavigatedTo on the new VM
+                // Call OnNavigatedTo on the new VM
                 if (vm is INavigationAware newNav)
                 {
                     newNav.OnNavigatedTo();

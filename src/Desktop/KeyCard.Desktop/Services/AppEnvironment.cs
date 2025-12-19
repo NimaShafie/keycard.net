@@ -60,7 +60,7 @@ namespace KeyCard.Desktop.Services
 
         private bool EvaluateIsMock()
         {
-            // ✅ CRITICAL FIX: Check KEYCARD_MODE environment variable FIRST
+            // Check KEYCARD_MODE environment variable FIRST
             // This is set by launchSettings.json and takes highest priority
             var keycardModeEnv = Environment.GetEnvironmentVariable("KEYCARD_MODE");
             if (!string.IsNullOrWhiteSpace(keycardModeEnv))

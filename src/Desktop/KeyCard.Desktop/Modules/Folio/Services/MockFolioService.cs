@@ -39,7 +39,6 @@ namespace KeyCard.Desktop.Modules.Folio.Services
 
         public Task<List<GuestFolio>> GetAllFoliosAsync()
         {
-            // ✅ FIX: Return clones with recalculated balances
             var result = _folios.Select(f => CloneFolioWithBalance(f)).ToList();
             return Task.FromResult(result);
         }
@@ -49,7 +48,6 @@ namespace KeyCard.Desktop.Modules.Folio.Services
             var folio = FindByFolioId(folioId);
             if (folio == null) return Task.FromResult<GuestFolio?>(null);
 
-            // ✅ FIX: Return clone with recalculated balance
             var result = CloneFolioWithBalance(folio);
             return Task.FromResult<GuestFolio?>(result);
         }
@@ -59,7 +57,6 @@ namespace KeyCard.Desktop.Modules.Folio.Services
 
         public Task<IReadOnlyList<GuestFolio>> GetActiveFoliosAsync()
         {
-            // ✅ FIX: Return clones with recalculated balances
             var active = _folios
                 .Where(IsOpen)
                 .Select(f => CloneFolioWithBalance(f))
@@ -88,7 +85,6 @@ namespace KeyCard.Desktop.Modules.Folio.Services
                 return fields.Any(s => !string.IsNullOrEmpty(s) && s!.ToLowerInvariant().Contains(term));
             }
 
-            // ✅ FIX: Return clones with recalculated balances
             var results = _folios
                 .Where(Matches)
                 .Select(f => CloneFolioWithBalance(f))
@@ -114,7 +110,7 @@ namespace KeyCard.Desktop.Modules.Folio.Services
             );
 
             AddToCharges(folio, item);
-            // ✅ Balance will be recalculated when GetActiveFoliosAsync is called
+            // Balance will be recalculated when GetActiveFoliosAsync is called
 
             Console.WriteLine($"Added charge ${charge?.Amount} to folio {folioId}. New balance: {GetBalance(folio)}");
 
@@ -138,7 +134,7 @@ namespace KeyCard.Desktop.Modules.Folio.Services
             );
 
             AddToPayments(folio, item);
-            // ✅ Balance will be recalculated when GetActiveFoliosAsync is called
+            // Balance will be recalculated when GetActiveFoliosAsync is called
 
             Console.WriteLine($"Added payment ${payment?.Amount} to folio {folioId}. New balance: {GetBalance(folio)}");
 
@@ -150,7 +146,14 @@ namespace KeyCard.Desktop.Modules.Folio.Services
             var folio = FindByFolioId(folioId);
             if (folio is null) return Task.CompletedTask;
 
+            // Remove the line item from the underlying folio
             RemoveFromListById(GetChargesIList(folio), GetChargesSidecar(folio), lineItemId);
+
+            // Recalculate totals/balance so subsequent queries see the updated state
+            RecalculateBalance(folio);
+
+            Console.WriteLine($"Removed charge {lineItemId} from folio {folioId}. New balance: {GetBalance(folio)}");
+
             return Task.CompletedTask;
         }
 
@@ -159,7 +162,14 @@ namespace KeyCard.Desktop.Modules.Folio.Services
             var folio = FindByFolioId(folioId);
             if (folio is null) return Task.CompletedTask;
 
+            // Remove the line item from the underlying folio
             RemoveFromListById(GetPaymentsIList(folio), GetPaymentsSidecar(folio), lineItemId);
+
+            // Recalculate totals/balance so subsequent queries see the updated state
+            RecalculateBalance(folio);
+
+            Console.WriteLine($"Removed payment {lineItemId} from folio {folioId}. New balance: {GetBalance(folio)}");
+
             return Task.CompletedTask;
         }
 
@@ -203,7 +213,7 @@ namespace KeyCard.Desktop.Modules.Folio.Services
         }
 
         // ----------------------------
-        // ✅ NEW: Clone method to create fresh objects with calculated balances
+        // Clone method to create fresh objects with calculated balances
         // ----------------------------
 
         private GuestFolio CloneFolioWithBalance(GuestFolio source)
@@ -223,8 +233,8 @@ namespace KeyCard.Desktop.Modules.Folio.Services
                 RoomNumber = source.RoomNumber,
                 CheckInDate = source.CheckInDate,
                 CheckOutDate = source.CheckOutDate,
-                TotalCharges = totalCharges,      // ✅ Explicitly set
-                TotalPayments = totalPayments,    // ✅ Explicitly set
+                TotalCharges = totalCharges,
+                TotalPayments = totalPayments,
                 Status = source.Status,
                 LineItems = new List<FolioLineItem>(source.LineItems) // Clone the list
             };
@@ -359,7 +369,6 @@ namespace KeyCard.Desktop.Modules.Folio.Services
 
             var totalCharges = Sum(charges);
             var totalPayments = Sum(payments);
-            // ✅ FIX: Calculate balance from actual charges/payments, not cached Balance property
             var balance = totalCharges - totalPayments;
 
             var html = $@"
@@ -539,7 +548,6 @@ namespace KeyCard.Desktop.Modules.Folio.Services
 
             var totalCharges = Sum(charges);
             var totalPayments = Sum(payments);
-            // ✅ FIX: Calculate balance from actual charges/payments, not cached Balance property
             var balance = totalCharges - totalPayments;
 
             var lines = new List<string>

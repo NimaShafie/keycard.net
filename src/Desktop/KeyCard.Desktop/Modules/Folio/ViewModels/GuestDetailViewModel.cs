@@ -26,7 +26,7 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        // ✅ NEW: Event to notify parent when data changes
+        // Event to notify parent when data changes
         public event EventHandler? DataChanged;
 
         // Header bindings - WITH PROPERTY CHANGE NOTIFICATIONS
@@ -175,8 +175,16 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
         {
             AddChargeCommand = new RelayCommand(async _ => await AddChargeAsync(), _ => CanAddCharge());
             AddPaymentCommand = new RelayCommand(async _ => await AddPaymentAsync(), _ => CanAddPayment());
-            RemoveChargeCommand = new RelayCommand(_ => { /* TODO */ });
-            RemovePaymentCommand = new RelayCommand(_ => { /* TODO */ });
+
+            // Hook up remove commands with proper can-execute
+            RemoveChargeCommand = new RelayCommand(
+                async param => await RemoveChargeAsync(param as string),
+                param => CanRemoveCharge(param));
+
+            RemovePaymentCommand = new RelayCommand(
+                async param => await RemovePaymentAsync(param as string),
+                param => CanRemovePayment(param));
+
             CloseCommand = new RelayCommand(window =>
             {
                 if (window is Window w)
@@ -200,10 +208,12 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
         {
             (AddChargeCommand as RelayCommand)?.RaiseCanExecuteChanged();
             (AddPaymentCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            (RemoveChargeCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            (RemovePaymentCommand as RelayCommand)?.RaiseCanExecuteChanged();
         }
 
         /// <summary>
-        /// ✅ FIXED: LoadAsync now properly loads folio data with correct balance
+        /// Load folio data and populate charges/payments.
         /// </summary>
         public async Task LoadAsync(string folioId)
         {
@@ -213,13 +223,12 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
                 return;
             }
 
-            _currentFolioId = folioId; // ✅ Store for refresh
+            _currentFolioId = folioId;
 
             try
             {
                 Console.WriteLine($"[GuestDetail] Loading folio {folioId}...");
 
-                // ✅ FIX: Use GetFolioByIdAsync which exists in your interface
                 var folio = await _folios.GetFolioByIdAsync(folioId);
 
                 if (folio == null)
@@ -231,21 +240,20 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
                 Console.WriteLine($"[GuestDetail] Loaded folio: {folio.GuestName}, Balance: {folio.Balance:C}");
 
                 GuestName = folio.GuestName;
-                FolioNumber = folio.FolioId; // ✅ FIX: Changed from folio.Id to folio.FolioId
-                Status = folio.Status ?? "Open"; // ✅ FIX: Handle null
-                CurrentBalance = folio.Balance; // ✅ FIX: This now works because MockFolioService returns clones with calculated balance
+                FolioNumber = folio.FolioId;
+                Status = folio.Status ?? "Open";
+                CurrentBalance = folio.Balance;
 
                 Charges.Clear();
                 Payments.Clear();
 
-                // ✅ FIX: Changed from folio.Charges/folio.Payments to folio.LineItems with filtering
                 if (folio.LineItems != null)
                 {
                     Console.WriteLine($"[GuestDetail] Processing {folio.LineItems.Count} line items");
 
                     foreach (var item in folio.LineItems)
                     {
-                        var itemType = item.Type?.ToLower();
+                        var itemType = item.Type?.ToLowerInvariant();
                         if (itemType == "charge")
                         {
                             Charges.Add(item);
@@ -278,7 +286,7 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
         }
 
         /// <summary>
-        /// ✅ NEW: Add charge from detail window
+        /// Add charge from detail window.
         /// </summary>
         private async Task AddChargeAsync()
         {
@@ -304,10 +312,10 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
                 ChargeAmount = string.Empty;
                 ChargeDescription = string.Empty;
 
-                // ✅ NEW: Notify parent that data changed
+                // Notify parent
                 DataChanged?.Invoke(this, EventArgs.Empty);
 
-                Console.WriteLine($"[GuestDetail] Charge added successfully");
+                Console.WriteLine("[GuestDetail] Charge added successfully");
             }
             catch (Exception ex)
             {
@@ -316,7 +324,7 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
         }
 
         /// <summary>
-        /// ✅ NEW: Add payment from detail window
+        /// Add payment from detail window.
         /// </summary>
         private async Task AddPaymentAsync()
         {
@@ -341,10 +349,10 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
                 // Clear inputs
                 PaymentAmount = string.Empty;
 
-                // ✅ NEW: Notify parent that data changed
+                // Notify parent
                 DataChanged?.Invoke(this, EventArgs.Empty);
 
-                Console.WriteLine($"[GuestDetail] Payment added successfully");
+                Console.WriteLine("[GuestDetail] Payment added successfully");
             }
             catch (Exception ex)
             {
@@ -370,13 +378,160 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
                    !string.IsNullOrWhiteSpace(PaymentMethod);
         }
 
+        /// <summary>
+        /// NEW: CanExecute for RemoveChargeCommand.
+        /// </summary>
+        private bool CanRemoveCharge(object? parameter)
+        {
+            var id = parameter as string;
+            return !string.IsNullOrWhiteSpace(id) &&
+                   Charges.Any(c => c.Id == id);
+        }
+
+        /// <summary>
+        /// NEW: CanExecute for RemovePaymentCommand.
+        /// </summary>
+        private bool CanRemovePayment(object? parameter)
+        {
+            var id = parameter as string;
+            return !string.IsNullOrWhiteSpace(id) &&
+                   Payments.Any(p => p.Id == id);
+        }
+
+        /// <summary>
+        /// NEW: Remove a charge line item by Id.
+        /// </summary>
+        private async Task RemoveChargeAsync(string? lineItemId)
+        {
+            if (string.IsNullOrWhiteSpace(lineItemId))
+                return;
+
+            Console.WriteLine($"[GuestDetail] Removing charge {lineItemId}...");
+
+            try
+            {
+                // ✅ NEW: persist via IFolioService when available
+                if (_folios != null && !string.IsNullOrWhiteSpace(_currentFolioId))
+                {
+                    try
+                    {
+                        await _folios.RemoveChargeAsync(_currentFolioId!, lineItemId);
+                    }
+                    catch (NotImplementedException)
+                    {
+                        Console.WriteLine("[GuestDetail] IFolioService.RemoveChargeAsync not implemented; falling back to local-only removal.");
+                    }
+                    catch (Exception exSvc)
+                    {
+                        Console.WriteLine($"[GuestDetail] Error calling IFolioService.RemoveChargeAsync: {exSvc.Message}");
+                    }
+                }
+
+                // Existing local removal logic (unchanged)
+                var item = Charges.FirstOrDefault(c => c.Id == lineItemId);
+                if (item != null)
+                {
+                    Charges.Remove(item);
+                    Console.WriteLine($"[GuestDetail] Charge {lineItemId} removed locally");
+                }
+
+                RecalculateBalance();
+
+                AuditLog.Add(new AuditEntry
+                {
+                    Timestamp = DateTimeOffset.Now,
+                    Action = "Remove Charge",
+                    Description = $"Removed charge {lineItemId}",
+                    User = "Staff"
+                });
+
+                DataChanged?.Invoke(this, EventArgs.Empty);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GuestDetail] Error removing charge: {ex.Message}");
+            }
+
+            await Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// NEW: Remove a payment line item by Id.
+        /// </summary>
+        private async Task RemovePaymentAsync(string? lineItemId)
+        {
+            if (string.IsNullOrWhiteSpace(lineItemId))
+                return;
+
+            Console.WriteLine($"[GuestDetail] Removing payment {lineItemId}...");
+
+            try
+            {
+                // ✅ NEW: persist via IFolioService when available
+                if (_folios != null && !string.IsNullOrWhiteSpace(_currentFolioId))
+                {
+                    try
+                    {
+                        await _folios.RemovePaymentAsync(_currentFolioId!, lineItemId);
+                    }
+                    catch (NotImplementedException)
+                    {
+                        Console.WriteLine("[GuestDetail] IFolioService.RemovePaymentAsync not implemented; falling back to local-only removal.");
+                    }
+                    catch (Exception exSvc)
+                    {
+                        Console.WriteLine($"[GuestDetail] Error calling IFolioService.RemovePaymentAsync: {exSvc.Message}");
+                    }
+                }
+
+                // Existing local removal logic (unchanged)
+                var item = Payments.FirstOrDefault(p => p.Id == lineItemId);
+                if (item != null)
+                {
+                    Payments.Remove(item);
+                    Console.WriteLine($"[GuestDetail] Payment {lineItemId} removed locally");
+                }
+
+                RecalculateBalance();
+
+                AuditLog.Add(new AuditEntry
+                {
+                    Timestamp = DateTimeOffset.Now,
+                    Action = "Remove Payment",
+                    Description = $"Removed payment {lineItemId}",
+                    User = "Staff"
+                });
+
+                DataChanged?.Invoke(this, EventArgs.Empty);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GuestDetail] Error removing payment: {ex.Message}");
+            }
+
+            await Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// NEW: Recalculate balance from current in-memory collections.
+        /// </summary>
+        private void RecalculateBalance()
+        {
+            var totalCharges = Charges.Sum(c => c.Amount);
+            var totalPayments = Payments.Sum(p => p.Amount);
+            CurrentBalance = totalCharges - totalPayments;
+            Console.WriteLine($"[GuestDetail] Balance recalculated: {CurrentBalance:C}");
+        }
+
         private static decimal ParseDecimal(string? input)
         {
             if (string.IsNullOrWhiteSpace(input))
                 return 0m;
 
             // Remove any currency symbols or spaces
-            input = input.Replace("$", "").Replace(" ", "").Trim();
+            input = input.Replace("$", string.Empty, StringComparison.Ordinal)
+                         .Replace(" ", string.Empty, StringComparison.Ordinal)
+                         .Trim();
 
             if (decimal.TryParse(input, System.Globalization.NumberStyles.Number,
                 System.Globalization.CultureInfo.InvariantCulture, out var result))
@@ -385,7 +540,7 @@ namespace KeyCard.Desktop.Modules.Folio.ViewModels
             return 0m;
         }
 
-        // ✅ ALL ORIGINAL CONSTRUCTORS PRESERVED BELOW
+        // ALL ORIGINAL CONSTRUCTORS PRESERVED BELOW
 
         public GuestDetailViewModel(IFolioService folios, bool isMock) : this(folios)
         {

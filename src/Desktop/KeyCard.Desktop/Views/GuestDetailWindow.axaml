@@ -4,12 +4,14 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:KeyCard.Desktop.Modules.Folio.ViewModels"
+        xmlns:m="clr-namespace:KeyCard.Desktop.Modules.Folio.Models"
         mc:Ignorable="d"
         d:DesignWidth="1000" d:DesignHeight="700"
         Width="1000" Height="700"
         MinWidth="900" MinHeight="600"
         x:Class="KeyCard.Desktop.Modules.Folio.Views.GuestDetailWindow"
         x:DataType="vm:GuestDetailViewModel"
+        x:Name="Root"
         Title="Guest Folio Details"
         Background="#2B2B33"
         Foreground="White"
@@ -78,7 +80,6 @@
                       Background="Transparent"
                       BorderThickness="0">
               <DataGrid.Columns>
-                <!-- ✅ FIX: Wider Date column (was too narrow) -->
                 <DataGridTextColumn Header="Date"
                                     Binding="{Binding TransactionDate, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
                                     Width="160"/>
@@ -89,10 +90,10 @@
                                     Binding="{Binding Amount, StringFormat=\{0:C\}}"
                                     Width="120"/>
 
-                <!-- ✅ FIX: Centered Remove button -->
+                <!-- Actions: Remove Charge -->
                 <DataGridTemplateColumn Header="Actions" Width="120">
                   <DataGridTemplateColumn.CellTemplate>
-                    <DataTemplate>
+                    <DataTemplate x:DataType="m:FolioLineItem">
                       <Button Content="Remove"
                               Background="#DC3545"
                               Foreground="White"
@@ -100,7 +101,7 @@
                               CornerRadius="4"
                               HorizontalAlignment="Center"
                               VerticalAlignment="Center"
-                              Command="{Binding $parent[DataGrid].((vm:GuestDetailViewModel)DataContext).RemoveChargeCommand}"
+                              Command="{Binding #Root.((vm:GuestDetailViewModel)DataContext).RemoveChargeCommand}"
                               CommandParameter="{Binding Id}"/>
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
@@ -184,7 +185,6 @@
                       Background="Transparent"
                       BorderThickness="0">
               <DataGrid.Columns>
-                <!-- ✅ FIX: Wider Date column -->
                 <DataGridTextColumn Header="Date"
                                     Binding="{Binding TransactionDate, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
                                     Width="160"/>
@@ -195,10 +195,10 @@
                                     Binding="{Binding Amount, StringFormat=\{0:C\}}"
                                     Width="120"/>
 
-                <!-- ✅ FIX: Centered Remove button -->
+                <!-- Actions: Remove Payment -->
                 <DataGridTemplateColumn Header="Actions" Width="120">
                   <DataGridTemplateColumn.CellTemplate>
-                    <DataTemplate>
+                    <DataTemplate x:DataType="m:FolioLineItem">
                       <Button Content="Remove"
                               Background="#DC3545"
                               Foreground="White"
@@ -206,7 +206,7 @@
                               CornerRadius="4"
                               HorizontalAlignment="Center"
                               VerticalAlignment="Center"
-                              Command="{Binding $parent[DataGrid].((vm:GuestDetailViewModel)DataContext).RemovePaymentCommand}"
+                              Command="{Binding #Root.((vm:GuestDetailViewModel)DataContext).RemovePaymentCommand}"
                               CommandParameter="{Binding Id}"/>
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
@@ -299,7 +299,7 @@
       </TabItem>
     </TabControl>
 
-    <!-- ✅ FIX: Footer with proper spacing for Close button -->
+    <!-- Footer -->
     <Grid Grid.Row="2" Margin="0,16,0,0">
       <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
         <TextBlock Text="Changes are saved automatically"
@@ -308,7 +308,6 @@
                    Margin="0,0,0,4"/>
       </StackPanel>
 
-      <!-- ✅ FIX: Close button with proper height to prevent cutoff -->
       <Button HorizontalAlignment="Right"
               Content="Close"
               Command="{Binding CloseCommand}"
