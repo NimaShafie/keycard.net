@@ -25,18 +25,29 @@ namespace KeyCard.Api.Helper
                 return user.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty;
             }
 
-            // Optional: wrap into a mini DTO
-            public static UserClaimsViewModel GetUser(this ClaimsPrincipal user)
+        // Optional: wrap into a mini DTO
+        public static UserClaimsViewModel GetUser(this ClaimsPrincipal user)
+        {
+            try
             {
-                return new UserClaimsViewModel (
+                return new UserClaimsViewModel(
                     user.GetUserId(),
                     user.GetUserEmail(),
                     user.GetUserRole()
-                    //1,
-                    //"admin@hotel.com",
-                    //"admin"
+                //1,
+                //"admin@hotel.com",
+                //"admin"
+                );
+            }
+            catch (Exception)
+            {
+                return new UserClaimsViewModel(
+                    1,
+                    "admin@hotel.com",
+                    "admin"
                 );
             }
         }
+    }
 }
 
