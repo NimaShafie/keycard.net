@@ -213,7 +213,7 @@ namespace KeyCard.Desktop.ViewModels
                 System.Diagnostics.Debug.WriteLine($"  Success: {success}");
                 System.Diagnostics.Debug.WriteLine($"  ErrorMessage: {errorMessage ?? "null"}");
 
-                // ✅ CRITICAL FIX: Only show success if actually successful
+                // Only show success if actually successful
                 if (success && string.IsNullOrEmpty(errorMessage))
                 {
                     // Registration successful

@@ -21,7 +21,7 @@ namespace KeyCard.Desktop.Modules.Folio.Views
             // Set up DataContext and wire events
             DataContextChanged += OnDataContextChanged;
 
-            // ✅ Wire up button clicks manually after DataGrid is loaded
+            // Wire up button clicks manually after DataGrid is loaded
             this.Loaded += OnViewLoaded;
         }
 
@@ -285,7 +285,7 @@ namespace KeyCard.Desktop.Modules.Folio.Views
                 // Set the DataContext
                 detailWindow.DataContext = detailVm;
 
-                // ✅ NEW: Subscribe to data changes and refresh main view immediately
+                // Subscribe to data changes and refresh main view immediately
                 detailVm.DataChanged += async (s, e) =>
                 {
                     SetStatus("🔄 Data changed, refreshing main view...");
@@ -303,7 +303,6 @@ namespace KeyCard.Desktop.Modules.Folio.Views
                 // Show the window and wait for it to close
                 await detailWindow.ShowDialog(owner);
 
-                // ✅ FIX: Refresh the main folio list after window closes
                 if (DataContext is FolioViewModel vm)
                 {
                     SetStatus("🔄 Refreshing folio list...");

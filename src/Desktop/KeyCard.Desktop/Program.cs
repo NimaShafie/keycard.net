@@ -161,7 +161,7 @@ namespace KeyCard.Desktop
                         {
                             services.AddKeyCardApi(ctx.Configuration, appEnv);
 
-                            // ✅ CRITICAL FIX: Add SSL bypass for localhost development
+                            // Add SSL bypass for localhost development
                             services.AddHttpClient("KeyCardApi", (sp, http) =>
                             {
                                 var env = sp.GetRequiredService<IAppEnvironment>();
@@ -236,10 +236,10 @@ namespace KeyCard.Desktop
                         }
                     });
 
-                    // ✅ CRITICAL FIX: ViewModels MUST be Singleton to preserve state across navigation
+                    // ViewModels MUST be Singleton to preserve state across navigation
                     services.AddSingleton<MainViewModel>();
                     services.AddSingleton<LoginViewModel>();
-                    services.AddSingleton<RegistrationViewModel>();  // ✅ Added missing ViewModel
+                    services.AddSingleton<RegistrationViewModel>();
                     services.AddSingleton<DashboardViewModel>();
                     services.AddSingleton<FrontDeskViewModel>();
                     services.AddSingleton<HousekeepingViewModel>();

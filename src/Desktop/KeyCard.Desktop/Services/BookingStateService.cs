@@ -79,7 +79,7 @@ namespace KeyCard.Desktop.Services
                 var index = AllBookings.IndexOf(booking);
                 if (index >= 0)
                 {
-                    // ✅ CRITICAL: Remove and Insert instead of direct assignment
+                    // Remove and Insert instead of direct assignment
                     // This triggers proper CollectionChanged notifications for DataGrid
                     AllBookings.RemoveAt(index);
                     AllBookings.Insert(index, updated);
@@ -129,7 +129,7 @@ namespace KeyCard.Desktop.Services
                         var index = AllBookings.IndexOf(booking);
                         if (index >= 0)
                         {
-                            // ✅ CRITICAL: Remove and Insert instead of direct assignment
+                            // Remove and Insert instead of direct assignment
                             AllBookings.RemoveAt(index);
                             AllBookings.Insert(index, updated);
 

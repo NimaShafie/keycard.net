@@ -12,7 +12,7 @@ namespace KeyCard.Desktop.Services.Api
     public sealed class AuthService : IAuthService
     {
         public bool IsAuthenticated { get; private set; }
-        public string DisplayName { get; private set; } = string.Empty;  // ✅ Fixed: non-nullable
+        public string DisplayName { get; private set; } = string.Empty;
 
         public event EventHandler? StateChanged;
 
@@ -21,7 +21,7 @@ namespace KeyCard.Desktop.Services.Api
             // Transitional: succeed if both provided
             await Task.Yield();
             IsAuthenticated = !string.IsNullOrWhiteSpace(username) && !string.IsNullOrWhiteSpace(password);
-            DisplayName = IsAuthenticated ? username : string.Empty;  // ✅ Fixed: always returns string
+            DisplayName = IsAuthenticated ? username : string.Empty;
             StateChanged?.Invoke(this, EventArgs.Empty);
             return IsAuthenticated;
         }
@@ -56,7 +56,7 @@ namespace KeyCard.Desktop.Services.Api
         public void Logout()
         {
             IsAuthenticated = false;
-            DisplayName = string.Empty;  // ✅ Fixed: set to empty string instead of null
+            DisplayName = string.Empty;
             StateChanged?.Invoke(this, EventArgs.Empty);
         }
     }

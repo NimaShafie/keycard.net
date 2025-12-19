@@ -177,7 +177,7 @@ namespace KeyCard.Desktop.ViewModels
         // Mock mode indicator for UI
         public bool IsMockMode => _env?.IsMock ?? true;
 
-        // ✅ Use the shared collection from BookingStateService
+        // Use the shared collection from BookingStateService
         public ObservableCollection<Booking> Arrivals => _bookingState.TodayArrivals;
 
         public ObservableCollection<Booking> Departures { get; } = new();
@@ -222,7 +222,7 @@ namespace KeyCard.Desktop.ViewModels
                 initialSearchText: SearchText
             );
 
-            // ✅ Only refresh if data hasn't been loaded yet
+            // Only refresh if data hasn't been loaded yet
             if (_bookingState.AllBookings.Count == 0)
             {
                 _ = RefreshAsync();
@@ -243,7 +243,7 @@ namespace KeyCard.Desktop.ViewModels
                 IsBusy = true;
                 StatusMessage = "Loading bookings...";
 
-                // ✅ Refresh the shared state
+                // Refresh the shared state
                 await _bookingState.RefreshAsync();
 
                 // Calculate departures locally
@@ -284,7 +284,7 @@ namespace KeyCard.Desktop.ViewModels
                 IsBusy = true;
                 StatusMessage = $"Searching for '{Query}'...";
 
-                // ✅ Search in the shared state
+                // Search in the shared state
                 var booking = _bookingState.FindByCode(Query);
 
                 if (booking is not null)
@@ -397,15 +397,15 @@ namespace KeyCard.Desktop.ViewModels
 
                 var confirmationCode = Selected.ConfirmationCode;
 
-                // ✅ Use the state service - it updates the shared collection
+                // Use the state service - it updates the shared collection
                 var success = await _bookingState.AssignRoomAsync(confirmationCode, roomNumber);
 
                 if (success)
                 {
-                    // ✅ CRITICAL: Refresh Results collection to show updated booking
+                    // Refresh Results collection to show updated booking
                     ApplyFilter();
 
-                    // ✅ CRITICAL: Update Selected to point to the new booking instance
+                    // Update Selected to point to the new booking instance
                     Selected = _bookingState.FindByCode(confirmationCode);
 
                     RoomNumberInput = string.Empty;
@@ -442,15 +442,15 @@ namespace KeyCard.Desktop.ViewModels
 
                 var confirmationCode = Selected.ConfirmationCode;
 
-                // ✅ Use the state service - it updates the shared collection
+                // Use the state service - it updates the shared collection
                 var success = await _bookingState.CheckInAsync(confirmationCode);
 
                 if (success)
                 {
-                    // ✅ CRITICAL: Refresh Results collection to show updated booking
+                    // Refresh Results collection to show updated booking
                     ApplyFilter();
 
-                    // ✅ CRITICAL: Update Selected to point to the new booking instance
+                    // Update Selected to point to the new booking instance
                     Selected = _bookingState.FindByCode(confirmationCode);
 
                     StatusMessage = $"{Selected?.GuestName ?? "Guest"} checked in successfully";
@@ -488,13 +488,13 @@ namespace KeyCard.Desktop.ViewModels
 
                 await Task.Delay(500);
 
-                // ✅ Update the shared state directly
+                // Update the shared state directly
                 _bookingState.UpdateBookingStatus(confirmationCode, "CheckedOut");
 
-                // ✅ CRITICAL: Refresh Results collection to show updated booking
+                // Refresh Results collection to show updated booking
                 ApplyFilter();
 
-                // ✅ CRITICAL: Update Selected to point to the new booking instance
+                // Update Selected to point to the new booking instance
                 Selected = _bookingState.FindByCode(confirmationCode);
 
                 StatusMessage = $"{Selected?.GuestName ?? "Guest"} checked out successfully";
@@ -668,7 +668,7 @@ namespace KeyCard.Desktop.ViewModels
             Departures.ReplaceWith(filteredDepartures);
             Results.ReplaceWith(filteredArrivals.Concat(filteredDepartures));
 
-            // ✅ CRITICAL: If Selected was updated, find the new instance in Results
+            // If Selected was updated, find the new instance in Results
             if (Selected is not null)
             {
                 var updatedSelected = Results.FirstOrDefault(b => b.ConfirmationCode == Selected.ConfirmationCode);
